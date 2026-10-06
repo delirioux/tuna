@@ -45,6 +45,7 @@ typedef struct {
     long n, cap, now;
     /* musical checks, harmonized mode */
     long mel_notes, mel_steps, mel_downbeats, mel_downbeat_chord;
+    long arrivals, arrivals_tonic, arrivals_tonic_chord, arrivals_by_step;
     int mel_prev;
 } evlog;
 
@@ -61,13 +62,19 @@ static void on_event(void *ctx, const tg_event *e)
     l->ev[l->n].e = *e;
     l->n++;
     if (e->on && e->part == TG_PART_MELODY) {
+        int step = l->mel_prev >= 0 ? abs(e->note - l->mel_prev) : 99;
         if (l->mel_prev >= 0) {
-            int d = abs(e->note - l->mel_prev);
-            l->mel_steps += d <= 2;
+            l->mel_steps += step <= 2;
             l->mel_notes++;
         }
         l->mel_prev = e->note;
         int q = (int)(cur->ticks - 1);
+        if (q > 0 && tg_period_position(cur, NULL) == 0) {
+            l->arrivals++;
+            l->arrivals_by_step += step >= 1 && step <= 2;
+            l->arrivals_tonic += ((e->note - cur->root) % 12 + 12) % 12 == 0;
+            l->arrivals_tonic_chord += cur->chord.root == 0;
+        }
         if (q % (cur->division * 4) == 0) {
             l->mel_downbeats++;
             int pc = ((e->note - cur->root) % 12 + 12) % 12;
@@ -113,6 +120,16 @@ static void run(const preset *p, int seconds, evlog *l)
     long total = (long)seconds * SR;
     for (l->now = 0; l->now < total; l->now += BLOCK)
         tg_process(&g, BLOCK, on_event, l);
+    /* end like a song: play on to the next arrival on the tonic and let it ring for its bar */
+    long arrived = -1;
+    while (1) {
+        tg_process(&g, BLOCK, on_event, l);
+        l->now += BLOCK;
+        if (arrived < 0 && g.ticks > 1 && tg_period_position(&g, NULL) == 0)
+            arrived = g.ticks;
+        if (arrived >= 0 && g.ticks >= arrived + g.division * 4)
+            break;
+    }
     tg_all_off(&g, on_event, l);
 }
 
@@ -174,7 +191,8 @@ static float mtof(int n) { return 440.0f * powf(2.0f, (n - 69) / 12.0f); }
 
 static void write_wav(const char *path, const evlog *l, int seconds)
 {
-    long total = (long)(seconds + 3) * SR;
+    (void)seconds;
+    long total = (l->n ? l->ev[l->n - 1].t : 0) + 4L * SR;    /* to the last note, plus its tail */
     float *mix = calloc((size_t)total * 2, sizeof(float));
     /* bass and melody mono, pad 4 voices */
     static voice v[6];
@@ -308,10 +326,14 @@ int main(int argc, char **argv)
                 off_key += !((allowed >> (((n - p->root) % 12 + 12) % 12)) & 1);
             }
         printf("%-8s %ld events (bass %ld, melody %ld, pad %ld), notes %d..%d, off-key %ld, seed replays: %s\n"
-               "         melody: %.0f%% steps (<= 2 semitones), downbeats on chord tones %ld/%ld\n",
+               "         melody: %.0f%% steps (<= 2 semitones), downbeats on chord tones %ld/%ld,"
+               " arrivals on the tonic %ld/%ld (over the tonic chord %ld, by step %ld)\n",
                p->name, a.n, count[0], count[1], count[2], lo, hi, off_key, same ? "yes" : "NO",
-               a.mel_notes ? 100.0 * a.mel_steps / a.mel_notes : 0.0, a.mel_downbeat_chord, a.mel_downbeats);
+               a.mel_notes ? 100.0 * a.mel_steps / a.mel_notes : 0.0, a.mel_downbeat_chord, a.mel_downbeats,
+               a.arrivals_tonic, a.arrivals, a.arrivals_tonic_chord, a.arrivals_by_step);
         fails += a.mel_downbeat_chord != a.mel_downbeats;
+        fails += !a.arrivals || a.arrivals_tonic != a.arrivals || a.arrivals_tonic_chord != a.arrivals ||
+                 a.arrivals_by_step != a.arrivals;
         fails += !same || off_key || !count[0] || !count[1] || !count[2];
         char path[512];
         snprintf(path, sizeof path, "%s/tuna_%s.mid", dir, p->name);

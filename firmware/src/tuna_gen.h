@@ -9,9 +9,11 @@
  *   harmonized  Marbles still makes every random choice, but a musician's rules turn them into
  *               notes (the default):
  *     melody  X2 picks the next *interval*, mostly steps; large leaps are followed by a step back;
- *             strong beats land on chord tones; phrases of two bars end on a chord tone and
- *             breathe for a beat; a density control and a deja-vu rhythm decide which ticks play;
- *             notes are held until the next one (legato).
+ *             downbeats land on chord tones; a density control and a deja-vu rhythm decide which
+ *             ticks play; notes are held until the next one (legato). Phrases form periods: a
+ *             question that pauses on the fifth or third halfway, and an answer whose last bar
+ *             steers home, whose last beat is a neighbour of the tonic, and which lands on the
+ *             tonic exactly when the progression returns to its tonic chord.
  *     bass    the chord root on the downbeat and on each chord change, then root, fifth, octave
  *             or third chosen by X1, and a step into the next chord's root just before it.
  *     pad     the chord itself, voiced close to the previous chord (smallest total movement),
@@ -52,7 +54,7 @@ typedef struct {
     bool harmonize;               /* false: raw Marbles notes */
     float melody_density;         /* 0..1: share of off-beat ticks the melody plays */
     int melody_range;             /* semitones above base_note the melody may use */
-    int phrase_bars;              /* melody phrase length; 0 = no phrasing */
+    int phrase_bars;              /* shortest melody period (question + answer) in bars */
     int pad_tones;                /* 3 = triads, 4 = sevenths */
     bool pad_restrike;            /* re-strike the pad chord on T3 */
 
@@ -79,6 +81,8 @@ typedef struct {
     uint32_t since_note[TG_PARTS];
     int mel_note, mel_prev_interval, bass_note;
     bool chord_fresh;             /* the chord changed and the bass has not played it yet */
+    long mel_hold_until;          /* tick before which the melody holds its note */
+    long mel_off_at;              /* tick at which a held melody note is released, -1 = none */
     tm_rng hrng;                  /* the harmonizer's own randomness: Marbles stays untouched */
     tm_sequence mel_rhythm;       /* which off-beat ticks the melody plays, with deja vu */
 } tg_gen;
@@ -89,6 +93,9 @@ void tg_reseed(tg_gen *g, uint32_t seed);
 /* Render size samples (size <= TG_MAX_BLOCK) and report note events through fn. */
 #define TG_MAX_BLOCK 64
 void tg_process(tg_gen *g, int size, tg_event_fn fn, void *ctx);
+/* Ticks since the melody's last arrival on the tonic, for the current tick (0 = arriving now);
+ * *period gets the period's length in ticks. */
+int tg_period_position(const tg_gen *g, int *period);
 /* Release every sounding note (stop). */
 void tg_all_off(tg_gen *g, tg_event_fn fn, void *ctx);
 

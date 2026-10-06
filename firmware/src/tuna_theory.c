@@ -16,6 +16,7 @@ static const struct { uint16_t mask; const char *name; } scales[TS_COUNT] = {
     [TS_PENT_MAJOR] = {0x295, "PENT MAJ"},    /* 0 2 4 7 9 */
     [TS_PENT_MINOR] = {0x4A9, "PENT MIN"},    /* 0 3 5 7 10 */
     [TS_BLUES]      = {0x4E9, "BLUES"},       /* 0 3 5 6 7 10 */
+    [TS_WHOLE_TONE] = {0x555, "WHOLE T"},     /* 0 2 4 6 8 10 */
 };
 
 static int clamp_note(int n) { return n < 0 ? 0 : n > 127 ? 127 : n; }

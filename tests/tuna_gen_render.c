@@ -39,8 +39,16 @@ static const preset presets[] = {
     {"rhythm",  104, 4,  9,  TS_AEOLIAN,    TP_ANDALUSIAN,  32, TM_T_DRUMS,                 0.8f, 0.0f,  0.75f, 0.3f, 0.0f, 16, 0.55f, 0.5f, 0.68f, 0.80f, 16, TM_CONTROL_IDENTICAL, 7,  0.55f, 3, true, -1, false},
     {"lydian",  84,  2,  5,  TS_LYDIAN,     TP_MODAL_VAMP,  16, TM_T_CLUSTERS,              0.65f, 0.3f, 0.4f, 0.6f, 0.4f, 8,  0.50f, 0.55f, 0.75f, 0.55f, 8, TM_CONTROL_BUMP,      42, 0.40f, 4, false, -1, false},
     /* composer signatures: everything comes from the style; only name, seed and synth matter here */
-    {.name = "bach",   .seed = 11, .style = TG_STYLE_BACH,   .keys = true},
-    {.name = "mozart", .seed = 5,  .style = TG_STYLE_MOZART, .keys = true},
+    {.name = "bach",        .seed = 11, .style = TG_STYLE_BACH,        .keys = true},
+    {.name = "mozart",      .seed = 5,  .style = TG_STYLE_MOZART,      .keys = true},
+    {.name = "beethoven",   .seed = 3,  .style = TG_STYLE_BEETHOVEN,   .keys = true},
+    {.name = "brahms",      .seed = 8,  .style = TG_STYLE_BRAHMS,      .keys = true},
+    {.name = "mahler",      .seed = 2,  .style = TG_STYLE_MAHLER,      .keys = false},
+    {.name = "chopin",      .seed = 9,  .style = TG_STYLE_CHOPIN,      .keys = true},
+    {.name = "satie",       .seed = 4,  .style = TG_STYLE_SATIE,       .keys = true},
+    {.name = "debussy",     .seed = 6,  .style = TG_STYLE_DEBUSSY,     .keys = true},
+    {.name = "dvorak",      .seed = 12, .style = TG_STYLE_DVORAK,      .keys = false},
+    {.name = "saint-saens", .seed = 13, .style = TG_STYLE_SAINT_SAENS, .keys = true},
 };
 
 /* ---- event log (for MIDI and the synth) ------------------------------------------------------- */
@@ -52,6 +60,7 @@ typedef struct {
     long mel_notes, mel_steps, mel_downbeats, mel_downbeat_chord;
     long arrivals, arrivals_tonic, arrivals_tonic_chord, arrivals_by_step;
     long off_key, halves, halves_on_dominant, bass_changes, bass_roots, counter_notes, parallels;
+    double motif_share;
     int counter_prev, counter_prev_iv, counter_prev_mel;
     int mel_prev;
 } evlog;
@@ -74,9 +83,10 @@ static void on_event(void *ctx, const tg_event *e)
         for (int k = 0; k < cur->chord.n; ++k)
             allowed |= (uint16_t)(1u << ((cur->chord.root + cur->chord.tone[k]) % 12));
         int pc = ((e->note - cur->root) % 12 + 12) % 12;
-        l->off_key += !((allowed >> pc) & 1);
+        bool leaning = e->part == TG_PART_MELODY && cur->mel_pending >= 0;   /* a chromatic appoggiatura */
+        l->off_key += !((allowed >> pc) & 1) && !leaning;
     }
-    if (e->on && e->part == TG_PART_BASS && cur->style && cur->chord_ticks > 0 &&
+    if (e->on && e->part == TG_PART_BASS && cur->style && cur->bass_mode != TG_BASS_PEDAL && cur->chord_ticks > 0 &&
         (cur->ticks - 1) % cur->chord_ticks == 0) {
         l->bass_changes++;
         l->bass_roots += ((e->note - cur->root) % 12 + 12) % 12 == cur->chord.root;
@@ -101,7 +111,8 @@ static void on_event(void *ctx, const tg_event *e)
         l->mel_prev = e->note;
         int q = (int)(cur->ticks - 1);
         int period = 0, ppos = tg_period_position(cur, &period);
-        if (cur->style && ppos == tg_half_position(cur)) {
+        bool aug = cur->chord.n >= 3 && cur->chord.tone[1] == 4 && cur->chord.tone[2] == 8;
+        if (cur->style && ppos == tg_half_position(cur) && !aug) {
             l->halves++;
             l->halves_on_dominant += cur->chord.root == 7 || cur->chord.root == 11;
         }
@@ -179,6 +190,8 @@ styled:
             break;
     }
     tg_all_off(&g, on_event, l);
+    long notes = g.motif_notes + g.free_notes;
+    l->motif_share = notes ? 100.0 * g.motif_notes / notes : 0.0;
 }
 
 /* ---- MIDI file -------------------------------------------------------------------------------- */
@@ -353,20 +366,10 @@ static void write_wav(const char *path, const evlog *l, int seconds, bool keys)
     free(mix);
 }
 
-int main(int argc, char **argv)
+static int check(const preset *p, const evlog *pa, bool same, bool verbose)
 {
-    const char *dir = argc > 1 ? argv[1] : ".";
-    int seconds = argc > 2 ? atoi(argv[2]) : 60;
+    const evlog a = *pa;
     int fails = 0;
-    for (size_t i = 0; i < sizeof presets / sizeof presets[0]; ++i) {
-        const preset *p = &presets[i];
-        evlog a, b;
-        run(p, seconds, &a);
-        run(p, seconds, &b);
-        bool same = a.n == b.n;     /* field by field: the structs carry padding bytes */
-        for (long k = 0; same && k < a.n; ++k)
-            same = a.ev[k].t == b.ev[k].t && a.ev[k].e.part == b.ev[k].e.part && a.ev[k].e.note == b.ev[k].e.note &&
-                   a.ev[k].e.velocity == b.ev[k].e.velocity && a.ev[k].e.on == b.ev[k].e.on;
         long count[TG_PARTS] = {0};
         int lo = 127, hi = 0;
         for (long k = 0; k < a.n; ++k)
@@ -376,22 +379,64 @@ int main(int argc, char **argv)
                 lo = n < lo ? n : lo;
                 hi = n > hi ? n : hi;
             }
-        printf("%-8s %ld events (bass %ld, melody %ld, third %ld), notes %d..%d, off-key %ld, seed replays: %s\n"
+        if (verbose) printf("%-8s %ld events (bass %ld, melody %ld, third %ld), notes %d..%d, off-key %ld, seed replays: %s\n"
                "         melody: %.0f%% steps (<= 2 semitones), downbeats on chord tones %ld/%ld,"
                " arrivals on the tonic %ld/%ld (over the tonic chord %ld, by step %ld)\n",
                p->name, a.n, count[0], count[1], count[2], lo, hi, a.off_key, same ? "yes" : "NO",
                a.mel_notes ? 100.0 * a.mel_steps / a.mel_notes : 0.0, a.mel_downbeat_chord, a.mel_downbeats,
                a.arrivals_tonic, a.arrivals, a.arrivals_tonic_chord, a.arrivals_by_step);
         if (p->style >= 0)
-            printf("         style: half cadences on the dominant %ld/%ld, bass on the root at chord changes %ld/%ld,"
-                   " counter-melody notes %ld with %ld parallel fifths/octaves\n",
-                   a.halves_on_dominant, a.halves, a.bass_roots, a.bass_changes, a.counter_notes, a.parallels);
+            if (verbose) printf("         style: half cadences on the dominant %ld/%ld, bass on the root at chord changes %ld/%ld,"
+                   " counter-melody parallels %ld/%ld, melody from the motif %.0f%%\n",
+                   a.halves_on_dominant, a.halves, a.bass_roots, a.bass_changes, a.parallels, a.counter_notes,
+                   a.motif_share);
         fails += !same || a.off_key || !count[0] || !count[1] || !count[2];
         fails += a.mel_downbeat_chord != a.mel_downbeats;
         fails += !a.arrivals || a.arrivals_tonic != a.arrivals || a.arrivals_tonic_chord != a.arrivals ||
                  a.arrivals_by_step != a.arrivals;
         if (p->style >= 0)
-            fails += a.halves_on_dominant != a.halves || a.bass_roots != a.bass_changes;
+            fails += a.halves_on_dominant != a.halves || a.bass_roots != a.bass_changes || a.parallels;
+    return fails;
+}
+
+int main(int argc, char **argv)
+{
+    const char *dir = argc > 1 ? argv[1] : ".";
+    int seconds = argc > 2 ? atoi(argv[2]) : 60;
+    int fails = 0;
+    if (getenv("SWEEP")) {
+        /* the same checks over many seeds per preset, no files */
+        int seeds = atoi(getenv("SWEEP"));
+        for (size_t i = 0; i < sizeof presets / sizeof presets[0]; ++i) {
+            int bad = 0;
+            for (int sd = 1; sd <= seeds; ++sd) {
+                preset q = presets[i];
+                q.seed = (uint32_t)(sd * 7919 + 17);
+                evlog a;
+                run(&q, seconds, &a);
+                int f = check(&q, &a, true, false);
+                if (f && bad < 2) {
+                    printf("  %s seed %u fails:\n", q.name, q.seed);
+                    check(&q, &a, true, true);
+                }
+                bad += f > 0;
+                free(a.ev);
+            }
+            printf("%-12s %d/%d seeds pass\n", presets[i].name, seeds - bad, seeds);
+            fails += bad;
+        }
+        return fails ? 1 : 0;
+    }
+    for (size_t i = 0; i < sizeof presets / sizeof presets[0]; ++i) {
+        const preset *p = &presets[i];
+        evlog a, b;
+        run(p, seconds, &a);
+        run(p, seconds, &b);
+        bool same = a.n == b.n;     /* field by field: the structs carry padding bytes */
+        for (long k = 0; same && k < a.n; ++k)
+            same = a.ev[k].t == b.ev[k].t && a.ev[k].e.part == b.ev[k].e.part && a.ev[k].e.note == b.ev[k].e.note &&
+                   a.ev[k].e.velocity == b.ev[k].e.velocity && a.ev[k].e.on == b.ev[k].e.on;
+        fails += check(p, &a, same, true);
         char path[512];
         snprintf(path, sizeof path, "%s/tuna_%s.mid", dir, p->name);
         write_midi(path, &a, p->style >= 0 ? tg_style_get(p->style)->bpm : p->bpm);

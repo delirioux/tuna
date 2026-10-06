@@ -98,6 +98,8 @@ uint16_t tg_chord_scale(uint16_t scale_mask, const tt_chord *chord)
     return m;
 }
 
+static void plan_period(tg_gen *g);
+
 /* ---- setup ----------------------------------------------------------------------------------------- */
 static void defaults(tg_gen *g)
 {
@@ -117,6 +119,17 @@ static void defaults(tg_gen *g)
     g->phrase_bars = 4;
     g->pad_tones = 3;
     g->pad_restrike = false;
+    g->beats_per_bar = 4;
+    g->bass_mode = TG_BASS_MARBLES;
+    g->pad_mode = TG_PAD_BLOCK;
+    g->appoggiatura = 0.0f;
+    g->suspension = 0.0f;
+    g->trill = false;
+    g->mel_profile[0] = 0.12f;
+    g->mel_profile[1] = 0.62f;
+    g->mel_profile[2] = 0.86f;
+    g->mel_profile[3] = 0.96f;
+    g->style = 0;
     g->clock_source = TM_CLOCK_T1_T2_T3;
     tm_group x = {TM_CONTROL_IDENTICAL, TM_RANGE_NARROW, 0.5f, 0.5f, 0.75f, 0.0f, 8, {1, 1}};
     tm_group y = {TM_CONTROL_IDENTICAL, TM_RANGE_POSITIVE, 0.5f, 0.5f, 0.0f, 0.0f, 8, {1, 4}};
@@ -159,6 +172,17 @@ void tg_reseed(tg_gen *g, uint32_t seed)
     g->chord_fresh = true;
     g->mel_hold_until = 0;
     g->mel_off_at = -1;
+    g->mel_pending = -1;
+    g->mel_pending_q = 0;
+    g->trill_until = -1;
+    g->trill_start = 0;
+    g->mel_last_dir = 0;
+    g->counter_note = -1;
+    g->counter_prev_iv = -1;
+    g->counter_prev_mel = -1;
+    g->pad_silent = false;
+    g->plan_len = 0;
+    plan_period(g);
 }
 
 void tg_init(tg_gen *g, uint32_t seed, float sample_rate)
@@ -172,12 +196,156 @@ void tg_init(tg_gen *g, uint32_t seed, float sample_rate)
     tg_reseed(g, seed);
 }
 
+/* ---- harmony: the fixed progression, or a style's planned periods ---------------------------------- */
+static bool key_is_minor(const tg_gen *g) { return (tt_scale_mask(g->scale) >> 3) & 1; }
+
+void tg_chord_at(const tg_gen *g, int step, int tones, tt_chord *c)
+{
+    if (!g->style || g->plan_len <= 0) {
+        tt_prog_chord(c, g->prog, step, g->scale, tones);
+        return;
+    }
+    int slot = ((step % g->plan_len) + g->plan_len) % g->plan_len;
+    /* a step in the next period that is not planned yet starts on the tonic */
+    int idx = step / g->plan_len > g->chord_step / g->plan_len ? 0 : g->plan[slot];
+    const tg_chord_def *d = &tg_vocab(g->plan_minor)[idx];
+    tt_chord_fixed(c, d->semis, d->quality);
+    if (tones < c->n)
+        c->n = (uint8_t)tones;
+}
+
+static float hrand(tg_gen *g) { return tm_rng_float(&g->hrng); }
+
+/* pick a vocabulary entry: allowed[i] gives 0/1, weights from the style, root motion down a fifth
+ * from prev_semis multiplied by the style's fifth bias */
+static int pick_chord(tg_gen *g, const bool *allowed, int prev_semis)
+{
+    const tg_chord_def *v = tg_vocab(g->plan_minor);
+    const uint8_t *w = g->plan_minor ? g->style->w_minor : g->style->w_major;
+    float weight[TG_VOCAB], sum = 0.0f;
+    for (int i = 0; i < TG_VOCAB; ++i) {
+        weight[i] = allowed[i] ? (float)w[i] : 0.0f;
+        if (weight[i] > 0.0f && prev_semis >= 0 && pmod12(v[i].semis - prev_semis) == 5)
+            weight[i] *= g->style->fifth_bias;
+        sum += weight[i];
+    }
+    if (sum <= 0.0f)
+        return 0;
+    float r = hrand(g) * sum;
+    for (int i = 0; i < TG_VOCAB; ++i) {
+        r -= weight[i];
+        if (r < 0.0f && weight[i] > 0.0f)
+            return i;
+    }
+    return 0;
+}
+
+static void plan_period(tg_gen *g)
+{
+    if (!g->style)
+        return;
+    const tg_style *st = g->style;
+    int n = st->period_bars * g->beats_per_bar / (st->chord_beats > 0 ? st->chord_beats : 1);
+    if (n < 2) n = 2;
+    if (n > TG_PLAN_MAX) n = TG_PLAN_MAX;
+    bool minor = key_is_minor(g);
+    if (g->plan_len == n && g->plan_minor == minor && hrand(g) < st->repeat)
+        return;                                     /* the period repeats its harmony: A A */
+    g->plan_len = n;
+    g->plan_minor = minor;
+    const tg_chord_def *v = tg_vocab(minor);
+
+    /* -1: free; TF_* + 10: a slot fixed to a function */
+    int want[TG_PLAN_MAX];
+    for (int i = 0; i < n; ++i) want[i] = -1;
+    if (n >= 4) {
+        want[n / 2 - 2] = TF_S + 10;
+        want[n / 2 - 1] = TF_D + 10;                /* half cadence */
+        want[n - 2] = TF_S + 10;
+        want[n - 1] = TF_D + 10;                    /* into the next tonic */
+    } else {
+        want[n - 1] = TF_D + 10;
+    }
+    g->plan[0] = 0;
+    for (int i = 1; i < n; ++i) {
+        const tg_chord_def *prev = &v[g->plan[i - 1]];
+        bool allowed[TG_VOCAB];
+        if (prev->func == TF_SEC) {                 /* an applied chord resolves to its target */
+            g->plan[i] = prev->target;
+            continue;
+        }
+        int next_want = i + 1 < n ? want[i + 1] : TF_T + 10;
+        for (int k = 0; k < TG_VOCAB; ++k) {
+            const tg_chord_def *c = &v[k];
+            bool ok;
+            if (want[i] >= 10) {
+                int f = want[i] - 10;
+                ok = c->func == f;
+                if (f == TF_S && c->func == TF_SEC && v[c->target].func == TF_D)
+                    ok = true;                      /* V7/V before the dominant */
+                if (f == TF_D)
+                    ok = c->func == TF_D;
+            } else if (prev->func == TF_D) {
+                ok = c->func == TF_T;               /* dominants resolve */
+            } else if (prev->func == TF_S) {
+                ok = c->func == TF_S || c->func == TF_D;
+            } else {
+                ok = true;
+            }
+            if (k == g->plan[i - 1])
+                ok = false;                         /* change the chord */
+            if (c->func == TF_SEC && want[i] < 10 && (i + 1 >= n || want[i + 1] >= 10))
+                ok = false;                         /* its target would land on a fixed slot */
+            if (c->func == TF_D && next_want == TF_S + 10)
+                ok = false;                         /* no dominant right before a pre-dominant */
+            allowed[k] = ok;
+        }
+        g->plan[i] = (int8_t)pick_chord(g, allowed, prev->semis);
+    }
+}
+
+void tg_apply_style(tg_gen *g, int id)
+{
+    const tg_style *st = tg_style_get(id);
+    g->style = st;
+    if (!st)
+        return;
+    g->root = st->root;
+    g->scale = st->scale;
+    g->bpm = st->bpm;
+    g->division = st->division;
+    g->beats_per_bar = st->beats_per_bar;
+    g->chord_ticks = st->chord_beats * st->division;
+    g->phrase_bars = st->period_bars;
+    g->melody_density = st->melody_density;
+    g->base_note[TG_PART_MELODY] = st->melody_base - st->root;
+    g->melody_range = st->melody_range;
+    for (int i = 0; i < 4; ++i)
+        g->mel_profile[i] = st->profile[i];
+    g->appoggiatura = st->appoggiatura;
+    g->suspension = st->suspension;
+    g->trill = st->trill;
+    g->bass_mode = st->bass_mode;
+    g->pad_mode = st->pad_mode;
+    g->base_note[TG_PART_PAD] = st->pad_base - st->root;
+    g->pad_tones = st->pad_tones;
+    /* Marbles as the style wants it: a centred, moderately wide X, motifs recurring by deja vu */
+    g->x.control_mode = TM_CONTROL_IDENTICAL;
+    g->x.spread = 0.5f;
+    g->x.bias = 0.5f;
+    g->x.steps = 0.75f;
+    g->x.deja_vu = st->motif;
+    g->x.length = st->beats_per_bar * 2;
+    g->plan_len = 0;
+    plan_period(g);
+}
+
 static void reload_scale(tg_gen *g)
 {
     if (g->loaded_scale == g->scale && g->loaded_prog == g->prog && g->loaded_step == g->chord_step &&
         g->loaded_root == g->root)
         return;
-    tt_prog_chord(&g->chord, g->prog, g->chord_step, g->scale, 4);
+    tg_chord_at(g, g->chord_step, 4, &g->chord);
     tm_scale s;
     tg_scale_for_chord(&s, tt_scale_mask(g->scale), &g->chord);
     tm_xy_load_scale(&g->xy, -1, &s);
@@ -218,7 +386,7 @@ static void note_on(tg_gen *g, int p, int note, int velocity, int offset, tg_eve
 
 static void pad_off(tg_gen *g, int offset, tg_event_fn fn, void *ctx)
 {
-    for (int i = 0; i < g->pad_n; ++i)
+    for (int i = 0; i < g->pad_n && !g->pad_silent; ++i)
         emit(fn, ctx, TG_PART_PAD, g->pad[i], 0, false, offset);
     g->pad_n = 0;
 }
@@ -237,7 +405,7 @@ static beat_pos position(const tg_gen *g)
 {
     beat_pos b;
     b.q = (int)(g->ticks - 1);               /* index of the tick just started */
-    b.bar_ticks = g->division * 4;
+    b.bar_ticks = g->division * g->beats_per_bar;
     b.downbeat = b.q % b.bar_ticks == 0;
     b.on_beat = b.q % g->division == 0;
     return b;
@@ -256,10 +424,10 @@ static float unit(const tg_gen *g, int ch, float v)
 }
 
 /* pad: voice the chord as close as possible to the previous voicing; common tones keep sounding */
-static void pad_voice(tg_gen *g, int offset, int velocity, bool restrike, tg_event_fn fn, void *ctx)
+static void pad_voice(tg_gen *g, int offset, int velocity, bool restrike, bool silent, tg_event_fn fn, void *ctx)
 {
     tt_chord c;
-    tt_prog_chord(&c, g->prog, g->chord_step, g->scale, g->pad_tones);
+    tg_chord_at(g, g->chord_step, g->pad_tones, &c);
     int n = c.n;
     int lo = g->base_note[TG_PART_PAD] + g->root;
     int best[TG_PAD_VOICES], best_cost = 1 << 30;
@@ -288,6 +456,13 @@ static void pad_voice(tg_gen *g, int offset, int velocity, bool restrike, tg_eve
             for (int k = 0; k < n; ++k)
                 best[k] = v[k];
         }
+    }
+    g->pad_silent = silent;
+    if (silent) {
+        for (int k = 0; k < n; ++k)
+            g->pad[k] = best[k];
+        g->pad_n = n;
+        return;
     }
     /* release what does not continue, strike what is new (everything on a re-strike) */
     for (int i = 0; i < g->pad_n; ++i) {
@@ -331,7 +506,7 @@ static void bass_play(tg_gen *g, beat_pos b, float u, int velocity, int offset, 
     } else if (to_change <= g->division && g->chord_ticks > g->division) {
         /* approach: a scale step into the next chord's root */
         tt_chord next;
-        tt_prog_chord(&next, g->prog, g->chord_step + 1, g->scale, 3);
+        tg_chord_at(g, g->chord_step + 1, 3, &next);
         int target = bass_root_note(g, next.root);
         note = mask_step(g->chord_scale, g->root, target, u < 0.5f ? -1 : 1);
     } else if (u < 0.40f) {
@@ -353,6 +528,11 @@ static void bass_play(tg_gen *g, beat_pos b, float u, int velocity, int offset, 
  * lands on the tonic exactly when the harmony returns home. */
 static void period_of(const tg_gen *g, int bar_ticks, int *period, int *anchor)
 {
+    if (g->style && g->plan_len > 0) {
+        *period = g->plan_len * g->chord_ticks;     /* a planned period starts on its tonic */
+        *anchor = 0;
+        return;
+    }
     int len = tt_prog_len(g->prog);
     int cycle = len * g->chord_ticks;
     int min_ticks = (g->phrase_bars > 0 ? g->phrase_bars : 4) * bar_ticks;
@@ -374,12 +554,22 @@ static void period_of(const tg_gen *g, int bar_ticks, int *period, int *anchor)
 
 int tg_period_position(const tg_gen *g, int *period)
 {
-    int p, a, bar = g->division * 4;
+    int p, a, bar = g->division * g->beats_per_bar;
     period_of(g, bar, &p, &a);
     if (period)
         *period = p;
     int q = (int)(g->ticks - 1);
     return ((q - a) % p + p) % p;
+}
+
+int tg_half_position(const tg_gen *g)
+{
+    int period;
+    tg_period_position(g, &period);
+    /* a planned period: the question ends on the half-cadence dominant (bar 4 of 8); else halfway */
+    if (g->style && g->plan_len >= 4)
+        return (g->plan_len / 2 - 1) * g->chord_ticks;
+    return period / 2;
 }
 
 static void melody_tick(tg_gen *g, beat_pos b, float x2, int velocity, int offset, tg_event_fn fn, void *ctx)
@@ -397,7 +587,7 @@ static void melody_tick(tg_gen *g, beat_pos b, float x2, int velocity, int offse
     bool arrival = d == 0 && b.q > 0;
     bool approach = to_arrival == g->division;
     bool homing = !approach && to_arrival <= b.bar_ticks + g->division;
-    bool half = period >= 4 * b.bar_ticks && d == period / 2;
+    bool half = period >= 4 * b.bar_ticks && d == tg_half_position(g);
 
     /* the tonic nearest the current note, inside the range */
     int home = mask_nearest(tonic, g->root, g->mel_note);
@@ -408,8 +598,23 @@ static void melody_tick(tg_gen *g, beat_pos b, float x2, int velocity, int offse
         note_off(g, TG_PART_MELODY, offset, fn, ctx);
         g->mel_off_at = -1;
     }
+    if (!arrival && b.q < g->trill_until) {
+        /* a trill: upper and main note alternate, ending on the main note */
+        int n = (b.q - g->trill_start) % 2 ? g->trill_main : g->trill_upper;
+        note_on(g, TG_PART_MELODY, n, accent(velocity, b) - 8, offset, fn, ctx);
+        return;
+    }
+    if (!arrival && g->mel_pending >= 0 && b.q >= g->mel_pending_q) {
+        /* an ornament resolves: appoggiatura or suspension, a step down to the chord tone */
+        g->mel_last_dir = g->mel_pending > g->mel_note ? 1 : g->mel_pending < g->mel_note ? -1 : 0;
+        g->mel_note = g->mel_pending;
+        g->mel_pending = -1;
+        note_on(g, TG_PART_MELODY, g->mel_note, accent(velocity, b) - 10, offset, fn, ctx);
+        return;
+    }
     if (!arrival && b.q < g->mel_hold_until)
         return;
+    g->mel_pending = -1;
 
     int note;
     if (arrival) {
@@ -425,6 +630,14 @@ static void melody_tick(tg_gen *g, beat_pos b, float x2, int velocity, int offse
         int dd = down > g->mel_note ? down - g->mel_note : g->mel_note - down;
         note = (dd <= du && down >= lo) || up > hi ? down : up;
         g->mel_hold_until = b.q + g->division;
+        if (g->trill && g->division >= 2) {
+            /* the classical cadential trill: start on the upper note, end on the main note */
+            g->trill_main = note;
+            g->trill_upper = mask_step(g->chord_scale, g->root, note, 1);
+            g->trill_start = b.q;
+            g->trill_until = b.q + g->division;
+            note = g->trill_upper;
+        }
     } else if (half) {
         /* the question: halfway, rest on the fifth or third of the chord, not the tonic */
         uint16_t open = (uint16_t)(chord_mask(&g->chord, 3) & ~chord_mask(&g->chord, 1));
@@ -437,6 +650,19 @@ static void melody_tick(tg_gen *g, beat_pos b, float x2, int velocity, int offse
         g->mel_hold_until = b.q + 2 * g->division;
         g->mel_off_at = b.q + g->division;
     } else {
+        /* a suspension: where the chord changes, hold the melody note over it if it is not a
+         * chord tone but the step below is, and resolve down on the next beat */
+        bool chord_change = g->chord_ticks > 0 && b.q % g->chord_ticks == 0 && b.q > 0;
+        if (chord_change && g->sounding[TG_PART_MELODY] == g->mel_note && g->suspension > 0.0f &&
+            !in_mask(chord, g->mel_note, g->root)) {
+            int below = mask_step(g->chord_scale, g->root, g->mel_note, -1);
+            if (in_mask(chord, below, g->root) && below >= lo && hrand(g) < g->suspension) {
+                g->mel_pending = below;
+                g->mel_pending_q = b.q + g->division;
+                g->mel_hold_until = g->mel_pending_q;
+                return;
+            }
+        }
         /* density: downbeats always play, other beats mostly, off-beats as the density says;
          * the choice comes from a deja-vu sequence, so rhythms recur like motifs */
         g->mel_rhythm.deja_vu = g->x.deja_vu;
@@ -451,7 +677,8 @@ static void melody_tick(tg_gen *g, beat_pos b, float x2, int velocity, int offse
         float m = fabsf(x);
         int dir = x < 0.0f ? -1 : 1;
         /* |x| near 0 repeats the note, then steps, thirds, and rarely a fourth or fifth */
-        int k = m < 0.12f ? 0 : m < 0.62f ? 1 : m < 0.86f ? 2 : m < 0.96f ? 3 : 4;
+        const float *pr = g->mel_profile;
+        int k = m < pr[0] ? 0 : m < pr[1] ? 1 : m < pr[2] ? 2 : m < pr[3] ? 3 : 4;
         if (homing) {
             /* the last bar steers toward the tonic, by steps */
             dir = home > g->mel_note ? 1 : home < g->mel_note ? -1 : (x < 0.0f ? -1 : 1);
@@ -483,13 +710,125 @@ static void melody_tick(tg_gen *g, beat_pos b, float x2, int velocity, int offse
             if (snapped < lo)
                 snapped = mask_step(chord, g->root, g->mel_note, 1);
             note = snapped;
+            /* an appoggiatura: lean on the step above the chord tone, resolve half a beat later */
+            if (g->appoggiatura > 0.0f && hrand(g) < g->appoggiatura) {
+                int lean = mask_step(g->chord_scale, g->root, note, 1);
+                if (!in_mask(chord, lean, g->root) && lean <= hi + 2) {
+                    g->mel_pending = note;
+                    g->mel_pending_q = b.q + (g->division >= 2 ? g->division / 2 : 1);
+                    g->mel_hold_until = g->mel_pending_q;
+                    note = lean;
+                }
+            }
         }
         g->mel_prev_interval = k;
     }
     if (arrival || approach || half)
         g->mel_prev_interval = note - g->mel_note > 2 ? 3 : note - g->mel_note < -2 ? -3 : 0;
+    g->mel_last_dir = note > g->mel_note ? 1 : note < g->mel_note ? -1 : 0;
     g->mel_note = note;
     note_on(g, TG_PART_MELODY, note, accent(velocity, b), offset, fn, ctx);   /* legato: held until the next */
+}
+
+/* ---- accompaniment figures -------------------------------------------------------------------------- */
+/* bass, root mode: the chord root on each chord change, held */
+static void bass_root(tg_gen *g, beat_pos b, int velocity, int offset, tg_event_fn fn, void *ctx)
+{
+    int note = bass_root_note(g, g->chord.root);
+    g->bass_note = note;
+    g->chord_fresh = false;
+    note_on(g, TG_PART_BASS, note, accent(velocity, b) - 6, offset, fn, ctx);
+}
+
+/* bass, walking: a note every beat, the root on the chord change, steps toward the next root,
+ * a chord tone mid-chord, and a neighbour of the next root on the last beat */
+static void bass_walk(tg_gen *g, beat_pos b, int velocity, int offset, tg_event_fn fn, void *ctx)
+{
+    const int lo = g->base_note[TG_PART_BASS] + g->root, hi = lo + 19;
+    int ct = g->chord_ticks > 0 ? g->chord_ticks : b.bar_ticks;
+    int pos = b.q % ct;
+    int beats_left = (ct - pos) / g->division;
+    int note;
+    if (pos == 0 || g->bass_note < 0) {
+        note = bass_root_note(g, g->chord.root);
+    } else {
+        tt_chord next;
+        tg_chord_at(g, g->chord_step + 1, 3, &next);
+        int target = bass_root_note(g, next.root);
+        int dir = target > g->bass_note ? 1 : target < g->bass_note ? -1 : (hrand(g) < 0.5f ? 1 : -1);
+        if (beats_left <= 1) {
+            note = mask_step(g->chord_scale, g->root, target, -dir);        /* the neighbour of the next root */
+            if (note == g->bass_note)
+                note = mask_step(g->chord_scale, g->root, target, dir);
+        } else {
+            note = mask_step(g->chord_scale, g->root, g->bass_note, dir);
+            if (pos == ct / 2)                                              /* mid-chord: a chord tone */
+                note = mask_nearest(chord_mask(&g->chord, 3), g->root, note);
+        }
+    }
+    if (note > hi) note -= 12;
+    if (note < lo) note += 12;
+    g->bass_note = note;
+    g->chord_fresh = false;
+    note_on(g, TG_PART_BASS, note, accent(velocity, b) - 4, offset, fn, ctx);
+}
+
+/* third part, Alberti: low, high, middle, high through the chord, every tick */
+static void pad_alberti(tg_gen *g, beat_pos b, int velocity, int offset, tg_event_fn fn, void *ctx)
+{
+    if (g->pad_n < 3)
+        return;
+    static const uint8_t figure[4] = {0, 2, 1, 2};
+    int note = g->pad[figure[b.q % 4]];
+    note_on(g, TG_PART_PAD, note, accent(velocity, b) - 30, offset, fn, ctx);
+}
+
+/* third part, counter-melody: below the melody, in contrary motion, consonant on strong beats,
+ * no parallel fifths or octaves with the melody */
+static void pad_counter(tg_gen *g, beat_pos b, int velocity, int offset, tg_event_fn fn, void *ctx)
+{
+    int every = g->division >= 2 ? g->division / 2 : 1;            /* eighth notes */
+    if (b.q % every)
+        return;
+    const int lo = g->base_note[TG_PART_PAD] + g->root, hi = lo + 19;
+    const int mel = g->mel_note;
+    const uint16_t chord = chord_mask(&g->chord, 3);
+    if (mel < 0)
+        return;
+    if (g->counter_note < 0)
+        g->counter_note = mask_nearest(chord, g->root, clampi(mel - 9, lo, hi));
+    int dir = g->mel_last_dir ? -g->mel_last_dir : (g->counter_note < (lo + hi) / 2 ? 1 : -1);
+    int cand = mask_step(g->chord_scale, g->root, g->counter_note, dir);
+    bool strong = b.q % g->division == 0;
+    if (strong) {
+        int best = cand, best_score = 1 << 20;
+        bool mel_moved = g->counter_prev_mel >= 0 && mel != g->counter_prev_mel;
+        int mel_dir = mel > g->counter_prev_mel ? 1 : -1;
+        for (int n = cand - 4; n <= cand + 4; ++n) {
+            if (!in_mask(chord, n, g->root) || n < lo || n > hi || n > mel - 3)
+                continue;
+            int iv = pmod12(mel - n);
+            int score = (iv == 3 || iv == 4 || iv == 8 || iv == 9) ? 0 : (iv == 0 || iv == 7) ? 2 : iv == 5 ? 4 : 8;
+            bool moved = n != g->counter_note;
+            if ((iv == 0 || iv == 7) && iv == g->counter_prev_iv && mel_moved && moved &&
+                (n > g->counter_note ? 1 : -1) == mel_dir)
+                score += 20;                                         /* parallel fifth or octave */
+            score += (n > cand ? n - cand : cand - n);
+            if (score < best_score) {
+                best_score = score;
+                best = n;
+            }
+        }
+        cand = best;
+    }
+    while (cand > mel - 3 && cand - 12 >= lo)
+        cand -= 12;
+    if (cand > hi) cand = mask_step(g->chord_scale, g->root, g->counter_note, -1);
+    if (cand < lo) cand = mask_step(g->chord_scale, g->root, g->counter_note, 1);
+    g->counter_prev_iv = pmod12(mel - cand);
+    g->counter_prev_mel = mel;
+    g->counter_note = cand;
+    note_on(g, TG_PART_PAD, cand, accent(velocity, b) - (strong ? 14 : 22), offset, fn, ctx);
 }
 
 /* ---- process --------------------------------------------------------------------------------------- */
@@ -520,6 +859,8 @@ void tg_process(tg_gen *g, int size, tg_event_fn fn, void *ctx)
             if (g->chord_ticks > 0 && g->ticks > 1 && (g->ticks - 1) % g->chord_ticks == 0) {
                 g->chord_step++;
                 g->chord_fresh = true;
+                if (g->style && g->plan_len > 0 && g->chord_step % g->plan_len == 0)
+                    plan_period(g);                  /* a new period: plan its harmony */
             }
             reload_scale(g);
         }
@@ -548,22 +889,37 @@ void tg_process(tg_gen *g, int size, tg_event_fn fn, void *ctx)
         beat_pos b = position(g);
         if (tick) {
             if (g->chord_fresh || g->pad_n == 0)
-                pad_voice(g, i, accent(velocity, b) - 20, false, fn, ctx);
-            if (g->chord_fresh && g->since_note[TG_PART_BASS] >= min_gap)
+                pad_voice(g, i, accent(velocity, b) - 20, false, g->pad_mode != TG_PAD_BLOCK, fn, ctx);
+            if (g->pad_mode == TG_PAD_ALBERTI)
+                pad_alberti(g, b, velocity, i, fn, ctx);
+            if (g->bass_mode == TG_BASS_WALKING) {
+                if (b.on_beat)
+                    bass_walk(g, b, velocity, i, fn, ctx);
+            } else if (g->bass_mode == TG_BASS_ROOT) {
+                if (g->chord_fresh)
+                    bass_root(g, b, velocity, i, fn, ctx);
+            } else if (g->chord_fresh && g->since_note[TG_PART_BASS] >= min_gap) {
                 bass_play(g, b, unit(g, TG_PART_BASS, o[0]), velocity, i, fn, ctx);
+            }
             melody_tick(g, b, o[1], velocity, i, fn, ctx);
+            if (g->pad_mode == TG_PAD_COUNTER)
+                pad_counter(g, b, velocity, i, fn, ctx);
         }
+        if (g->bass_mode != TG_BASS_MARBLES && g->pad_mode != TG_PAD_BLOCK)
+            continue;                                /* the figures run on the clock, not on T1/T3 */
         bool g1 = gate[i * 2], g3 = gate[i * 2 + 1];
         bool bass_rise = g1 && !g->gate_prev[TG_PART_BASS];
         bool bass_fall = !g1 && g->gate_prev[TG_PART_BASS];
         bool pad_rise = g3 && !g->gate_prev[TG_PART_PAD];
         g->gate_prev[TG_PART_BASS] = g1;
         g->gate_prev[TG_PART_PAD] = g3;
-        if (bass_fall && g->since_note[TG_PART_BASS] >= min_gap)
-            note_off(g, TG_PART_BASS, i, fn, ctx);
-        if (bass_rise && g->since_note[TG_PART_BASS] >= min_gap)
-            bass_play(g, b, unit(g, TG_PART_BASS, o[0]), velocity, i, fn, ctx);
-        if (pad_rise && g->pad_restrike && g->since_note[TG_PART_PAD] >= min_gap)
-            pad_voice(g, i, accent(velocity, b) - 26, true, fn, ctx);
+        if (g->bass_mode == TG_BASS_MARBLES) {
+            if (bass_fall && g->since_note[TG_PART_BASS] >= min_gap)
+                note_off(g, TG_PART_BASS, i, fn, ctx);
+            if (bass_rise && g->since_note[TG_PART_BASS] >= min_gap)
+                bass_play(g, b, unit(g, TG_PART_BASS, o[0]), velocity, i, fn, ctx);
+        }
+        if (g->pad_mode == TG_PAD_BLOCK && pad_rise && g->pad_restrike && g->since_note[TG_PART_PAD] >= min_gap)
+            pad_voice(g, i, accent(velocity, b) - 26, true, false, fn, ctx);
     }
 }

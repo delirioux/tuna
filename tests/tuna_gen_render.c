@@ -29,13 +29,18 @@ typedef struct {
     float mel_density;
     int pad_tones;
     bool pad_restrike;
+    int style;                /* TG_STYLE_*, -1 = the settings above */
+    bool keys;                /* sketch synth: a keyboard sound for the third part (figures) */
 } preset;
 
 static const preset presets[] = {
     /* name     bpm  div root scale        prog           chord  T model                   bias  jit   dv    pw    pwstd len  spread xbias steps xdv  xlen ctrl                  seed dens pad restrike */
-    {"garden",  72,  2,  2,  TS_DORIAN,     TP_MODAL_VAMP,  16, TM_T_COMPLEMENTARY_BERNOULLI, 0.5f, 0.15f, 0.6f, 0.75f, 0.2f, 8,  0.40f, 0.5f, 0.80f, 0.70f, 8, TM_CONTROL_TILT,      1,  0.35f, 4, false},
-    {"rhythm",  104, 4,  9,  TS_AEOLIAN,    TP_ANDALUSIAN,  32, TM_T_DRUMS,                 0.8f, 0.0f,  0.75f, 0.3f, 0.0f, 16, 0.55f, 0.5f, 0.68f, 0.80f, 16, TM_CONTROL_IDENTICAL, 7,  0.55f, 3, true},
-    {"lydian",  84,  2,  5,  TS_LYDIAN,     TP_MODAL_VAMP,  16, TM_T_CLUSTERS,              0.65f, 0.3f, 0.4f, 0.6f, 0.4f, 8,  0.50f, 0.55f, 0.75f, 0.55f, 8, TM_CONTROL_BUMP,      42, 0.40f, 4, false},
+    {"garden",  72,  2,  2,  TS_DORIAN,     TP_MODAL_VAMP,  16, TM_T_COMPLEMENTARY_BERNOULLI, 0.5f, 0.15f, 0.6f, 0.75f, 0.2f, 8,  0.40f, 0.5f, 0.80f, 0.70f, 8, TM_CONTROL_TILT,      1,  0.35f, 4, false, -1, false},
+    {"rhythm",  104, 4,  9,  TS_AEOLIAN,    TP_ANDALUSIAN,  32, TM_T_DRUMS,                 0.8f, 0.0f,  0.75f, 0.3f, 0.0f, 16, 0.55f, 0.5f, 0.68f, 0.80f, 16, TM_CONTROL_IDENTICAL, 7,  0.55f, 3, true, -1, false},
+    {"lydian",  84,  2,  5,  TS_LYDIAN,     TP_MODAL_VAMP,  16, TM_T_CLUSTERS,              0.65f, 0.3f, 0.4f, 0.6f, 0.4f, 8,  0.50f, 0.55f, 0.75f, 0.55f, 8, TM_CONTROL_BUMP,      42, 0.40f, 4, false, -1, false},
+    /* composer signatures: everything comes from the style; only name, seed and synth matter here */
+    {.name = "bach",   .seed = 11, .style = TG_STYLE_BACH,   .keys = true},
+    {.name = "mozart", .seed = 5,  .style = TG_STYLE_MOZART, .keys = true},
 };
 
 /* ---- event log (for MIDI and the synth) ------------------------------------------------------- */
@@ -46,6 +51,8 @@ typedef struct {
     /* musical checks, harmonized mode */
     long mel_notes, mel_steps, mel_downbeats, mel_downbeat_chord;
     long arrivals, arrivals_tonic, arrivals_tonic_chord, arrivals_by_step;
+    long off_key, halves, halves_on_dominant, bass_changes, bass_roots, counter_notes, parallels;
+    int counter_prev, counter_prev_iv, counter_prev_mel;
     int mel_prev;
 } evlog;
 
@@ -61,6 +68,30 @@ static void on_event(void *ctx, const tg_event *e)
     l->ev[l->n].t = l->now + e->offset;
     l->ev[l->n].e = *e;
     l->n++;
+    if (e->on) {
+        /* in key: the scale, the current chord, or the scale bent to the chord */
+        uint16_t allowed = tt_scale_mask(cur->scale) | cur->chord_scale;
+        for (int k = 0; k < cur->chord.n; ++k)
+            allowed |= (uint16_t)(1u << ((cur->chord.root + cur->chord.tone[k]) % 12));
+        int pc = ((e->note - cur->root) % 12 + 12) % 12;
+        l->off_key += !((allowed >> pc) & 1);
+    }
+    if (e->on && e->part == TG_PART_BASS && cur->style && cur->chord_ticks > 0 &&
+        (cur->ticks - 1) % cur->chord_ticks == 0) {
+        l->bass_changes++;
+        l->bass_roots += ((e->note - cur->root) % 12 + 12) % 12 == cur->chord.root;
+    }
+    if (e->on && e->part == TG_PART_PAD && cur->pad_mode == TG_PAD_COUNTER) {
+        /* parallel fifths or octaves between melody and counter-melody */
+        int mel = cur->mel_note, iv = ((mel - e->note) % 12 + 12) % 12;
+        if (l->counter_prev >= 0 && (iv == 0 || iv == 7) && iv == l->counter_prev_iv && mel != l->counter_prev_mel &&
+            e->note != l->counter_prev && (mel > l->counter_prev_mel) == (e->note > l->counter_prev))
+            l->parallels++;
+        l->counter_notes++;
+        l->counter_prev = e->note;
+        l->counter_prev_iv = iv;
+        l->counter_prev_mel = mel;
+    }
     if (e->on && e->part == TG_PART_MELODY) {
         int step = l->mel_prev >= 0 ? abs(e->note - l->mel_prev) : 99;
         if (l->mel_prev >= 0) {
@@ -69,21 +100,30 @@ static void on_event(void *ctx, const tg_event *e)
         }
         l->mel_prev = e->note;
         int q = (int)(cur->ticks - 1);
-        if (q > 0 && tg_period_position(cur, NULL) == 0) {
+        int period = 0, ppos = tg_period_position(cur, &period);
+        if (cur->style && ppos == tg_half_position(cur)) {
+            l->halves++;
+            l->halves_on_dominant += cur->chord.root == 7 || cur->chord.root == 11;
+        }
+        if (q > 0 && ppos == 0) {
             l->arrivals++;
             l->arrivals_by_step += step >= 1 && step <= 2;
             l->arrivals_tonic += ((e->note - cur->root) % 12 + 12) % 12 == 0;
             l->arrivals_tonic_chord += cur->chord.root == 0;
         }
-        if (q % (cur->division * 4) == 0) {
+        if (q % (cur->division * cur->beats_per_bar) == 0) {
             l->mel_downbeats++;
             int pc = ((e->note - cur->root) % 12 + 12) % 12;
             tt_chord c = cur->chord;
-            for (int k = 0; k < c.n && k < 3; ++k)
-                if ((c.root + c.tone[k]) % 12 == pc) {
-                    l->mel_downbeat_chord++;
-                    break;
-                }
+            if (cur->mel_pending >= 0) {
+                l->mel_downbeat_chord++;      /* an appoggiatura: a non-chord tone on purpose, resolving */
+            } else {
+                for (int k = 0; k < c.n && k < 3; ++k)
+                    if ((c.root + c.tone[k]) % 12 == pc) {
+                        l->mel_downbeat_chord++;
+                        break;
+                    }
+            }
         }
     }
 }
@@ -92,6 +132,8 @@ static void run(const preset *p, int seconds, evlog *l)
 {
     static tg_gen g;
     tg_init(&g, p->seed, (float)SR);
+    if (p->style >= 0)
+        goto styled;              /* a signature brings its own settings */
     g.bpm = p->bpm;
     g.division = p->division;
     g.root = p->root;
@@ -114,9 +156,15 @@ static void run(const preset *p, int seconds, evlog *l)
     g.melody_density = p->mel_density;
     g.pad_tones = p->pad_tones;
     g.pad_restrike = p->pad_restrike;
+styled:
+    if (p->style >= 0) {
+        tg_apply_style(&g, p->style);
+        tg_reseed(&g, p->seed);
+    }
     cur = &g;
     memset(l, 0, sizeof *l);
     l->mel_prev = -1;
+    l->counter_prev = -1;
     long total = (long)seconds * SR;
     for (l->now = 0; l->now < total; l->now += BLOCK)
         tg_process(&g, BLOCK, on_event, l);
@@ -127,7 +175,7 @@ static void run(const preset *p, int seconds, evlog *l)
         l->now += BLOCK;
         if (arrived < 0 && g.ticks > 1 && tg_period_position(&g, NULL) == 0)
             arrived = g.ticks;
-        if (arrived >= 0 && g.ticks >= arrived + g.division * 4)
+        if (arrived >= 0 && g.ticks >= arrived + g.division * g.beats_per_bar)
             break;
     }
     tg_all_off(&g, on_event, l);
@@ -189,7 +237,7 @@ typedef struct { float freq, amp, env, phase, phase2; bool on; int note; float k
 
 static float mtof(int n) { return 440.0f * powf(2.0f, (n - 69) / 12.0f); }
 
-static void write_wav(const char *path, const evlog *l, int seconds)
+static void write_wav(const char *path, const evlog *l, int seconds, bool keys)
 {
     (void)seconds;
     long total = (l->n ? l->ev[l->n - 1].t : 0) + 4L * SR;    /* to the last note, plus its tail */
@@ -248,7 +296,19 @@ static void write_wav(const char *path, const evlog *l, int seconds)
             out_l += 0.30f * s * x->env; out_r += 0.24f * s * x->env;
         }
         /* pad: two detuned sines, slow envelope */
-        for (int k = 2; k < 6; ++k) {
+        for (int k = 2; k < 6 && keys; ++k) {
+            /* keys: fast attack, decay while held, short release; a few harmonics */
+            voice *x = &v[k];
+            if (x->on && x->phase2 == 0.0f) { x->env = x->amp * 0.8f; x->phase2 = 1.0f; }
+            if (!x->on) x->phase2 = 0.0f;
+            x->env *= x->on ? 0.99985f : 0.9985f;
+            x->phase += x->freq / SR; x->phase -= floorf(x->phase);
+            float ph = 6.2831853f * x->phase;
+            float s = sinf(ph) + 0.45f * sinf(2.0f * ph) + 0.2f * sinf(3.0f * ph) + 0.08f * sinf(5.0f * ph);
+            out_l += 0.16f * s * x->env * (k % 2 ? 1.0f : 0.7f);
+            out_r += 0.16f * s * x->env * (k % 2 ? 0.7f : 1.0f);
+        }
+        for (int k = 2; k < 6 && !keys; ++k) {
             voice *x = &v[k];
             float target = x->on ? x->amp * 0.6f : 0.0f;
             x->env += (target - x->env) * (x->on ? 0.00008f : 0.00004f);
@@ -307,15 +367,7 @@ int main(int argc, char **argv)
         for (long k = 0; same && k < a.n; ++k)
             same = a.ev[k].t == b.ev[k].t && a.ev[k].e.part == b.ev[k].e.part && a.ev[k].e.note == b.ev[k].e.note &&
                    a.ev[k].e.velocity == b.ev[k].e.velocity && a.ev[k].e.on == b.ev[k].e.on;
-        /* allowed pitch classes: the scale plus every chord tone of the progression */
-        uint16_t allowed = tt_scale_mask(p->scale);
-        for (int s = 0; s < tt_prog_len(p->prog); ++s) {
-            tt_chord c;
-            tt_prog_chord(&c, p->prog, s, p->scale, 4);
-            for (int k = 0; k < c.n; ++k)
-                allowed |= (uint16_t)(1u << ((c.root + c.tone[k]) % 12));
-        }
-        long count[TG_PARTS] = {0}, off_key = 0;
+        long count[TG_PARTS] = {0};
         int lo = 127, hi = 0;
         for (long k = 0; k < a.n; ++k)
             if (a.ev[k].e.on) {
@@ -323,23 +375,28 @@ int main(int argc, char **argv)
                 int n = a.ev[k].e.note;
                 lo = n < lo ? n : lo;
                 hi = n > hi ? n : hi;
-                off_key += !((allowed >> (((n - p->root) % 12 + 12) % 12)) & 1);
             }
-        printf("%-8s %ld events (bass %ld, melody %ld, pad %ld), notes %d..%d, off-key %ld, seed replays: %s\n"
+        printf("%-8s %ld events (bass %ld, melody %ld, third %ld), notes %d..%d, off-key %ld, seed replays: %s\n"
                "         melody: %.0f%% steps (<= 2 semitones), downbeats on chord tones %ld/%ld,"
                " arrivals on the tonic %ld/%ld (over the tonic chord %ld, by step %ld)\n",
-               p->name, a.n, count[0], count[1], count[2], lo, hi, off_key, same ? "yes" : "NO",
+               p->name, a.n, count[0], count[1], count[2], lo, hi, a.off_key, same ? "yes" : "NO",
                a.mel_notes ? 100.0 * a.mel_steps / a.mel_notes : 0.0, a.mel_downbeat_chord, a.mel_downbeats,
                a.arrivals_tonic, a.arrivals, a.arrivals_tonic_chord, a.arrivals_by_step);
+        if (p->style >= 0)
+            printf("         style: half cadences on the dominant %ld/%ld, bass on the root at chord changes %ld/%ld,"
+                   " counter-melody notes %ld with %ld parallel fifths/octaves\n",
+                   a.halves_on_dominant, a.halves, a.bass_roots, a.bass_changes, a.counter_notes, a.parallels);
+        fails += !same || a.off_key || !count[0] || !count[1] || !count[2];
         fails += a.mel_downbeat_chord != a.mel_downbeats;
         fails += !a.arrivals || a.arrivals_tonic != a.arrivals || a.arrivals_tonic_chord != a.arrivals ||
                  a.arrivals_by_step != a.arrivals;
-        fails += !same || off_key || !count[0] || !count[1] || !count[2];
+        if (p->style >= 0)
+            fails += a.halves_on_dominant != a.halves || a.bass_roots != a.bass_changes;
         char path[512];
         snprintf(path, sizeof path, "%s/tuna_%s.mid", dir, p->name);
-        write_midi(path, &a, p->bpm);
+        write_midi(path, &a, p->style >= 0 ? tg_style_get(p->style)->bpm : p->bpm);
         snprintf(path, sizeof path, "%s/tuna_%s.wav", dir, p->name);
-        write_wav(path, &a, seconds);
+        write_wav(path, &a, seconds, p->keys);
         free(a.ev);
         free(b.ev);
     }

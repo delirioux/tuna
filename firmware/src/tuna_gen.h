@@ -19,6 +19,9 @@
  *     pad     the chord itself, voiced close to the previous chord (smallest total movement),
  *             struck on each chord change and re-struck on T3.
  *     all     accents by beat position on top of Y's velocity.
+ * A composer signature (tuna_style.h, tg_apply_style) replaces the fixed progression with
+ * planned functional harmony and can swap the bass (root, walking) and the third part (Alberti
+ * figures, a counter-melody), and add ornaments (appoggiatura, suspension, trill).
  * Every Marbles parameter stays reachable through gen->t, gen->x and gen->y. */
 #ifndef TUNA_GEN_H
 #define TUNA_GEN_H
@@ -27,6 +30,7 @@
 #include <stdint.h>
 #include "tuna_marbles.h"
 #include "tuna_theory.h"
+#include "tuna_style.h"
 
 #define TG_PARTS 3
 #define TG_PAD_VOICES TT_CHORD_MAX
@@ -45,6 +49,7 @@ typedef struct {
     /* settings (change any time) */
     float bpm;
     int division;                 /* master ticks per beat: 2 = eighths, 4 = sixteenths */
+    int beats_per_bar;            /* meter: 4 = 4/4, 3 = 3/4 */
     int root;                     /* key tonic pitch class, 0 = C */
     int scale;                    /* TS_* */
     int prog;                     /* TP_* */
@@ -57,6 +62,13 @@ typedef struct {
     int phrase_bars;              /* shortest melody period (question + answer) in bars */
     int pad_tones;                /* 3 = triads, 4 = sevenths */
     bool pad_restrike;            /* re-strike the pad chord on T3 */
+    int bass_mode;                /* TG_BASS_* */
+    int pad_mode;                 /* TG_PAD_* */
+    float appoggiatura;           /* chance of an appoggiatura on a melody downbeat */
+    float suspension;             /* chance of a suspension where the chord changes */
+    bool trill;                   /* trill on the note before the final tonic */
+    float mel_profile[4];         /* melody interval thresholds: repeat < step < third < fourth */
+    const tg_style *style;        /* NULL: the fixed progression `prog` */
 
     /* Marbles */
     tm_rng rng;
@@ -85,6 +97,16 @@ typedef struct {
     long mel_off_at;              /* tick at which a held melody note is released, -1 = none */
     tm_rng hrng;                  /* the harmonizer's own randomness: Marbles stays untouched */
     tm_sequence mel_rhythm;       /* which off-beat ticks the melody plays, with deja vu */
+    int8_t plan[TG_PLAN_MAX];     /* the period's chords, vocabulary indices (with a style) */
+    int plan_len;
+    bool plan_minor;
+    int mel_pending;              /* a melody note due at mel_pending_q (ornament resolution), -1 = none */
+    long mel_pending_q;
+    int trill_main, trill_upper;
+    long trill_start, trill_until;
+    int mel_last_dir;             /* direction of the melody's last move: -1, 0, 1 */
+    int counter_note, counter_prev_iv, counter_prev_mel;
+    bool pad_silent;              /* the pad voicing is a reference for figures, not sounding */
 } tg_gen;
 
 void tg_init(tg_gen *g, uint32_t seed, float sample_rate);
@@ -96,6 +118,13 @@ void tg_process(tg_gen *g, int size, tg_event_fn fn, void *ctx);
 /* Ticks since the melody's last arrival on the tonic, for the current tick (0 = arriving now);
  * *period gets the period's length in ticks. */
 int tg_period_position(const tg_gen *g, int *period);
+/* Tick within the period where the question ends (the half cadence). */
+int tg_half_position(const tg_gen *g);
+/* Apply a composer signature (TG_STYLE_*): key, tempo, meter, harmony, accompaniment, ornaments.
+ * Takes effect from the next period; call tg_reseed() to start cleanly. */
+void tg_apply_style(tg_gen *g, int style);
+/* The chord at a chord step (the planned harmony with a style, else the progression). */
+void tg_chord_at(const tg_gen *g, int step, int tones, tt_chord *c);
 /* Release every sounding note (stop). */
 void tg_all_off(tg_gen *g, tg_event_fn fn, void *ctx);
 

@@ -48,7 +48,7 @@ static void test_scales(void)
     }
     /* sizes */
     for (int s = 0; s < TS_COUNT; s++) {
-        int want = s <= TS_MEL_MINOR ? 7 : s == TS_BLUES ? 6 : 5;
+        int want = s <= TS_MEL_MINOR ? 7 : s == TS_BLUES || s == TS_WHOLE_TONE ? 6 : 5;
         CHECK(tt_scale_size(s) == want, "%s size %d", tt_scale_name(s), tt_scale_size(s));
         CHECK(tt_scale_mask(s) & 1, "%s lacks its tonic", tt_scale_name(s));
     }

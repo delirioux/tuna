@@ -68,6 +68,20 @@ typedef struct {
     float suspension;             /* chance of a suspension where the chord changes */
     bool trill;                   /* trill on the note before the final tonic */
     float mel_profile[4];         /* melody interval thresholds: repeat < step < third < fourth */
+    int max_leap;                 /* scale steps of the widest melody leap */
+    uint16_t melody_mask;         /* restrict the melody to these pitch classes (0 = no) */
+    float syncopation;            /* 0..1: melody notes move from beats to off-beats */
+    bool chromatic;               /* appoggiaturas lean from a semitone above */
+    int arrival_bars;             /* how long the final tonic is held */
+    bool plagal;                  /* periods end IV - I */
+    float whole_tone;             /* chance of a whole-tone period */
+    int motif_beats;              /* motif length */
+    float motif_use;              /* chance a later segment develops the motif */
+    float var_invert, var_alter;  /* development: inversion, changed ending */
+    bool hemiola;                 /* 3/4: twos against threes before cadences */
+    float sforzando;              /* chance of an accent on a weak beat */
+    float swell;                  /* crescendo through the period */
+    float rubato;                 /* slowing into cadences */
     const tg_style *style;        /* NULL: the fixed progression `prog` */
 
     /* Marbles */
@@ -107,6 +121,15 @@ typedef struct {
     int mel_last_dir;             /* direction of the melody's last move: -1, 0, 1 */
     int counter_note, counter_prev_iv, counter_prev_mel;
     bool pad_silent;              /* the pad voicing is a reference for figures, not sounding */
+    bool plan_wt;                 /* this period is coloured whole-tone */
+    uint16_t mel_scale;           /* the melody's notes: chord scale, limited by melody_mask */
+    /* the motif: rhythm and scale-step intervals of the period's first segment */
+#define TG_MOTIF_MAX 32
+    bool motif_play[TG_MOTIF_MAX];
+    int8_t motif_k[TG_MOTIF_MAX];
+    int motif_len, motif_seg, motif_start_note, motif_last;
+    bool motif_valid, motif_recording, motif_active, motif_invert, motif_alter;
+    long motif_notes, free_notes;  /* statistics: notes from development vs free invention */
 } tg_gen;
 
 void tg_init(tg_gen *g, uint32_t seed, float sample_rate);

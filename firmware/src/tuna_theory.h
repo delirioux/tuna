@@ -18,6 +18,7 @@ enum {
     TS_HARM_MINOR, TS_MEL_MINOR,                                                          /* minor variants */
     TS_PENT_MAJOR, TS_PENT_MINOR,                                                         /* pentatonic */
     TS_BLUES,
+    TS_WHOLE_TONE,                                                                        /* colour */
     TS_COUNT
 };
 

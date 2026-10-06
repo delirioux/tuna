@@ -4,7 +4,7 @@
  *      firmware/src/tuna_gen.c firmware/src/tuna_marbles.c firmware/src/tuna_marbles_tables.c \
  *      firmware/src/tuna_theory.c -lm
  *   build/host/tuna_gen_render OUTDIR [SECONDS]
- * The WAV uses a tiny sketch synth (sine bass, plucked melody, soft pad, a delay), not Felucca's
+ * The WAV uses a tiny sketch synth (sine bass, soft flute-like melody, sine pad, a delay), not Felucca's
  * engines: it is for judging the notes, not the sound. The MIDI has one track per part.
  * Also checks that a seed replays identically. */
 #include <math.h>
@@ -26,18 +26,29 @@ typedef struct {
     float x_spread, x_bias, x_steps, x_deja_vu;
     int x_length, x_control;
     uint32_t seed;
+    float mel_density;
+    int pad_tones;
+    bool pad_restrike;
 } preset;
 
 static const preset presets[] = {
-    /* name     bpm  div root scale        prog           chord  T model                   bias  jit   dv    pw    pwstd len  spread xbias steps xdv  xlen ctrl                  seed */
-    {"garden",  72,  2,  2,  TS_DORIAN,     TP_MODAL_VAMP,  16, TM_T_COMPLEMENTARY_BERNOULLI, 0.5f, 0.15f, 0.6f, 0.75f, 0.2f, 8,  0.40f, 0.5f, 0.80f, 0.70f, 8, TM_CONTROL_TILT,      1},
-    {"rhythm",  104, 4,  9,  TS_AEOLIAN,    TP_ANDALUSIAN,  32, TM_T_DRUMS,                 0.8f, 0.0f,  0.75f, 0.3f, 0.0f, 16, 0.55f, 0.5f, 0.68f, 0.80f, 16, TM_CONTROL_IDENTICAL, 7},
-    {"lydian",  84,  2,  5,  TS_LYDIAN,     TP_MODAL_VAMP,  16, TM_T_CLUSTERS,              0.65f, 0.3f, 0.4f, 0.6f, 0.4f, 8,  0.50f, 0.55f, 0.75f, 0.55f, 8, TM_CONTROL_BUMP,      42},
+    /* name     bpm  div root scale        prog           chord  T model                   bias  jit   dv    pw    pwstd len  spread xbias steps xdv  xlen ctrl                  seed dens pad restrike */
+    {"garden",  72,  2,  2,  TS_DORIAN,     TP_MODAL_VAMP,  16, TM_T_COMPLEMENTARY_BERNOULLI, 0.5f, 0.15f, 0.6f, 0.75f, 0.2f, 8,  0.40f, 0.5f, 0.80f, 0.70f, 8, TM_CONTROL_TILT,      1,  0.35f, 4, false},
+    {"rhythm",  104, 4,  9,  TS_AEOLIAN,    TP_ANDALUSIAN,  32, TM_T_DRUMS,                 0.8f, 0.0f,  0.75f, 0.3f, 0.0f, 16, 0.55f, 0.5f, 0.68f, 0.80f, 16, TM_CONTROL_IDENTICAL, 7,  0.55f, 3, true},
+    {"lydian",  84,  2,  5,  TS_LYDIAN,     TP_MODAL_VAMP,  16, TM_T_CLUSTERS,              0.65f, 0.3f, 0.4f, 0.6f, 0.4f, 8,  0.50f, 0.55f, 0.75f, 0.55f, 8, TM_CONTROL_BUMP,      42, 0.40f, 4, false},
 };
 
 /* ---- event log (for MIDI and the synth) ------------------------------------------------------- */
 typedef struct { long t; tg_event e; } logged;
-typedef struct { logged *ev; long n, cap; long now; } evlog;
+typedef struct {
+    logged *ev;
+    long n, cap, now;
+    /* musical checks, harmonized mode */
+    long mel_notes, mel_steps, mel_downbeats, mel_downbeat_chord;
+    int mel_prev;
+} evlog;
+
+static tg_gen *cur;     /* the generator being rendered, for the checks in on_event */
 
 static void on_event(void *ctx, const tg_event *e)
 {
@@ -49,6 +60,25 @@ static void on_event(void *ctx, const tg_event *e)
     l->ev[l->n].t = l->now + e->offset;
     l->ev[l->n].e = *e;
     l->n++;
+    if (e->on && e->part == TG_PART_MELODY) {
+        if (l->mel_prev >= 0) {
+            int d = abs(e->note - l->mel_prev);
+            l->mel_steps += d <= 2;
+            l->mel_notes++;
+        }
+        l->mel_prev = e->note;
+        int q = (int)(cur->ticks - 1);
+        if (q % (cur->division * 4) == 0) {
+            l->mel_downbeats++;
+            int pc = ((e->note - cur->root) % 12 + 12) % 12;
+            tt_chord c = cur->chord;
+            for (int k = 0; k < c.n && k < 3; ++k)
+                if ((c.root + c.tone[k]) % 12 == pc) {
+                    l->mel_downbeat_chord++;
+                    break;
+                }
+        }
+    }
 }
 
 static void run(const preset *p, int seconds, evlog *l)
@@ -74,7 +104,12 @@ static void run(const preset *p, int seconds, evlog *l)
     g.x.deja_vu = p->x_deja_vu;
     g.x.length = p->x_length;
     g.x.control_mode = p->x_control;
+    g.melody_density = p->mel_density;
+    g.pad_tones = p->pad_tones;
+    g.pad_restrike = p->pad_restrike;
+    cur = &g;
     memset(l, 0, sizeof *l);
+    l->mel_prev = -1;
     long total = (long)seconds * SR;
     for (l->now = 0; l->now < total; l->now += BLOCK)
         tg_process(&g, BLOCK, on_event, l);
@@ -141,36 +176,33 @@ static void write_wav(const char *path, const evlog *l, int seconds)
 {
     long total = (long)(seconds + 3) * SR;
     float *mix = calloc((size_t)total * 2, sizeof(float));
-    /* pad is polyphonic-ish: 3 voices round robin; bass and melody mono */
-    static voice v[5];
+    /* bass and melody mono, pad 4 voices */
+    static voice v[6];
     memset(v, 0, sizeof v);
-    int pad_next = 0;
     long e = 0;
-    uint32_t noise = 22222;
+    float mel_age = 0.0f, mel_freq = 0.0f;
     for (long t = 0; t < total; ++t) {
         while (e < l->n && l->ev[e].t <= t) {
             const tg_event *ev = &l->ev[e].e;
-            int vi = ev->part == 0 ? 0 : ev->part == 1 ? 1 : 2 + pad_next;
             if (ev->on) {
-                if (ev->part == 2) pad_next = (pad_next + 1) % 3;
+                int vi = ev->part == 0 ? 0 : 1;
+                if (ev->part == 2) {                 /* a free pad voice, else the quietest */
+                    vi = 2;
+                    for (int i = 2; i < 6; ++i)
+                        if (!v[i].on && (v[vi].on || v[i].env < v[vi].env)) vi = i;
+                }
                 voice *x = &v[vi];
                 x->on = true;
                 x->note = ev->note;
                 x->freq = mtof(ev->note);
                 x->amp = ev->velocity / 127.0f;
-                if (ev->part == 1) {        /* Karplus-Strong pluck */
-                    x->ks_len = (int)(SR / x->freq);
-                    if (x->ks_len > 2047) x->ks_len = 2047;
-                    for (int i = 0; i < x->ks_len; ++i) {
-                        noise = noise * 1664525u + 1013904223u;
-                        x->ks[i] = ((noise >> 9) / 4194304.0f - 1.0f) * x->amp;
-                    }
-                    x->ks_pos = 0;
-                }
+                if (ev->part == 1) mel_age = 0.0f;
             } else {
-                for (int i = 0; i < 5; ++i)
-                    if (v[i].on && v[i].note == ev->note && ((ev->part == 2) == (i >= 2)) && ((ev->part == 0) == (i == 0)))
+                for (int i = 0; i < 6; ++i) {
+                    int part = i == 0 ? 0 : i == 1 ? 1 : 2;
+                    if (v[i].on && v[i].note == ev->note && part == ev->part)
                         v[i].on = false;
+                }
             }
             e++;
         }
@@ -184,27 +216,29 @@ static void write_wav(const char *path, const evlog *l, int seconds)
             float s = sinf(6.2831853f * x->phase) + 0.25f * sinf(12.566371f * x->phase);
             out_l += 0.35f * s * x->env; out_r += 0.35f * s * x->env;
         }
-        /* melody: pluck */
+        /* melody: a soft flute-like voice, short glide between legato notes, delayed vibrato */
         {
             voice *x = &v[1];
-            if (x->ks_len) {
-                int i = x->ks_pos, j = (i + 1) % x->ks_len;
-                float s = x->ks[i];
-                x->ks[i] = 0.5f * (x->ks[i] + x->ks[j]) * 0.996f;
-                x->ks_pos = j;
-                out_l += 0.30f * s; out_r += 0.22f * s;
-            }
+            float target = x->on ? x->amp : 0.0f;
+            x->env += (target - x->env) * (x->on ? 0.004f : 0.0015f);
+            if (mel_freq <= 0.0f) mel_freq = x->freq;
+            mel_freq += (x->freq - mel_freq) * 0.006f;
+            mel_age += 1.0f / SR;
+            float vib = mel_age > 0.25f ? 0.004f * sinf(6.2831853f * 5.2f * mel_age) : 0.0f;
+            x->phase += mel_freq * (1.0f + vib) / SR; x->phase -= floorf(x->phase);
+            float s = sinf(6.2831853f * x->phase) + 0.12f * sinf(18.849556f * x->phase);
+            out_l += 0.30f * s * x->env; out_r += 0.24f * s * x->env;
         }
         /* pad: two detuned sines, slow envelope */
-        for (int k = 2; k < 5; ++k) {
+        for (int k = 2; k < 6; ++k) {
             voice *x = &v[k];
             float target = x->on ? x->amp * 0.6f : 0.0f;
             x->env += (target - x->env) * (x->on ? 0.00008f : 0.00004f);
             x->phase += x->freq / SR; x->phase -= floorf(x->phase);
             x->phase2 += x->freq * 1.004f / SR; x->phase2 -= floorf(x->phase2);
             float s = 0.5f * (sinf(6.2831853f * x->phase) + sinf(6.2831853f * x->phase2));
-            out_l += 0.22f * s * x->env * (k == 2 ? 1.0f : 0.7f);
-            out_r += 0.22f * s * x->env * (k == 4 ? 1.0f : 0.7f);
+            out_l += 0.16f * s * x->env * (k % 2 ? 1.0f : 0.6f);
+            out_r += 0.16f * s * x->env * (k % 2 ? 0.6f : 1.0f);
         }
         mix[t * 2] = out_l;
         mix[t * 2 + 1] = out_r;
@@ -273,8 +307,11 @@ int main(int argc, char **argv)
                 hi = n > hi ? n : hi;
                 off_key += !((allowed >> (((n - p->root) % 12 + 12) % 12)) & 1);
             }
-        printf("%-8s %ld events (bass %ld, melody %ld, pad %ld), notes %d..%d, off-key %ld, seed replays: %s\n",
-               p->name, a.n, count[0], count[1], count[2], lo, hi, off_key, same ? "yes" : "NO");
+        printf("%-8s %ld events (bass %ld, melody %ld, pad %ld), notes %d..%d, off-key %ld, seed replays: %s\n"
+               "         melody: %.0f%% steps (<= 2 semitones), downbeats on chord tones %ld/%ld\n",
+               p->name, a.n, count[0], count[1], count[2], lo, hi, off_key, same ? "yes" : "NO",
+               a.mel_notes ? 100.0 * a.mel_steps / a.mel_notes : 0.0, a.mel_downbeat_chord, a.mel_downbeats);
+        fails += a.mel_downbeat_chord != a.mel_downbeats;
         fails += !same || off_key || !count[0] || !count[1] || !count[2];
         char path[512];
         snprintf(path, sizeof path, "%s/tuna_%s.mid", dir, p->name);

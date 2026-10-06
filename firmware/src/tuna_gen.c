@@ -114,7 +114,7 @@ static void defaults(tg_gen *g)
     g->harmonize = true;
     g->melody_density = 0.5f;
     g->melody_range = 19;
-    g->phrase_bars = 2;
+    g->phrase_bars = 4;
     g->pad_tones = 3;
     g->pad_restrike = false;
     g->clock_source = TM_CLOCK_T1_T2_T3;
@@ -157,6 +157,8 @@ void tg_reseed(tg_gen *g, uint32_t seed)
     g->mel_prev_interval = 0;
     g->bass_note = -1;
     g->chord_fresh = true;
+    g->mel_hold_until = 0;
+    g->mel_off_at = -1;
 }
 
 void tg_init(tg_gen *g, uint32_t seed, float sample_rate)
@@ -346,69 +348,146 @@ static void bass_play(tg_gen *g, beat_pos b, float u, int velocity, int offset, 
     note_on(g, TG_PART_BASS, note, accent(velocity, b), offset, fn, ctx);
 }
 
+/* The melody's period: a question and an answer, as long as whole cycles of the progression
+ * (at least phrase_bars bars). It is anchored on the progression's tonic chord, so the answer
+ * lands on the tonic exactly when the harmony returns home. */
+static void period_of(const tg_gen *g, int bar_ticks, int *period, int *anchor)
+{
+    int len = tt_prog_len(g->prog);
+    int cycle = len * g->chord_ticks;
+    int min_ticks = (g->phrase_bars > 0 ? g->phrase_bars : 4) * bar_ticks;
+    if (cycle <= 0) {
+        *period = min_ticks;
+        *anchor = 0;
+        return;
+    }
+    *period = cycle * ((min_ticks + cycle - 1) / cycle);
+    int tonic_step = 0;
+    for (int s = 0; s < len; ++s) {
+        tt_chord c;
+        tt_prog_chord(&c, g->prog, s, g->scale, 3);
+        if (c.root == 0)
+            tonic_step = s;                     /* the last tonic chord: ii-V-I resolves on its I */
+    }
+    *anchor = tonic_step * g->chord_ticks;
+}
+
+int tg_period_position(const tg_gen *g, int *period)
+{
+    int p, a, bar = g->division * 4;
+    period_of(g, bar, &p, &a);
+    if (period)
+        *period = p;
+    int q = (int)(g->ticks - 1);
+    return ((q - a) % p + p) % p;
+}
+
 static void melody_tick(tg_gen *g, beat_pos b, float x2, int velocity, int offset, tg_event_fn fn, void *ctx)
 {
     const int lo = g->base_note[TG_PART_MELODY] + g->root;
     const int hi = lo + g->melody_range;
     const uint16_t chord = chord_mask(&g->chord, 3);
+    const uint16_t tonic = 1u;                  /* pitch class 0 relative to the key */
     if (g->mel_note < 0)
         g->mel_note = mask_nearest(chord, g->root, lo + g->melody_range / 2);
 
-    /* phrasing: the last beat of a phrase breathes, the beat before it lands on a chord tone */
-    int phrase_ticks = g->phrase_bars * b.bar_ticks;
-    int pp = phrase_ticks > 0 ? b.q % phrase_ticks : 0;
-    bool rest = phrase_ticks > 0 && pp >= phrase_ticks - g->division;
-    bool cadence = phrase_ticks > 0 && !rest && pp >= phrase_ticks - 2 * g->division;
-    if (rest) {
+    int period;
+    int d = tg_period_position(g, &period);     /* ticks since the last arrival on the tonic */
+    int to_arrival = period - d;
+    bool arrival = d == 0 && b.q > 0;
+    bool approach = to_arrival == g->division;
+    bool homing = !approach && to_arrival <= b.bar_ticks + g->division;
+    bool half = period >= 4 * b.bar_ticks && d == period / 2;
+
+    /* the tonic nearest the current note, inside the range */
+    int home = mask_nearest(tonic, g->root, g->mel_note);
+    if (home > hi) home -= 12;
+    if (home < lo) home += 12;
+
+    if (g->mel_off_at >= 0 && b.q >= g->mel_off_at) {          /* a held note's breath */
         note_off(g, TG_PART_MELODY, offset, fn, ctx);
-        return;
+        g->mel_off_at = -1;
     }
-    if (cadence && !b.on_beat)
-        return;                                                    /* hold the cadence note */
-
-    /* density: downbeats always play, other beats mostly, off-beats as the density says; the
-     * choice comes from a deja-vu sequence, so rhythms recur like motifs */
-    g->mel_rhythm.deja_vu = g->x.deja_vu;
-    tm_seq_set_length(&g->mel_rhythm, g->x.length);
-    float r = tm_seq_next_value(&g->mel_rhythm, false, 0.0f);
-    float p_play = b.downbeat || cadence ? 1.0f
-                 : b.on_beat ? 0.25f + 0.75f * g->melody_density
-                 : g->melody_density;
-    if (r >= p_play)
+    if (!arrival && b.q < g->mel_hold_until)
         return;
 
-    /* interval from X2: mostly steps, sometimes a leap, in the chord-bent scale */
-    float x = 2.0f * unit(g, TG_PART_MELODY, x2) - 1.0f;
-    float m = fabsf(x);
-    int dir = x < 0.0f ? -1 : 1;
-    /* |x| near 0 repeats the note, then steps, thirds, and rarely a fourth or fifth */
-    int k = m < 0.12f ? 0 : m < 0.62f ? 1 : m < 0.86f ? 2 : m < 0.96f ? 3 : 4;
-    k *= dir;
-    if (g->mel_prev_interval >= 3 || g->mel_prev_interval <= -3)
-        k = (g->mel_prev_interval > 0 ? -1 : 1) * (m > 0.5f ? 2 : 1);   /* a leap is answered by a step back */
-    int note = mask_step(g->chord_scale, g->root, g->mel_note, k);
-    if (note > hi || note < lo) {
-        k = -k;
+    int note;
+    if (arrival) {
+        /* the answer: the tonic, over the tonic chord, held for three beats, then a breath */
+        note = home;
+        g->mel_hold_until = b.q + b.bar_ticks;
+        g->mel_off_at = b.q + b.bar_ticks - g->division;
+    } else if (approach) {
+        /* the beat before: a neighbour of the tonic, the second above or the leading note below */
+        int up = mask_step(g->chord_scale, g->root, home, 1);
+        int down = mask_step(g->chord_scale, g->root, home, -1);
+        int du = up > g->mel_note ? up - g->mel_note : g->mel_note - up;
+        int dd = down > g->mel_note ? down - g->mel_note : g->mel_note - down;
+        note = (dd <= du && down >= lo) || up > hi ? down : up;
+        g->mel_hold_until = b.q + g->division;
+    } else if (half) {
+        /* the question: halfway, rest on the fifth or third of the chord, not the tonic */
+        uint16_t open = (uint16_t)(chord_mask(&g->chord, 3) & ~chord_mask(&g->chord, 1));
+        open &= (uint16_t)~tonic;
+        if (!open)
+            open = chord;
+        note = mask_nearest(open, g->root, g->mel_note);
+        if (note > hi) note -= 12;
+        if (note < lo) note += 12;
+        g->mel_hold_until = b.q + 2 * g->division;
+        g->mel_off_at = b.q + g->division;
+    } else {
+        /* density: downbeats always play, other beats mostly, off-beats as the density says;
+         * the choice comes from a deja-vu sequence, so rhythms recur like motifs */
+        g->mel_rhythm.deja_vu = g->x.deja_vu;
+        tm_seq_set_length(&g->mel_rhythm, g->x.length);
+        float r = tm_seq_next_value(&g->mel_rhythm, false, 0.0f);
+        float p_play = b.downbeat ? 1.0f : b.on_beat ? 0.25f + 0.75f * g->melody_density : g->melody_density;
+        if (r >= p_play)
+            return;
+
+        /* interval from X2: mostly steps, sometimes a leap, in the chord-bent scale */
+        float x = 2.0f * unit(g, TG_PART_MELODY, x2) - 1.0f;
+        float m = fabsf(x);
+        int dir = x < 0.0f ? -1 : 1;
+        /* |x| near 0 repeats the note, then steps, thirds, and rarely a fourth or fifth */
+        int k = m < 0.12f ? 0 : m < 0.62f ? 1 : m < 0.86f ? 2 : m < 0.96f ? 3 : 4;
+        if (homing) {
+            /* the last bar steers toward the tonic, by steps */
+            dir = home > g->mel_note ? 1 : home < g->mel_note ? -1 : (x < 0.0f ? -1 : 1);
+            k = m < 0.6f ? 1 : 2;
+            int dist = home > g->mel_note ? home - g->mel_note : g->mel_note - home;
+            if (dist <= 2)
+                k = 1;
+        } else if (g->mel_prev_interval >= 3 || g->mel_prev_interval <= -3) {
+            dir = g->mel_prev_interval > 0 ? -1 : 1;            /* a leap is answered by a step back */
+            k = m > 0.5f ? 2 : 1;
+        }
+        k *= dir;
         note = mask_step(g->chord_scale, g->root, g->mel_note, k);
+        if (note > hi || note < lo) {
+            k = -k;
+            note = mask_step(g->chord_scale, g->root, g->mel_note, k);
+        }
+        note = clampi(note, lo, hi);
+        if (b.downbeat) {
+            /* downbeats on chord tones; other beats may carry passing notes, which keeps the line
+             * stepwise instead of arpeggiated */
+            int snapped = mask_nearest(chord, g->root, note);
+            /* do not let the snap undo the motion */
+            if (snapped == g->mel_note && k != 0)
+                snapped = mask_step(chord, g->root, g->mel_note, k > 0 ? 1 : -1);
+            /* at the edges of the range, turn around rather than jump an octave */
+            if (snapped > hi)
+                snapped = mask_step(chord, g->root, g->mel_note, -1);
+            if (snapped < lo)
+                snapped = mask_step(chord, g->root, g->mel_note, 1);
+            note = snapped;
+        }
+        g->mel_prev_interval = k;
     }
-    note = clampi(note, lo, hi);
-    if (b.downbeat || cadence) {
-        /* downbeats on chord tones; a cadence prefers root or third. Other beats may carry
-         * passing notes, which keeps the line stepwise instead of arpeggiated. */
-        uint16_t target = cadence ? chord_mask(&g->chord, 2) : chord;
-        int snapped = mask_nearest(target, g->root, note);
-        /* do not let the snap undo the motion: if it lands back on the previous note, take the
-         * next chord tone in the direction the melody was going */
-        if (snapped == g->mel_note && k != 0)
-            snapped = mask_step(target, g->root, g->mel_note, k > 0 ? 1 : -1);
-        /* at the edges of the range, turn around rather than jump an octave */
-        if (snapped > hi)
-            snapped = mask_step(target, g->root, g->mel_note, -1);
-        if (snapped < lo)
-            snapped = mask_step(target, g->root, g->mel_note, 1);
-        note = snapped;
-    }
-    g->mel_prev_interval = k;
+    if (arrival || approach || half)
+        g->mel_prev_interval = note - g->mel_note > 2 ? 3 : note - g->mel_note < -2 ? -3 : 0;
     g->mel_note = note;
     note_on(g, TG_PART_MELODY, note, accent(velocity, b), offset, fn, ctx);   /* legato: held until the next */
 }

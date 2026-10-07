@@ -115,6 +115,12 @@ typedef struct {
     float bpm;
     int division;                 /* master ticks per beat: 2 = eighths, 4 = sixteenths */
     int beats_per_bar;            /* meter: 4 = 4/4, 3 = 3/4 */
+#define TG_METER_MAX 12
+    uint8_t meter[TG_METER_MAX];  /* odd meters: beat groups in ticks, 0-terminated (3+3+2, 2+2+3, 3+2 ...);
+                                     meter[0] == 0: beats_per_bar beats of `division` ticks */
+    uint16_t meter_bars;          /* bit i: group i starts a bar (bit 0 implied): changing meters as a cycle */
+    float swing;                  /* 0..1: the off-beat eighth late (1 = triplet swing, 2:1) */
+    float lilt;                   /* 0..1: Viennese waltz: the second beat comes early */
     int root;                     /* key tonic pitch class, 0 = C */
     int scale;                    /* TS_* */
     int prog;                     /* TP_* */
@@ -212,6 +218,7 @@ typedef struct {
     struct { long due; tg_event e; } hq[TG_HQ];
     int hq_n;
     long clock;                    /* samples rendered */
+    int tick_delay;                /* swing and lilt: samples the events of this tick come late */
     uint16_t hdelay[TG_EVENT_PARTS][128];
     tm_rng hum_rng;
     tg_event_fn user_fn;
@@ -272,6 +279,11 @@ void tg_process(tg_gen *g, int size, tg_event_fn fn, void *ctx);
 int tg_period_position(const tg_gen *g, int *period);
 /* Tick within the period where the question ends (the half cadence). */
 int tg_half_position(const tg_gen *g);
+/* The meter: ticks in one cycle of beat groups (one bar unless the meter changes), and bars in it. */
+int tg_meter_cycle(const tg_gen *g, int *bars);
+/* Where a tick falls: the beat group, the tick in it, and whether it starts a bar. */
+typedef struct { int group, beat, sub, glen, bar_pos, bar_len, nbeats; bool bar_start; } tg_meter_pos;
+void tg_meter_at(const tg_gen *g, long q, tg_meter_pos *m);
 /* Apply a composer signature (TG_STYLE_*): key, tempo, meter, harmony, accompaniment, ornaments.
  * Takes effect from the next period; call tg_reseed() to start cleanly. */
 void tg_apply_style(tg_gen *g, int style);

@@ -48,7 +48,8 @@ static void test_scales(void)
     }
     /* sizes */
     for (int s = 0; s < TS_COUNT; s++) {
-        int want = s <= TS_MEL_MINOR ? 7 : s == TS_BLUES || s == TS_WHOLE_TONE ? 6 : 5;
+        int want = s <= TS_MEL_MINOR ? 7 : s == TS_BLUES || s == TS_WHOLE_TONE ? 6 : s <= TS_PENT_MINOR ? 5 :
+                   s == TS_OCT_HW || s == TS_OCT_WH ? 8 : s == TS_MESSIAEN3 ? 9 : 7;
         CHECK(tt_scale_size(s) == want, "%s size %d", tt_scale_name(s), tt_scale_size(s));
         CHECK(tt_scale_mask(s) & 1, "%s lacks its tonic", tt_scale_name(s));
     }
@@ -62,6 +63,22 @@ static void test_scales(void)
     /* harmonic minor has the raised 7th, melodic minor the raised 6th and 7th */
     CHECK(tt_degree_note(TS_HARM_MINOR, 57, 6) == 68, "A harmonic minor has G#");
     CHECK(tt_degree_note(TS_MEL_MINOR, 57, 5) == 66, "A melodic minor has F#");
+    /* the modes of limited transposition repeat: octatonic every minor third, mode 3 every major third */
+    for (int s = TS_OCT_HW; s <= TS_OCT_WH; s++)
+        CHECK(rotate(tt_scale_mask(s), 3) == tt_scale_mask(s), "%s repeats at the minor third", tt_scale_name(s));
+    CHECK(rotate(tt_scale_mask(TS_MESSIAEN3), 4) == tt_scale_mask(TS_MESSIAEN3), "mode 3 repeats at the major third");
+    CHECK(rotate(tt_scale_mask(TS_OCT_HW), 1) == tt_scale_mask(TS_OCT_WH), "the two octatonic forms are rotations");
+    /* the acoustic scale is melodic minor from its fourth degree; Phrygian dominant is harmonic minor
+     * from its fifth */
+    CHECK(tt_scale_mask(TS_ACOUSTIC) == rotate(tt_scale_mask(TS_MEL_MINOR), 5), "acoustic = melodic minor mode 4");
+    CHECK(tt_scale_mask(TS_PHRYG_DOM) == rotate(tt_scale_mask(TS_HARM_MINOR), 7), "Phrygian dominant = harmonic minor mode 5");
+    /* augmented seconds: two in Hungarian minor and in the double harmonic scale */
+    for (int s = TS_HUNG_MINOR; s <= TS_DOUBLE_HARM; s++) {
+        int aug = 0, n = tt_scale_size(s);
+        for (int d = 0; d < n; d++)
+            aug += tt_degree_note(s, 60, d + 1) - tt_degree_note(s, 60, d) == 3;
+        CHECK(aug == 2, "%s has %d augmented seconds", tt_scale_name(s), aug);
+    }
     /* clamping */
     CHECK(tt_degree_note(TS_IONIAN, 120, 14) == 127, "clamps at 127");
 }
@@ -110,6 +127,36 @@ static void test_chords(void)
             ok &= c.tone[k] > c.tone[k - 1];
         CHECK(ok, "quality %d malformed", q);
     }
+    tt_chord_fixed(&c, 0, TQ_DIM7);
+    CHECK(c.n == 4 && c.tone[1] == 3 && c.tone[2] == 6 && c.tone[3] == 9, "dim7 is minor thirds");
+    tt_chord_fixed(&c, 0, TQ_QUARTAL);
+    CHECK(c.tone[1] == 5 && c.tone[2] == 10 && c.tone[3] == 15, "quartal is stacked fourths");
+    tt_chord_fixed(&c, 2, TQ_DOM13);
+    CHECK(!strcmp(chord_str(&c, 0), "D F# C B"), "D13 (no fifth, no ninth): %s", chord_str(&c, 0));
+    tt_chord_fixed(&c, 0, TQ_FIFTH);
+    CHECK(c.n == 2 && c.tone[1] == 7, "the bare fifth");
+}
+
+static void test_tunings(void)
+{
+    /* the root is exact; everything within 30 cents of equal */
+    for (int t = 0; t < TT_TUNE_USER; t++) {
+        CHECK(tt_tuning_cents10(t, 0) == 0, "%s moves the root", tt_tuning_name(t));
+        for (int pc = 0; pc < 12; pc++)
+            CHECK(abs(tt_tuning_cents10(t, pc)) <= 300, "%s pc %d off by %d", tt_tuning_name(t), pc, tt_tuning_cents10(t, pc));
+    }
+    /* intervals (cents x10) above the root */
+    #define IV(t, pc, semis) (semis * 1000 + tt_tuning_cents10(t, pc) - tt_tuning_cents10(t, 0))
+    CHECK(abs(IV(TT_TUNE_MEANTONE, 4, 4) - 3863) <= 2, "meantone third is pure: %d", IV(TT_TUNE_MEANTONE, 4, 4));
+    CHECK(abs(IV(TT_TUNE_MEANTONE, 7, 7) - 6966) <= 2, "meantone fifth narrow by a quarter comma: %d", IV(TT_TUNE_MEANTONE, 7, 7));
+    CHECK(abs(IV(TT_TUNE_PYTHAGOREAN, 7, 7) - 7020) <= 2, "Pythagorean fifth is pure: %d", IV(TT_TUNE_PYTHAGOREAN, 7, 7));
+    CHECK(abs(IV(TT_TUNE_JUST, 4, 4) - 3863) <= 2 && abs(IV(TT_TUNE_JUST, 7, 7) - 7020) <= 2, "just third and fifth");
+    CHECK(abs(IV(TT_TUNE_WERCKMEISTER, 4, 4) - 3902) <= 2, "Werckmeister C-E: %d", IV(TT_TUNE_WERCKMEISTER, 4, 4));
+    /* the user table, wrapping pitch classes */
+    int16_t u[12] = {0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110};
+    tt_tuning_set_user(u);
+    CHECK(tt_tuning_cents10(TT_TUNE_USER, 13) == 10 && tt_tuning_cents10(TT_TUNE_USER, -1) == 110, "user table wraps");
+    CHECK(tt_tuning_cents10(TT_TUNE_EQUAL, 5) == 0, "equal is equal");
 }
 
 static void test_progressions(int verbose)
@@ -165,6 +212,7 @@ int main(void)
     test_chords();
     test_progressions(verbose);
     test_held();
+    test_tunings();
     printf("tuna_theory: %d checks, %d failed\n", checks, fails);
     return fails ? 1 : 0;
 }

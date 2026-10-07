@@ -160,7 +160,11 @@ void ta_init(tuna_app *a, float sample_rate, uint32_t seed)
     a->reso_bright = 50;
     a->reso_mode = TR_TUNE_CHORD;
     tg_init(&a->g, seed, sample_rate);
-    load_item(a, item_of_style(TG_STYLE_BACH));
+    int home = 0;                                /* the first piece: TUNA's GARDEN */
+    for (int i = 0; i < ta_lib_count(); ++i)
+        if (ta_lib_group(i) == 0 && !strcmp(ta_lib_name(i), "GARDEN"))
+            home = i;
+    load_item(a, home);
 }
 
 void ta_set_sound(tuna_app *a, void (*fn)(void *ctx, const tg_event *e), void *ctx)

@@ -1468,7 +1468,7 @@ static void melody_tick(tg_gen *g, beat_pos b, float x2, int velocity, int offse
             float octave = g->octave;
             if (cp != 0.0f) {
                 /* PITCH chaos: the thresholds between repeat, step, third, fourth and leap move: up, more
-                 * steps and repeats; down, more leaps, wider (and octaves) */
+                 * and wider leaps (and octaves); down, more steps and repeats, no octaves */
                 for (int i = 0; i < 4; ++i)
                     prc[i] = cp > 0.0f ? pr[i] * (1.0f - 0.6f * cp) : pr[i] + (1.0f - pr[i]) * (-0.7f * cp);
                 pr = prc;

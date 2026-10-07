@@ -38,16 +38,7 @@
 enum { TG_PART_BASS, TG_PART_MELODY, TG_PART_PAD, TG_PART_DRUMS, TG_PART_TIMPANI };
 #define TG_EVENT_PARTS 5          /* the three voices, plus drums (GM note numbers) and pitched timpani */
 
-/* General MIDI percussion notes used by the drum part */
-#define TG_GM_BASS_DRUM 35
-#define TG_GM_KICK 36
-#define TG_GM_SIDE_STICK 37
-#define TG_GM_SNARE 38
-#define TG_GM_HAT_CLOSED 42
-#define TG_GM_HAT_OPEN 46
-#define TG_GM_CRASH 49
-#define TG_GM_TAMBOURINE 54
-#define TG_GM_TRIANGLE 81
+/* General MIDI percussion notes: tuna_style.h */
 
 typedef struct {
     uint8_t part, note, velocity;

@@ -206,6 +206,16 @@ int tt_tuning_cents10(int t, int pc_rel)
     return t > 0 && t < TT_TUNE_USER ? tunings[t][pc_rel] : 0;
 }
 
+int tt_tuning_cents10_key(int t, int pc_rel, int minor)
+{
+    pc_rel = pmod(pc_rel, 12);
+    if (minor && pc_rel == 8) {
+        if (t == TT_TUNE_MEANTONE) return 137;          /* A-flat: four meantone fifths below */
+        if (t == TT_TUNE_PYTHAGOREAN) return -78;       /* A-flat: four pure fifths below */
+    }
+    return tt_tuning_cents10(t, pc_rel);
+}
+
 void tt_tuning_set_user(const int16_t *c)
 {
     for (int i = 0; i < 12; i++)

@@ -906,7 +906,7 @@ static void test_form(void)
     for (long i = 0; i < nlg; ++i)
         if (lg[i].e.on && lg[i].e.type == TG_EV_NOTE && lg[i].e.part < TG_PART_DRUMS) {
             tn++;
-            tbad += lg[i].e.value != tt_tuning_cents10(TT_TUNE_MEANTONE, lg[i].e.note - ts.root);
+            tbad += lg[i].e.value != tt_tuning_cents10_key(TT_TUNE_MEANTONE, lg[i].e.note - ts.root, 0);
         }
     CHECK(tn > 50 && tbad == 0, "tuning cents on %ld notes, %ld wrong", tn, tbad);
 

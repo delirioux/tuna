@@ -106,6 +106,11 @@ static void on_event(void *ctx, const tg_event *e)
             allowed |= (uint16_t)(1u << ((cur->chord.root + cur->chord.tone[k]) % 12));
         int pc = ((e->note - cur->root) % 12 + 12) % 12;
         bool leaning = e->part == TG_PART_MELODY && cur->mel_pending >= 0;   /* a chromatic appoggiatura */
+        if (!((allowed >> pc) & 1) && !leaning && getenv("OFFKEY"))
+            printf("    off key: tick %ld part %d note %d pc %d key %d scale %d period_scale %d chord %d/%d n%d tones %d %d %d, "
+                   "pending %d key_pending %d\n", cur->ticks - 1, e->part, e->note, pc, cur->root, cur->scale,
+                   cur->period_scale, cur->chord.root, cur->chord_step, cur->chord.n, cur->chord.tone[0], cur->chord.tone[1],
+                   cur->chord.tone[2], cur->mel_pending, cur->key_pending);
         l->off_key += !((allowed >> pc) & 1) && !leaning;
     }
     bool root_bass = cur->bass_mode == TG_BASS_ROOT || cur->bass_mode == TG_BASS_BAR || cur->bass_mode == TG_BASS_WALKING ||

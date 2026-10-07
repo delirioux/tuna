@@ -45,6 +45,7 @@ typedef struct {
     sound_t s[3];               /* bass, melody, third */
     uint8_t level[4];           /* track levels (default 104) */
     uint8_t rev;                /* reverb send on the three voices, at least */
+    int demo;                   /* 0: plain, 1: the evolution timer, 2: freeze with conditions and locks */
     /* generative (style -1) */
     float bpm;
     int division, root, scale, prog, chord_ticks, t_model;
@@ -102,6 +103,11 @@ static const piece_t pieces[] = {
      .level = {96, 106, 90, 96}, .rev = 40},
     {.name = "saint-saens",  .style = TG_STYLE_SAINT_SAENS, .seed = 13, .s = {PIANO, VIOLIN, PIANO},
      .level = {96, 108, 86, 98}, .rev = 34},
+    /* phase 4: the sequencer */
+    {.name = "mozart-evolve", .style = TG_STYLE_MOZART,     .seed = 5,  .s = {PIANO, PIANO, PIANO},
+     .level = {98, 108, 88, 96}, .rev = 30, .demo = 1},
+    {.name = "bach-freeze",   .style = TG_STYLE_BACH,       .seed = 11, .s = {HARPSICHORD, HARPSICHORD, HARPSICHORD},
+     .level = {100, 106, 96, 96}, .rev = 28, .demo = 2},
 };
 
 /* ---- events into the tracks ---------------------------------------------------------------------- */
@@ -112,10 +118,34 @@ static int tuna_div = 4;
 static int timp_lo, timp_hi;          /* GM notes of the dominant and tonic kettledrums */
 static long n_events;
 
+/* sound locks: Tuna's TG_LK_* to Felucca's track parameters, the track's own value kept to restore */
+static int16_t base_val[4][TG_LK_COUNT];
+static int lk_param(int lk)
+{
+    if (lk >= TG_LK_E0 && lk <= TG_LK_E7) return P_E0 + (lk - TG_LK_E0);
+    switch (lk) {
+    case TG_LK_LEVEL: return P_LEVEL;
+    case TG_LK_PAN:   return P_PAN;
+    case TG_LK_DIST:  return P_DIST;
+    case TG_LK_CHO:   return P_CHOR;
+    case TG_LK_DLY:   return P_DLY;
+    case TG_LK_REV:   return P_REV;
+    default:          return -1;
+    }
+}
+static long n_params;
+
 static void on_event(void *ctx, const tg_event *e)
 {
     (void)ctx;
     uint32_t tr = e->part >= TG_PART_DRUMS ? 3u : e->part;
+    if (e->type == TG_EV_PARAM) {
+        int prm = lk_param(e->param);
+        if (prm >= 0)
+            trk[tr].p[prm] = e->value == TG_LK_RESTORE ? base_val[tr][e->param] : e->value;
+        n_params++;
+        return;
+    }
     uint32_t note = e->note;
     if (e->part == TG_PART_TIMPANI) {
         int pc = ((e->note - gen.root) % 12 + 12) % 12;
@@ -185,6 +215,51 @@ static void setup(const piece_t *p)
     host_drums(&trk[3]);
     trk[3].p[P_LEVEL] = p->level[3];
     tune_timpani(&trk[3], gen.root);
+    for (int t = 0; t < 4; ++t)
+        for (int lk = 0; lk < TG_LK_COUNT; ++lk)
+            if (lk_param(lk) >= 0)
+                base_val[t][lk] = trk[t].p[lk_param(lk)];
+    if (p->demo == 1)
+        tg_evolve(&gen, true, 8, 1.0f, true);
+}
+
+/* the freeze demo: two periods of Bach, FREEZE, then on the loop: a melody note every other time
+ * (1:2), another only with FILL (held in loops 3 and 6), a chance on a bass note, one step up a scale
+ * step and accented, one brighter (a sound lock on the engine's second knob); after 8 loops UNFREEZE */
+static void freeze_script(void)
+{
+    static int stage;
+    if (gen.ticks <= 1)
+        stage = 0;
+    if (stage == 0 && gen.period_index == 1 && tg_period_position(&gen, NULL) > 4) {
+        tg_freeze(&gen);
+        stage = 1;
+    } else if (stage == 1 && gen.frozen) {
+        int mel = 0;
+        for (int i = 0; i < gen.pat.n; ++i) {
+            const tg_pnote *x = &gen.pat.ev[i];
+            if (x->part == TG_PART_MELODY) {
+                if (mel == 3) tg_step_cond(&gen, TG_PART_MELODY, x->tick, TG_C_RATIO, 1, 2);
+                if (mel == 9) tg_step_cond(&gen, TG_PART_MELODY, x->tick, TG_C_FILL, 0, 0);
+                if (mel == 6) {
+                    tg_step_lock(&gen, TG_PART_MELODY, x->tick, TG_LK_STEPS, 1);
+                    tg_step_lock(&gen, TG_PART_MELODY, x->tick, TG_LK_VEL, 120);
+                }
+                if (mel == 12) tg_step_lock(&gen, TG_PART_MELODY, x->tick, TG_LK_E1, 110);
+                mel++;
+            }
+            if (x->part == TG_PART_BASS && x->tick == gen.pat.len / 2)
+                tg_step_cond(&gen, TG_PART_BASS, x->tick, TG_C_PROB, 50, 0);
+        }
+        stage = 2;
+    } else if (stage == 2) {
+        gen.fill = gen.pat_loop == 3 || gen.pat_loop == 6;
+        if (gen.pat_loop >= 8) {
+            gen.fill = false;
+            tg_unfreeze(&gen);
+            stage = 3;
+        }
+    }
 }
 
 /* ---- render ---------------------------------------------------------------------------------------- */
@@ -207,6 +282,7 @@ static int render(const piece_t *p, const char *dir, int seconds, stats_t *st)
     memset(st, 0, sizeof *st);
     setup(p);
     n_events = 0;
+    n_params = 0;
     uint32_t kills0 = voice_kills;
     long total = (long)seconds * FS, f = 0, arrived = -1, tail_left = -1;
     const long seg = FS / 2;
@@ -216,6 +292,13 @@ static int render(const piece_t *p, const char *dir, int seconds, stats_t *st)
     while (1) {
         int32_t o[2 * BLOCK];
         uint64_t t0 = now_ns();
+        if (p->demo == 2 && tail_left < 0)
+            freeze_script();
+        static int tuned_root = -1;
+        if (gen.root != tuned_root) {               /* the timpanist retunes for the new key */
+            tune_timpani(&trk[3], gen.root);
+            tuned_root = gen.root;
+        }
         CG_ON(0);
         if (tail_left < 0)
             tg_process(&gen, BLOCK / tuna_div, on_event, 0);
@@ -332,8 +415,13 @@ int main(int argc, char **argv)
             continue;
         stats_t st;
         fails += render(p, dir, seconds, &st);
-        printf("%-13s %6ld %5d %3u/%-2u %6u %6.2fx %6.2fx %8.1f %6u\n", p->name, n_events, st.peak, st.busy_max, NVOICE,
+        printf("%-13s %6ld %5d %3u/%-2u %6u %6.2fx %6.2fx %8.1f %6u", p->name, n_events, st.peak, st.busy_max, NVOICE,
                st.kills, st.mix_ns / ref, st.worst_mix_ns / ref, st.gen_ns, st.clips);
+        if (p->demo == 1)
+            printf("   evolution: %ld periods away from home", gen.periods_away);
+        if (p->demo == 2)
+            printf("   freeze: %u loops, %ld sound-lock events", gen.pat_loop, n_params);
+        printf("\n");
         fails += st.busy_max > NVOICE || st.peak == 0;
     }
     return fails ? 1 : 0;

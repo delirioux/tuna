@@ -144,6 +144,7 @@ static void defaults(tg_gen *g)
     g->sforzando = 0.0f;
     g->swell = 0.0f;
     g->rubato = 0.0f;
+    g->humanize = 0.0f;
     g->perc_mode = TG_PERC_OFF;
     for (int i = 0; i < TG_PI_COUNT; ++i)
         g->perc_w[i] = 0;
@@ -218,6 +219,9 @@ void tg_reseed(tg_gen *g, uint32_t seed)
     g->roll_countdown = 0.0f;
     g->march_on = g->kit_g1_prev = g->kit_g3_prev = false;
     g->perc_hits = 0;
+    tm_rng_init(&g->hum_rng, seed ^ 0x48756d61u);
+    g->hq_n = 0;
+    g->clock = 0;
     g->plan_len = 0;
     plan_period(g);
 }
@@ -481,6 +485,14 @@ static void drums_release(tg_gen *g, int offset, tg_event_fn fn, void *ctx);
 
 void tg_all_off(tg_gen *g, tg_event_fn fn, void *ctx)
 {
+    /* queued by the humanizer: releases go out now, notes not yet started never will */
+    for (int i = 0; i < g->hq_n; ++i)
+        if (!g->hq[i].e.on) {
+            tg_event e = g->hq[i].e;
+            e.offset = 0;
+            fn(ctx, &e);
+        }
+    g->hq_n = 0;
     for (int p = 0; p < TG_PARTS; ++p)
         note_off(g, p, 0, fn, ctx);
     pad_off(g, 0, fn, ctx);
@@ -1394,8 +1406,73 @@ static void perc_kit(tg_gen *g, beat_pos b, int velocity, bool t1, bool t3, int 
     }
 }
 
-/* ---- process --------------------------------------------------------------------------------------- */
+/* ---- humanization ---------------------------------------------------------------------------------- */
+/* Every event can come a little late, as from a player: up to a few milliseconds per part (each note
+ * of a chord on its own, which spreads it slightly), and velocities vary a little. A note's release
+ * keeps its note's delay, so lengths stay as written. Off by default: the checks see exact time. */
+static const float HUMAN_MS[TG_EVENT_PARTS] = {6.0f, 10.0f, 8.0f, 3.0f, 4.0f};   /* bass melody third drums timpani */
+
+static void hum_collect(void *ctx, const tg_event *e)
+{
+    tg_gen *g = ctx;
+    if (g->hq_n >= TG_HQ) {                         /* full: deliver as is (never happens at sane rates) */
+        g->user_fn(g->user_ctx, e);
+        return;
+    }
+    tg_event x = *e;
+    long d;
+    if (x.on) {
+        float r = tm_rng_float(&g->hum_rng);
+        d = (long)(r * r * HUMAN_MS[x.part] * 0.001f * g->sample_rate * g->humanize);   /* mostly small */
+        g->hdelay[x.part][x.note] = (uint16_t)d;
+        int dv = (int)lrintf((tm_rng_float(&g->hum_rng) * 2.0f - 1.0f) * 8.0f * g->humanize);
+        x.velocity = (uint8_t)clampi(x.velocity + dv, 1, 127);
+    } else {
+        d = g->hdelay[x.part][x.note];
+    }
+    g->hq[g->hq_n].due = g->clock + x.offset + d;
+    g->hq[g->hq_n].e = x;
+    g->hq_n++;
+}
+
+/* deliver the queued events due before `end`, earliest first, with offsets inside this block */
+static void hum_deliver(tg_gen *g, long end)
+{
+    while (1) {
+        int best = -1;
+        for (int i = 0; i < g->hq_n; ++i)
+            if (g->hq[i].due < end && (best < 0 || g->hq[i].due < g->hq[best].due))
+                best = i;
+        if (best < 0)
+            return;
+        tg_event e = g->hq[best].e;
+        long off = g->hq[best].due - g->clock;
+        e.offset = (uint16_t)(off < 0 ? 0 : off);
+        g->hq[best] = g->hq[--g->hq_n];
+        g->user_fn(g->user_ctx, &e);
+    }
+}
+
+static void process_block(tg_gen *g, int size, tg_event_fn fn, void *ctx);
+
 void tg_process(tg_gen *g, int size, tg_event_fn fn, void *ctx)
+{
+    if (size > TG_MAX_BLOCK)
+        size = TG_MAX_BLOCK;
+    if (g->humanize <= 0.0f && g->hq_n == 0) {
+        process_block(g, size, fn, ctx);
+        g->clock += size;
+        return;
+    }
+    g->user_fn = fn;
+    g->user_ctx = ctx;
+    process_block(g, size, hum_collect, g);
+    hum_deliver(g, g->clock + size);
+    g->clock += size;
+}
+
+/* ---- process --------------------------------------------------------------------------------------- */
+static void process_block(tg_gen *g, int size, tg_event_fn fn, void *ctx)
 {
     static float master[TG_MAX_BLOCK], s0[TG_MAX_BLOCK], s1[TG_MAX_BLOCK], yr[TG_MAX_BLOCK];
     static float out[TG_MAX_BLOCK * TM_CHANNELS];

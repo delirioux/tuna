@@ -153,6 +153,16 @@ typedef struct {
     float roll_countdown;          /* samples to the roll's in-between stroke */
     bool march_on, kit_g1_prev, kit_g3_prev;
     long perc_hits;
+    /* humanization: a player's small lateness and touch, on its own randomness */
+    float humanize;                /* 0 = machine-exact (the default), 1 = a natural amount */
+#define TG_HQ 160
+    struct { long due; tg_event e; } hq[TG_HQ];
+    int hq_n;
+    long clock;                    /* samples rendered */
+    uint16_t hdelay[TG_EVENT_PARTS][128];
+    tm_rng hum_rng;
+    tg_event_fn user_fn;
+    void *user_ctx;
 } tg_gen;
 
 void tg_init(tg_gen *g, uint32_t seed, float sample_rate);

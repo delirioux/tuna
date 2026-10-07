@@ -982,7 +982,7 @@ void tu_knob(tuna_ui *u, int k, int d)
     u->hot_ms = TU_HOT_MS;
     switch (k) {
     case TU_K_MASTER: u->master = (uint8_t)tu_clampi(u->master + 2 * d, 0, 100); u->hot = -1; return;
-    case TU_K_SELECT: g->bpm = (float)tu_clampi((int)(g->bpm + 0.5f) + d, 20, 300); u->hot = TU_K_SELECT; return;
+    case TU_K_SELECT: ta_set_tempo(a, (float)tu_clampi((int)(g->bpm + 0.5f) + d, 20, 300)); u->hot = TU_K_SELECT; return;
     case TU_K_PRESETS: tu_lib_turn(u, d, false); u->hot = -1; return;
     case TU_K_ALGO: tu_lib_turn(u, d, true); u->hot = -1; return;
     }
@@ -1000,7 +1000,7 @@ void tu_knob(tuna_ui *u, int k, int d)
         else if (c == 2) ta_seed_step(a, d);
         break;
     case TU_PG_KEY:
-        if (c == 0) tg_set_root(g, (g->root_req >= 0 ? g->root_req : g->root) + d);
+        if (c == 0) ta_set_root(a, (g->root_req >= 0 ? g->root_req : g->root) + d);
         else if (c == 1) tu_set_edit(u, 5, d);
         else if (c == 2) g->tuning = tu_wrap(g->tuning + d, TT_TUNE_COUNT);
         else ta_set_deja(a, tu_clampi(a->deja + d, 0, TA_DV_COUNT - 1));
@@ -1009,17 +1009,17 @@ void tu_knob(tuna_ui *u, int k, int d)
         if (c == 0) tu_set_edit(u, 0, d);
         else if (c == 1) g->swing = (float)tu_clampi((int)(g->swing * 100.0f + 0.5f) + 2 * d, 0, 100) / 100.0f;
         else if (c == 2) g->humanize = (float)tu_clampi((int)(g->humanize * 100.0f + 0.5f) + 2 * d, 0, 100) / 100.0f;
-        else tg_set_percussion(g, tu_clampi(g->perc_mode + d, TG_PERC_OFF, TG_PERC_KIT));
+        else ta_set_percussion(a, tu_clampi(g->perc_mode + d, TG_PERC_OFF, TG_PERC_KIT));
         break;
     case TU_PG_PARTS:
         if (g->style)
             tu_set_edit(u, 1 + c, d);
         break;
     case TU_PG_EVOLVE:
-        if (c == 0) tg_evolve(g, d > 0, g->evolve_periods, g->evolve_depth, g->evolve_modulate);
-        else if (c == 1) tg_evolve(g, g->evolve, tu_clampi(g->evolve_periods + d, 2, 16), g->evolve_depth, g->evolve_modulate);
-        else if (c == 2) tg_evolve(g, g->evolve, g->evolve_periods, (float)tu_clampi((int)(g->evolve_depth * 100.0f + 0.5f) + 2 * d, 0, 100) / 100.0f, g->evolve_modulate);
-        else tg_evolve(g, g->evolve, g->evolve_periods, g->evolve_depth, d > 0);
+        if (c == 0) ta_set_evolve(a, d > 0, g->evolve_periods, g->evolve_depth, g->evolve_modulate);
+        else if (c == 1) ta_set_evolve(a, g->evolve, tu_clampi(g->evolve_periods + d, 2, 16), g->evolve_depth, g->evolve_modulate);
+        else if (c == 2) ta_set_evolve(a, g->evolve, g->evolve_periods, (float)tu_clampi((int)(g->evolve_depth * 100.0f + 0.5f) + 2 * d, 0, 100) / 100.0f, g->evolve_modulate);
+        else ta_set_evolve(a, g->evolve, g->evolve_periods, g->evolve_depth, d > 0);
         break;
     case TU_PG_SEQ:
         if (c == 3 && g->frozen)
@@ -1213,7 +1213,7 @@ void tu_key(tuna_ui *u, int note, bool down)
         tg_hold_chord(&a->g, 0, 0);
     if (!down && !u->keys_down && u->key_gesture == 1) {   /* a single key, tapped: the root */
         char m[16];
-        tg_set_root(&a->g, u->key_first % 12);
+        ta_set_root(a, u->key_first % 12);
         tu_cpy(m, "ROOT ", sizeof m);
         tu_cat(m, TU_NOTE_NAMES[u->key_first % 12], sizeof m);
         tu_msg(u, m);

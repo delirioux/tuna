@@ -273,7 +273,8 @@ typedef struct {
     int16_t rec_open[TG_EVENT_PARTS][128];   /* index of a recorded note still sounding, -1 none */
     tg_pattern pat;               /* the frozen pattern */
     bool frozen, freeze_req, unfreeze_req;
-    uint16_t pat_pos;             /* the pattern's tick now playing */
+    uint16_t pat_pos;             /* the pattern's next tick */
+    int seq_step;                 /* the step of the tick now sounding (pattern or period), for displays */
     uint32_t pat_loop;
     struct { uint8_t part, note; uint16_t left; } play[48];   /* pattern notes sounding */
     int play_n;

@@ -1421,6 +1421,10 @@ static void melody_tick(tg_gen *g, beat_pos b, float x2, int velocity, int offse
                 k = note > g->mel_note ? 3 : note < g->mel_note ? -3 : 0;   /* answered by a step back */
             }
         }
+        /* a repeated note (or a motif step) can outlive its chord: a tone the new chord and the key no longer
+         * have moves to the nearest that they do */
+        if (!in_mask((uint16_t)(tt_scale_mask(scale_now(g)) | g->chord_scale | g->mel_scale), note, g->root))
+            note = mask_nearest(ms, g->root, note);
         note = clampi(note, lo, hi);
         if (b.downbeat) {
             /* downbeats on chord tones; other beats may carry passing notes */
@@ -2715,6 +2719,7 @@ static void seq_tick(tg_gen *g, int offset)
     }
     if (g->loff_n)
         loff_tick(g, offset);
+    g->seq_step = g->frozen ? g->pat_pos : d;
     if (g->frozen) {
         pat_tick(g, offset);
         if (++g->pat_pos >= g->pat.len) {

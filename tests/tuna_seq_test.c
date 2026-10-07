@@ -47,8 +47,8 @@ static void cb(void *ctx, const tg_event *e)
     x->tick = g.ticks - 1;
     x->frozen = g.frozen;
     if (g.frozen) {
-        x->pos = g.pat_pos;
-        x->loop = g.pat_loop;
+        x->pos = g.seq_step;                    /* the tick it belongs to (a swung note arrives later) */
+        x->loop = g.pat_pos == 0 && g.seq_step == g.pat.len - 1 ? g.pat_loop - 1 : g.pat_loop;
     } else {
         x->pos = tg_period_position(&g, NULL);
         x->loop = (uint32_t)g.period_index;

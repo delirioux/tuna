@@ -79,7 +79,7 @@ static uint32_t tu_rand(tuna_ui *u)
 }
 
 /* sharps only: the fonts have capitals only (gfx.c fold), and EB would not read as E-flat */
-static const char *const NOTE_NAMES[12] = {"C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"};
+static const char *const TU_NOTE_NAMES[12] = {"C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"};
 
 /* ---- icons (the Fukiai cells of ui_icons.h; as icons.c draws them, without its parameter tables) ---------- */
 static int32_t tu_icon_cell(uint32_t *size, uint32_t id)
@@ -119,55 +119,55 @@ static int32_t tu_icon_mid(int32_t x, int32_t cy, uint32_t size, uint32_t id, ui
 }
 
 /* ---- names ------------------------------------------------------------------------------------------- */
-static const char *const MEL_NAMES[] = {"PHRASE", "CHANT", "TINTI", "PATTERN", "BIRDS"};
+static const char *const TU_MEL_NAMES[] = {"PHRASE", "CHANT", "TINTI", "PATTERN", "BIRDS"};
 /* (a card's value fits 49 px: in M, or in S; the long names shortened as Felucca's are) */
-static const char *const BASS_NAMES[] = {"FREE", "ROOT", "WALK", "BAR", "MARCH", "PEDAL", "DRONE", "OSTIN",
+static const char *const TU_BASS_NAMES[] = {"FREE", "ROOT", "WALK", "BAR", "MARCH", "PEDAL", "DRONE", "OSTIN",
                                          "LINE", "REPEAT", "TOLL", "BEAT", "NONE"};
-static const char *const PAD_NAMES[] = {"BLOCK", "ALBERTI", "CNTR", "BROKEN", "AFTER", "PARAL", "DOUBLE",
+static const char *const TU_PAD_NAMES[] = {"BLOCK", "ALBERTI", "CNTR", "BROKEN", "AFTER", "PARAL", "DOUBLE",
                                         "REPEAT", "ARP", "OOMPAH", "TREM", "ORGNM", "TINTI", "CANON",
                                         "FIGURE", "ADDIT", "PHASE", "NONE"};
-static const char *const HARM_NAMES[] = {"PLAN", "CYCLE", "DRONE"};
-static const char *const TUNE_NAMES[TT_TUNE_COUNT] = {"EQUAL", "MEAN", "WERCK", "PYTH", "JUST", "USER"};
-static const char *const SCALE_SHORT[TS_COUNT] = {"MAJ", "DOR", "PHRY", "LYD", "MIX", "MIN", "LOC", "HARM", "MEL",
+static const char *const TU_HARM_NAMES[] = {"PLAN", "CYCLE", "DRONE"};
+static const char *const TU_TUNE_NAMES[TT_TUNE_COUNT] = {"EQUAL", "MEAN", "WERCK", "PYTH", "JUST", "USER"};
+static const char *const TU_SCALE_SHORT[TS_COUNT] = {"MAJ", "DOR", "PHRY", "LYD", "MIX", "MIN", "LOC", "HARM", "MEL",
                                                   "PEN", "MPEN", "BLUES", "WHOLE", "DIMHW", "DIMWH", "MESS3",
                                                   "ACOUS", "HUNG", "DHARM", "PDOM"};
-static const char *const PERC_NAMES[] = {"OFF", "PERIOD", "KIT", "PATTERN"};
-static const char *const DEJA_NAMES[TA_DV_COUNT] = {"OFF", "OWN", "LOCK"};
-static const char *const PAGE_NAMES[TU_PAGES] = {"HOME", "LIBRARY", "KEY", "TIME", "PARTS", "EVOLVE", "FREEZE",
+static const char *const TU_PERC_NAMES[] = {"OFF", "PERIOD", "KIT", "PATTERN"};
+static const char *const TU_DEJA_NAMES[TA_DV_COUNT] = {"OFF", "OWN", "LOCK"};
+static const char *const TU_PAGE_NAMES[TU_PAGES] = {"HOME", "LIBRARY", "KEY", "TIME", "PARTS", "EVOLVE", "FREEZE",
                                                  "MIX", "REVERB", "SAVE", "LOAD", "MENU", "MIDI", "RESONATOR"};
-const char *tu_page_name(int page) { return page >= 0 && page < TU_PAGES ? PAGE_NAMES[page] : ""; }
-#define NAMES_N(a) ((int)(sizeof a / sizeof a[0]))
+const char *tu_page_name(int page) { return page >= 0 && page < TU_PAGES ? TU_PAGE_NAMES[page] : ""; }
+#define TU_NAMES_N(a) ((int)(sizeof a / sizeof a[0]))
 
 /* modes a part can take over any composer; the ones that need the composer's own material (a pattern, a
  * figure, a line, a canon) only where the composer has them, i.e. as its own setting */
-static bool mode_ok(const tg_gen *g, int kind, int m)
+static bool tu_mode_ok(const tg_gen *g, int kind, int m)
 {
     const tg_style *st = g->style;
     if (!st)
         return false;
     switch (kind) {
-    case 0: return m == TG_MEL_PATTERN ? st->mel_mode == m : m >= 0 && m < NAMES_N(MEL_NAMES);
+    case 0: return m == TG_MEL_PATTERN ? st->mel_mode == m : m >= 0 && m < TU_NAMES_N(TU_MEL_NAMES);
     case 1: return m == TG_BASS_MARBLES ? false : m == TG_BASS_OSTINATO || m == TG_BASS_LINE ? st->bass_mode == m
-                                                                                             : m >= 0 && m < NAMES_N(BASS_NAMES);
-    case 2: return m >= TG_PAD_CANON && m <= TG_PAD_PHASE ? st->pad_mode == m : m >= 0 && m < NAMES_N(PAD_NAMES);
-    case 3: return m == TG_HARM_CYCLE ? st->cycle_len > 0 : m >= 0 && m < NAMES_N(HARM_NAMES);
+                                                                                             : m >= 0 && m < TU_NAMES_N(TU_BASS_NAMES);
+    case 2: return m >= TG_PAD_CANON && m <= TG_PAD_PHASE ? st->pad_mode == m : m >= 0 && m < TU_NAMES_N(TU_PAD_NAMES);
+    case 3: return m == TG_HARM_CYCLE ? st->cycle_len > 0 : m >= 0 && m < TU_NAMES_N(TU_HARM_NAMES);
     }
     return false;
 }
-static int mode_step(const tg_gen *g, int kind, int m, int d)
+static int tu_mode_step(const tg_gen *g, int kind, int m, int d)
 {
-    int n = kind == 0 ? NAMES_N(MEL_NAMES) : kind == 1 ? NAMES_N(BASS_NAMES) : kind == 2 ? NAMES_N(PAD_NAMES)
-                                                                                       : NAMES_N(HARM_NAMES);
+    int n = kind == 0 ? TU_NAMES_N(TU_MEL_NAMES) : kind == 1 ? TU_NAMES_N(TU_BASS_NAMES) : kind == 2 ? TU_NAMES_N(TU_PAD_NAMES)
+                                                                                       : TU_NAMES_N(TU_HARM_NAMES);
     for (int i = 0; i < n; ++i) {
         m = tu_wrap(m + (d > 0 ? 1 : -1), n);
-        if (mode_ok(g, kind, m))
+        if (tu_mode_ok(g, kind, m))
             return m;
     }
     return m;
 }
 
 /* a chord's name: root and quality from its tones */
-static void chord_name(char *d, const tt_chord *c, int key_root)
+static void tu_chord_name(char *d, const tt_chord *c, int key_root)
 {
     int root = (c->root + key_root) % 12;
     uint16_t m = 0;
@@ -191,7 +191,7 @@ static void chord_name(char *d, const tt_chord *c, int key_root)
         q = " SUS2";
     else if (fifth && c->n <= 2)
         q = "5";
-    tu_cpy(d, NOTE_NAMES[root], 24);
+    tu_cpy(d, TU_NOTE_NAMES[root], 24);
     tu_cat(d, q, 24);
 }
 
@@ -205,30 +205,30 @@ typedef struct {
     bool name;                            /* a name: may be ellipsised */
 } tu_card;
 
-static int chaos_val(float v) { return (int)(v * 100.0f + 0.5f); }
+static int tu_chaos_val(float v) { return (int)(v * 100.0f + 0.5f); }
 
-static void card_chaos(tu_card *c, const char *label, float v)
+static void tu_card_chaos(tu_card *c, const char *label, float v)
 {
     c->label = label;
-    int x = chaos_val(v) - 50;
+    int x = tu_chaos_val(v) - 50;
     tu_fmt_signed(c->val, x);
-    c->ratio = chaos_val(v) * 10;
+    c->ratio = tu_chaos_val(v) * 10;
     c->bipolar = true;
 }
-static void card_text(tu_card *c, const char *label, const char *v, int32_t ratio)
+static void tu_card_text(tu_card *c, const char *label, const char *v, int32_t ratio)
 {
     c->label = label;
     tu_cpy(c->val, v, sizeof c->val);
     c->ratio = ratio;
 }
-static void card_int(tu_card *c, const char *label, int v, int lo, int hi)
+static void tu_card_int(tu_card *c, const char *label, int v, int lo, int hi)
 {
     c->label = label;
     tu_fmt_int(c->val, v);
     c->ratio = hi > lo ? (v - lo) * 1000 / (hi - lo) : -1;
 }
 
-static void page_cards(tuna_ui *u, tu_card *c)
+static void tu_page_cards(tuna_ui *u, tu_card *c)
 {
     tuna_app *a = u->app;
     tg_gen *g = &a->g;
@@ -241,36 +241,36 @@ static void page_cards(tuna_ui *u, tu_card *c)
     }
     switch (u->page) {
     case TU_PG_HOME:
-        card_chaos(&c[0], "RHYTHM", g->chaos_rhythm);
-        card_chaos(&c[1], "PITCH", g->chaos_pitch);
-        card_chaos(&c[2], "DENSITY", g->chaos_density);
-        card_chaos(&c[3], "MACRO", g->chaos_macro);
+        tu_card_chaos(&c[0], "RHYTHM", g->chaos_rhythm);
+        tu_card_chaos(&c[1], "PITCH", g->chaos_pitch);
+        tu_card_chaos(&c[2], "DENSITY", g->chaos_density);
+        tu_card_chaos(&c[3], "MACRO", g->chaos_macro);
         break;
     case TU_PG_LIB: {
         int item = a->pending >= 0 ? a->pending : a->item, gr = item >= 0 ? ta_lib_group(item) : 0;
         char t[8];
         tu_fmt_int(t, gr);
-        card_text(&c[0], "ERA", gr == 0 ? "TUNA" : t, gr * 1000 / (TA_GROUPS - 1));
-        card_text(&c[1], "PIECE", item >= 0 ? ta_lib_name(item) : "SLOT", -1);
+        tu_card_text(&c[0], "ERA", gr == 0 ? "TUNA" : t, gr * 1000 / (TA_GROUPS - 1));
+        tu_card_text(&c[1], "PIECE", item >= 0 ? ta_lib_name(item) : "SLOT", -1);
         c[1].name = true;
-        card_int(&c[2], "SEED", (int)(a->seed % 100000u), 0, -1);
+        tu_card_int(&c[2], "SEED", (int)(a->seed % 100000u), 0, -1);
         c[2].ratio = -1;
         c[3].off = true;
         break;
     }
     case TU_PG_KEY: {
         int root = g->root_req >= 0 ? g->root_req : g->root;
-        card_text(&c[0], "ROOT", NOTE_NAMES[root], root * 1000 / 11);
-        card_text(&c[1], "SCALE", SCALE_SHORT[e.scale], e.scale * 1000 / (TS_COUNT - 1));
-        card_text(&c[2], "TUNE", TUNE_NAMES[g->tuning], g->tuning * 1000 / (TT_TUNE_COUNT - 1));
-        card_text(&c[3], "DEJA", DEJA_NAMES[a->deja], a->deja * 500);
+        tu_card_text(&c[0], "ROOT", TU_NOTE_NAMES[root], root * 1000 / 11);
+        tu_card_text(&c[1], "SCALE", TU_SCALE_SHORT[e.scale], e.scale * 1000 / (TS_COUNT - 1));
+        tu_card_text(&c[2], "TUNE", TU_TUNE_NAMES[g->tuning], g->tuning * 1000 / (TT_TUNE_COUNT - 1));
+        tu_card_text(&c[3], "DEJA", TU_DEJA_NAMES[a->deja], a->deja * 500);
         break;
     }
     case TU_PG_TIME:
-        card_text(&c[0], "METER", ta_meter_name(e.meter), e.meter < 0 ? -1 : e.meter * 1000 / (TA_M_COUNT - 1));
-        card_int(&c[1], "SWING", (int)(g->swing * 100.0f + 0.5f), 0, 100);
-        card_int(&c[2], "HUMAN", (int)(g->humanize * 100.0f + 0.5f), 0, 100);
-        card_text(&c[3], "PERC", PERC_NAMES[tu_clampi(g->perc_mode, 0, 3)], g->perc_mode * 333);
+        tu_card_text(&c[0], "METER", ta_meter_name(e.meter), e.meter < 0 ? -1 : e.meter * 1000 / (TA_M_COUNT - 1));
+        tu_card_int(&c[1], "SWING", (int)(g->swing * 100.0f + 0.5f), 0, 100);
+        tu_card_int(&c[2], "HUMAN", (int)(g->humanize * 100.0f + 0.5f), 0, 100);
+        tu_card_text(&c[3], "PERC", TU_PERC_NAMES[tu_clampi(g->perc_mode, 0, 3)], g->perc_mode * 333);
         break;
     case TU_PG_PARTS:
         if (!g->style) {                          /* a character preset: Marbles' own parts */
@@ -278,71 +278,71 @@ static void page_cards(tuna_ui *u, tu_card *c)
                 c[i].off = true;
             break;
         }
-        card_text(&c[0], "MELODY", MEL_NAMES[tu_clampi(e.mel, 0, NAMES_N(MEL_NAMES) - 1)], -1);
-        card_text(&c[1], "BASS", BASS_NAMES[tu_clampi(e.bass, 0, NAMES_N(BASS_NAMES) - 1)], -1);
-        card_text(&c[2], "PAD", PAD_NAMES[tu_clampi(e.pad, 0, NAMES_N(PAD_NAMES) - 1)], -1);
-        card_text(&c[3], "HARM", HARM_NAMES[tu_clampi(e.harm, 0, NAMES_N(HARM_NAMES) - 1)], -1);
+        tu_card_text(&c[0], "MELODY", TU_MEL_NAMES[tu_clampi(e.mel, 0, TU_NAMES_N(TU_MEL_NAMES) - 1)], -1);
+        tu_card_text(&c[1], "BASS", TU_BASS_NAMES[tu_clampi(e.bass, 0, TU_NAMES_N(TU_BASS_NAMES) - 1)], -1);
+        tu_card_text(&c[2], "PAD", TU_PAD_NAMES[tu_clampi(e.pad, 0, TU_NAMES_N(TU_PAD_NAMES) - 1)], -1);
+        tu_card_text(&c[3], "HARM", TU_HARM_NAMES[tu_clampi(e.harm, 0, TU_NAMES_N(TU_HARM_NAMES) - 1)], -1);
         break;
     case TU_PG_EVOLVE:
-        card_text(&c[0], "EVOLVE", g->evolve ? "ON" : "OFF", g->evolve ? 1000 : 0);
-        card_int(&c[1], "LEN", g->evolve_periods, 2, 16);
-        card_int(&c[2], "DEPTH", (int)(g->evolve_depth * 100.0f + 0.5f), 0, 100);
-        card_text(&c[3], "MOD", g->evolve_modulate ? "ON" : "OFF", g->evolve_modulate ? 1000 : 0);
+        tu_card_text(&c[0], "EVOLVE", g->evolve ? "ON" : "OFF", g->evolve ? 1000 : 0);
+        tu_card_int(&c[1], "LEN", g->evolve_periods, 2, 16);
+        tu_card_int(&c[2], "DEPTH", (int)(g->evolve_depth * 100.0f + 0.5f), 0, 100);
+        tu_card_text(&c[3], "MOD", g->evolve_modulate ? "ON" : "OFF", g->evolve_modulate ? 1000 : 0);
         break;
     case TU_PG_SEQ:
-        card_text(&c[0], "STATE", g->frozen ? (g->unfreeze_req ? "ENDING" : "LOOP") : g->freeze_req ? "WAIT" : "LIVE", -1);
-        card_int(&c[1], "NOTES", g->frozen ? g->pat.n : 0, 0, -1);
+        tu_card_text(&c[0], "STATE", g->frozen ? (g->unfreeze_req ? "ENDING" : "LOOP") : g->freeze_req ? "WAIT" : "LIVE", -1);
+        tu_card_int(&c[1], "NOTES", g->frozen ? g->pat.n : 0, 0, -1);
         c[1].ratio = g->frozen ? g->pat.n * 1000 / TG_PAT_MAX : -1;
-        card_int(&c[2], "LOCKS", g->nsteps, 0, TG_STEPS);
+        tu_card_int(&c[2], "LOCKS", g->nsteps, 0, TG_STEPS);
         c[3].off = true;
         if (g->frozen)
-            card_text(&c[3], "TRANSP", "+/-", -1), c[3].off = false;
+            tu_card_text(&c[3], "TRANSP", "+/-", -1), c[3].off = false;
         break;
     case TU_PG_MIX: {
         static const char *const L[4] = {"BASS", "MELODY", "PAD", "DRUMS"};
         for (int i = 0; i < 4; ++i)
-            card_int(&c[i], L[i], a->level[i], 0, 100);
+            tu_card_int(&c[i], L[i], a->level[i], 0, 100);
         break;
     }
     case TU_PG_FX:
-        card_int(&c[0], "REVERB", a->reverb, 0, 100);
-        card_int(&c[1], "VOL", u->master, 0, 100);
+        tu_card_int(&c[0], "REVERB", a->reverb, 0, 100);
+        tu_card_int(&c[1], "VOL", u->master, 0, 100);
         c[2].off = c[3].off = true;
         break;
     case TU_PG_SAVE:
     case TU_PG_LOAD: {
         char t[8];
         tu_fmt_int(t, u->slot + 1);
-        card_text(&c[0], "SLOT", t, u->slot * 1000 / (TP_SLOTS - 1));
+        tu_card_text(&c[0], "SLOT", t, u->slot * 1000 / (TP_SLOTS - 1));
         bool used = (u->slots_used >> u->slot) & 1u;
-        card_text(&c[1], "NAME", used ? u->slot_names[u->slot] : "EMPTY", -1);
+        tu_card_text(&c[1], "NAME", used ? u->slot_names[u->slot] : "EMPTY", -1);
         c[1].name = true;
         c[2].off = c[3].off = true;
         break;
     }
     case TU_PG_MIDI:
-        card_text(&c[0], "OUT", a->midi.on ? "ON" : "OFF", a->midi.on ? 1000 : 0);
-        card_text(&c[1], "SOUND", a->local ? "ON" : "OFF", a->local ? 1000 : 0);
-        card_text(&c[2], "CLOCK", a->midi.clock ? "ON" : "OFF", a->midi.clock ? 1000 : 0);
-        card_text(&c[3], "BEND", a->midi.bend ? "ON" : "OFF", a->midi.bend ? 1000 : 0);
+        tu_card_text(&c[0], "OUT", a->midi.on ? "ON" : "OFF", a->midi.on ? 1000 : 0);
+        tu_card_text(&c[1], "SOUND", a->local ? "ON" : "OFF", a->local ? 1000 : 0);
+        tu_card_text(&c[2], "CLOCK", a->midi.clock ? "ON" : "OFF", a->midi.clock ? 1000 : 0);
+        tu_card_text(&c[3], "BEND", a->midi.bend ? "ON" : "OFF", a->midi.bend ? 1000 : 0);
         break;
     case TU_PG_RESO: {
         static const char *const TN[TR_TUNE_COUNT] = {"CHORD", "KEY", "ROOT"};
-        card_int(&c[0], "AMOUNT", a->reso_amount, 0, 100);
-        card_int(&c[1], "DECAY", a->reso_decay, 0, 100);
-        card_int(&c[2], "BRIGHT", a->reso_bright, 0, 100);
-        card_text(&c[3], "TUNE", TN[a->reso_mode % TR_TUNE_COUNT], a->reso_mode * 500);
+        tu_card_int(&c[0], "AMOUNT", a->reso_amount, 0, 100);
+        tu_card_int(&c[1], "DECAY", a->reso_decay, 0, 100);
+        tu_card_int(&c[2], "BRIGHT", a->reso_bright, 0, 100);
+        tu_card_text(&c[3], "TUNE", TN[a->reso_mode % TR_TUNE_COUNT], a->reso_mode * 500);
         break;
     }
     case TU_PG_MENU:
-        card_text(&c[0], "COLOR", UI_PALETTES[u->palette % NPALETTES].name, u->palette * 1000 / (NPALETTES - 1));
-        card_text(&c[1], "STYLE", u->style ? "LINE" : "FLAT", u->style * 1000);
+        tu_card_text(&c[0], "COLOR", UI_PALETTES[u->palette % NPALETTES].name, u->palette * 1000 / (NPALETTES - 1));
+        tu_card_text(&c[1], "STYLE", u->style ? "LINE" : "FLAT", u->style * 1000);
         c[2].off = c[3].off = true;
         break;
     }
 }
 
-static void draw_card(tuna_ui *u, int i, const tu_card *c)
+static void tu_draw_card(tuna_ui *u, int i, const tu_card *c)
 {
     bool hot = u->hot == i && u->hot_ms > 0;
     uint16_t lc = hot ? T_ACCENT : T_MID, vc = hot ? T_ACCENT : T_THEME;
@@ -384,7 +384,7 @@ static void draw_card(tuna_ui *u, int i, const tu_card *c)
 }
 
 /* ---- the header -------------------------------------------------------------------------------------- */
-static void draw_head(tuna_ui *u)
+static void tu_draw_head(tuna_ui *u)
 {
     tuna_app *a = u->app;
     tg_gen *g = &a->g;
@@ -421,7 +421,7 @@ static void draw_head(tuna_ui *u)
 }
 
 /* ---- the footer -------------------------------------------------------------------------------------- */
-static void draw_foot(tuna_ui *u)
+static void tu_draw_foot(tuna_ui *u)
 {
     tuna_app *a = u->app;
     tg_gen *g = &a->g;
@@ -451,7 +451,7 @@ static void draw_foot(tuna_ui *u)
 }
 
 /* ---- the panels ---------------------------------------------------------------------------------------- */
-static uint16_t part_color(int part)
+static uint16_t tu_part_color(int part)
 {
     switch (part) {
     case TG_PART_MELODY: return T_ACCENT;
@@ -461,14 +461,14 @@ static uint16_t part_color(int part)
     }
 }
 
-static void panel_begin(void)
+static void tu_panel_begin(void)
 {
     cv_begin(240, TU_PANEL_H, T_BG);
     cv_rrect(3, 0, 234, TU_PANEL_H, 4, T_SURF, T_BG);
 }
 
 /* HOME: the notes falling, the chord and the key on top */
-static void panel_home(tuna_ui *u)
+static void tu_panel_home(tuna_ui *u)
 {
     tuna_app *a = u->app;
     tg_gen *g = &a->g;
@@ -476,7 +476,7 @@ static void panel_home(tuna_ui *u)
         tu_particle *p = &u->pt[i];
         if (!p->life)
             continue;
-        uint16_t c = part_color(p->part);
+        uint16_t c = tu_part_color(p->part);
         if (p->life < 64)
             c = ux_mix(T_SURF, c, p->life * 100 / 64);
         int32_t x = p->x >> 4, y = p->y >> 4, s = p->size;
@@ -490,10 +490,10 @@ static void panel_home(tuna_ui *u)
     cv_rect(8, TU_PANEL_H - 3, 224, 1, T_LINE);    /* the floor they land on */
     char t[24];
     if (a->playing) {
-        chord_name(t, &g->chord, g->root);
+        tu_chord_name(t, &g->chord, g->root);
         cv_text_on(10, 6, &AF_M, t, T_TEXT, T_SURF);
     }
-    tu_cpy(t, NOTE_NAMES[g->root], sizeof t);
+    tu_cpy(t, TU_NOTE_NAMES[g->root], sizeof t);
     tu_cat(t, " ", sizeof t);
     tu_cat(t, tt_scale_name(g->scale), sizeof t);
     cv_text_r(230, 6 + AF_M_CAP_Y + AF_M_CAP_H - AF_S_CAP_Y - AF_S_CAP_H, &AF_S, t, T_MID, T_SURF);
@@ -507,7 +507,7 @@ static void panel_home(tuna_ui *u)
 }
 
 /* the library list (the PRESETS knob, the LIBRARY page) */
-static void panel_browse(tuna_ui *u)
+static void tu_panel_browse(tuna_ui *u)
 {
     tuna_app *a = u->app;
     int item = u->browse, gr = ta_lib_group(item), first = ta_lib_first(gr);
@@ -542,7 +542,7 @@ static void panel_browse(tuna_ui *u)
 }
 
 /* KEY: one octave of keys, the scale's notes marked, the tonic and the chord sounding */
-static void panel_key(tuna_ui *u)
+static void tu_panel_key(tuna_ui *u)
 {
     tuna_app *a = u->app;
     tg_gen *g = &a->g;
@@ -574,16 +574,16 @@ static void panel_key(tuna_ui *u)
             cv_rrect(x + 4, ky + 30, 8, 8, 4, T_INK, f);
     }
     char t[32];
-    tu_cpy(t, NOTE_NAMES[root], sizeof t);
+    tu_cpy(t, TU_NOTE_NAMES[root], sizeof t);
     tu_cat(t, " ", sizeof t);
     tu_cat(t, tt_scale_name(e.scale), sizeof t);
     cv_free_text(15, 4, &AF_S, t, T_TEXT, T_SURF, 140);
-    cv_text_r(228, 4, &AF_S, TUNE_NAMES[g->tuning], T_MID, T_SURF);
+    cv_text_r(228, 4, &AF_S, TU_TUNE_NAMES[g->tuning], T_MID, T_SURF);
     cv_text_on(15, 100, &AF_S, "KEYS: TAP A ROOT, HOLD A CHORD", T_MID, T_SURF);
 }
 
 /* TIME and PARTS: the meter as big figures, or what each part does */
-static void panel_time(tuna_ui *u)
+static void tu_panel_time(tuna_ui *u)
 {
     tuna_app *a = u->app;
     tg_gen *g = &a->g;
@@ -621,7 +621,7 @@ static void panel_time(tuna_ui *u)
         cv_text_in(3, 96, 234, &AF_S, "AT THE PERIOD'S END", T_ACCENT, T_SURF);
 }
 
-static void panel_parts(tuna_ui *u)
+static void tu_panel_parts(tuna_ui *u)
 {
     tuna_app *a = u->app;
     tg_gen *g = &a->g;
@@ -633,9 +633,9 @@ static void panel_parts(tuna_ui *u)
     static const uint8_t part[4] = {TG_PART_BASS, TG_PART_MELODY, TG_PART_PAD, TG_PART_DRUMS};
     for (int i = 0; i < 4; ++i) {
         int32_t y = 8 + i * 24;
-        cv_rrect(10, y + 4, 8, 8, 4, part_color(part[i]), T_SURF);
+        cv_rrect(10, y + 4, 8, 8, 4, tu_part_color(part[i]), T_SURF);
         cv_text_on(24, y + CAP_IN(S, 16), &AF_S, P[i], T_MID, T_SURF);
-        const char *fam = i < TG_PARTS && g->orch_cur[part[i]] >= 0 ? tg_family_name(g->orch_cur[part[i]]) : i == 3 ? PERC_NAMES[tu_clampi(g->perc_mode, 0, 3)] : "";
+        const char *fam = i < TG_PARTS && g->orch_cur[part[i]] >= 0 ? tg_family_name(g->orch_cur[part[i]]) : i == 3 ? TU_PERC_NAMES[tu_clampi(g->perc_mode, 0, 3)] : "";
         cv_free_text(90, y + CAP_IN(M, 16), &AF_M, fam, T_TEXT, T_SURF, 140);
     }
     if (a->req_on)
@@ -643,7 +643,7 @@ static void panel_parts(tuna_ui *u)
 }
 
 /* EVOLVE: the energy arc over the cycle, the period now */
-static void panel_evolve(tuna_ui *u)
+static void tu_panel_evolve(tuna_ui *u)
 {
     tg_gen *g = &u->app->g;
     int n = tu_clampi(g->evolve_periods, 2, 16);
@@ -663,7 +663,7 @@ static void panel_evolve(tuna_ui *u)
 }
 
 /* FREEZE: the loop as a piano roll, the playhead; live, how to freeze */
-static void panel_seq(tuna_ui *u)
+static void tu_panel_seq(tuna_ui *u)
 {
     tg_gen *g = &u->app->g;
     if (!g->frozen) {
@@ -689,7 +689,7 @@ static void panel_seq(tuna_ui *u)
         const tg_pnote *p = &pt->ev[i];
         int32_t x = x0 + p->tick * w / len, xw = p->len * w / len;
         int32_t y = p->part >= TG_PART_DRUMS ? y0 + h - 3 : y0 + h - 8 - (p->note - lo) * (h - 12) / span;
-        cv_rect(x, y, xw > 2 ? xw - 1 : 2, 3, part_color(p->part));
+        cv_rect(x, y, xw > 2 ? xw - 1 : 2, 3, tu_part_color(p->part));
     }
     int32_t px = x0 + g->pat_pos * w / len;
     cv_rect(px, y0, 1, h, T_ACCENT);
@@ -698,7 +698,7 @@ static void panel_seq(tuna_ui *u)
 }
 
 /* MIX: four level bars, what each part plays now */
-static void panel_mix(tuna_ui *u)
+static void tu_panel_mix(tuna_ui *u)
 {
     tuna_app *a = u->app;
     tg_gen *g = &a->g;
@@ -707,7 +707,7 @@ static void panel_mix(tuna_ui *u)
         int32_t x = TU_CARD_X(i) + 8, h = a->level[i] * 80 / 100;
         cv_rrect(x + 14, 12, 12, 80, 3, T_RAISE, T_SURF);
         if (h > 0)
-            cv_rrect(x + 14, 92 - h, 12, h, 3, part_color(part[i]), T_RAISE);
+            cv_rrect(x + 14, 92 - h, 12, h, 3, tu_part_color(part[i]), T_RAISE);
         const char *fam = i < 3 && g->orch_cur[part[i]] >= 0 ? tg_family_name(g->orch_cur[part[i]]) : i == 3 ? "DRUMS" : "";
         GFX_HOOK_ALIGN(TU_CARD_X(i), 0, TU_CARD_X(i) + TU_CARD_W, 0, AL_H, "mix: the part's family");
         int32_t fw = text_w(&AF_S, fam);
@@ -716,7 +716,7 @@ static void panel_mix(tuna_ui *u)
     }
 }
 
-static void panel_fx(tuna_ui *u)
+static void tu_panel_fx(tuna_ui *u)
 {
     tuna_app *a = u->app;
     int32_t w = 200 * a->reverb / 100;
@@ -732,7 +732,7 @@ static void panel_fx(tuna_ui *u)
 }
 
 /* SAVE and LOAD: the 16 slots as the 16 white keys, in 4 rows */
-static void panel_slots(tuna_ui *u)
+static void tu_panel_slots(tuna_ui *u)
 {
     for (int s = 0; s < TP_SLOTS; ++s) {
         int r = s / 4, c = s % 4;
@@ -755,7 +755,7 @@ static void panel_slots(tuna_ui *u)
     cv_text_r(232, 104 + HALF_UP(KC_H - AF_S_CAP_H) - AF_S_CAP_Y, &AF_S, "WHITE KEYS: SLOT", T_DIM, T_SURF);
 }
 
-static void panel_menu(tuna_ui *u)
+static void tu_panel_menu(tuna_ui *u)
 {
     (void)u;
     for (int i = 0; i < 5; ++i) {                 /* the palette's colours */
@@ -770,7 +770,7 @@ static void panel_menu(tuna_ui *u)
 }
 
 /* MIDI: the parts, their channels, a light as each plays */
-static void panel_midi(tuna_ui *u)
+static void tu_panel_midi(tuna_ui *u)
 {
     tuna_app *a = u->app;
     static const char *const P[5] = {"BASS", "MELODY", "PAD", "TIMPANI", "DRUMS"};
@@ -779,7 +779,7 @@ static void panel_midi(tuna_ui *u)
         int32_t y = 6 + i * 21;
         int ch = a->midi.ch[part[i]] & 15;
         uint8_t act = a->midi.act[ch];
-        uint16_t led = !a->midi.on ? T_DIM : act ? ux_mix(T_RAISE, part_color(part[i]), 30 + act * 70 / 255) : T_RAISE;
+        uint16_t led = !a->midi.on ? T_DIM : act ? ux_mix(T_RAISE, tu_part_color(part[i]), 30 + act * 70 / 255) : T_RAISE;
         cv_rrect(12, y + 4, 10, 10, 5, led, T_SURF);
         cv_text_on(30, y + CAP_IN(S, 18), &AF_S, P[i], T_MID, T_SURF);
         char t[8];
@@ -801,7 +801,7 @@ static void panel_midi(tuna_ui *u)
 }
 
 /* RESONATOR: its strings, each a line that shakes as it rings, its note at the left */
-static void panel_reso(tuna_ui *u)
+static void tu_panel_reso(tuna_ui *u)
 {
     tuna_app *a = u->app;
     const tr_reso *r = &a->reso;
@@ -811,7 +811,7 @@ static void panel_reso(tuna_ui *u)
         uint16_t c = note < 0 || !a->reso_amount ? T_DIM : k & 1 ? T_THEME : T_ACCENT;
         if (note >= 0) {
             char t[8];
-            tu_cpy(t, NOTE_NAMES[note % 12], sizeof t);
+            tu_cpy(t, TU_NOTE_NAMES[note % 12], sizeof t);
             char o[4];
             tu_fmt_int(o, note / 12 - 1);
             tu_cat(t, o, sizeof t);
@@ -833,48 +833,31 @@ static void panel_reso(tuna_ui *u)
     }
 }
 
-static void draw_panel(tuna_ui *u)
+static void tu_draw_panel(tuna_ui *u)
 {
-    panel_begin();
+    tu_panel_begin();
     if (u->browse_ms > 0 || u->page == TU_PG_LIB) {
-        panel_browse(u);
+        tu_panel_browse(u);
     } else {
         switch (u->page) {
-        case TU_PG_HOME: panel_home(u); break;
-        case TU_PG_KEY: panel_key(u); break;
-        case TU_PG_TIME: panel_time(u); break;
-        case TU_PG_PARTS: panel_parts(u); break;
-        case TU_PG_EVOLVE: panel_evolve(u); break;
-        case TU_PG_SEQ: panel_seq(u); break;
-        case TU_PG_MIX: panel_mix(u); break;
-        case TU_PG_FX: panel_fx(u); break;
-        case TU_PG_SAVE: case TU_PG_LOAD: panel_slots(u); break;
-        case TU_PG_MENU: panel_menu(u); break;
-        case TU_PG_MIDI: panel_midi(u); break;
-        case TU_PG_RESO: panel_reso(u); break;
+        case TU_PG_HOME: tu_panel_home(u); break;
+        case TU_PG_KEY: tu_panel_key(u); break;
+        case TU_PG_TIME: tu_panel_time(u); break;
+        case TU_PG_PARTS: tu_panel_parts(u); break;
+        case TU_PG_EVOLVE: tu_panel_evolve(u); break;
+        case TU_PG_SEQ: tu_panel_seq(u); break;
+        case TU_PG_MIX: tu_panel_mix(u); break;
+        case TU_PG_FX: tu_panel_fx(u); break;
+        case TU_PG_SAVE: case TU_PG_LOAD: tu_panel_slots(u); break;
+        case TU_PG_MENU: tu_panel_menu(u); break;
+        case TU_PG_MIDI: tu_panel_midi(u); break;
+        case TU_PG_RESO: tu_panel_reso(u); break;
         }
     }
     cv_blit(0, TU_PANEL_Y);
 }
 
-void tu_draw(tuna_ui *u)
-{
-    tu_card c[4];
-    if (u->slots_dirty && (u->page == TU_PG_SAVE || u->page == TU_PG_LOAD)) {
-        u->slots_used = ta_slots_used(u->app, u->slot_names);
-        u->slots_dirty = false;
-    }
-    draw_head(u);
-    page_cards(u, c);
-    for (int i = 0; i < 4; ++i)
-        draw_card(u, i, &c[i]);
-    draw_panel(u);
-    draw_foot(u);
-    u->force = false;
-    u->frame++;
-}
-
-void tu_draw_all(tuna_ui *u)
+static void tu_background(void)
 {
     cv_begin(240, 40, T_BG);                      /* the background, gaps and all */
     for (int y = 0; y < 240; y += 40)
@@ -888,6 +871,29 @@ void tu_draw_all(tuna_ui *u)
         for (int c = 1; c < 4; ++c)
             cv_blit((uint32_t)(TU_CARD_X(c) - 2), TU_CARD_Y);
     }
+}
+
+void tu_draw(tuna_ui *u)
+{
+    tu_card c[4];
+    if (u->force)                                 /* a page, a palette, a style: everything again */
+        tu_background();
+    if (u->slots_dirty && (u->page == TU_PG_SAVE || u->page == TU_PG_LOAD)) {
+        u->slots_used = ta_slots_used(u->app, u->slot_names);
+        u->slots_dirty = false;
+    }
+    tu_draw_head(u);
+    tu_page_cards(u, c);
+    for (int i = 0; i < 4; ++i)
+        tu_draw_card(u, i, &c[i]);
+    tu_draw_panel(u);
+    tu_draw_foot(u);
+    u->force = false;
+    u->frame++;
+}
+
+void tu_draw_all(tuna_ui *u)
+{
     u->force = true;
     tu_draw(u);
 }
@@ -899,7 +905,7 @@ static void tu_msg(tuna_ui *u, const char *m)
     u->msg_ms = 1500;
 }
 
-static void goto_page(tuna_ui *u, int pg)
+static void tu_goto_page(tuna_ui *u, int pg)
 {
     if (pg != u->page) {
         u->page = pg;
@@ -928,9 +934,9 @@ void tu_init(tuna_ui *u, tuna_app *a)
     palette_set((uint32_t)u->palette);
 }
 
-static float chaos_add(float v, int d) { return (float)tu_clampi(chaos_val(v) + 2 * d, 0, 100) / 100.0f; }
+static float tu_chaos_add(float v, int d) { return (float)tu_clampi(tu_chaos_val(v) + 2 * d, 0, 100) / 100.0f; }
 
-static void set_edit(tuna_ui *u, int which, int d)
+static void tu_set_edit(tuna_ui *u, int which, int d)
 {
     tuna_app *a = u->app;
     ta_edit e, cur;
@@ -940,16 +946,16 @@ static void set_edit(tuna_ui *u, int which, int d)
         e = a->req;
     switch (which) {
     case 0: e.meter = (int8_t)tu_wrap((cur.meter < 0 ? (d > 0 ? -1 : TA_M_COUNT) : cur.meter) + d, TA_M_COUNT); break;
-    case 1: e.mel = (int8_t)mode_step(&a->g, 0, cur.mel, d); break;
-    case 2: e.bass = (int8_t)mode_step(&a->g, 1, cur.bass, d); break;
-    case 3: e.pad = (int8_t)mode_step(&a->g, 2, cur.pad, d); break;
-    case 4: e.harm = (int8_t)mode_step(&a->g, 3, cur.harm, d); break;
+    case 1: e.mel = (int8_t)tu_mode_step(&a->g, 0, cur.mel, d); break;
+    case 2: e.bass = (int8_t)tu_mode_step(&a->g, 1, cur.bass, d); break;
+    case 3: e.pad = (int8_t)tu_mode_step(&a->g, 2, cur.pad, d); break;
+    case 4: e.harm = (int8_t)tu_mode_step(&a->g, 3, cur.harm, d); break;
     case 5: e.scale = (int8_t)tu_wrap(cur.scale + d, TS_COUNT); break;
     }
     ta_edit_set(a, &e);
 }
 
-static void lib_turn(tuna_ui *u, int d, bool era)
+static void tu_lib_turn(tuna_ui *u, int d, bool era)
 {
     tuna_app *a = u->app;
     int from = u->browse_ms > 0 || u->page == TU_PG_LIB ? u->browse : (a->pending >= 0 ? a->pending : a->item);
@@ -977,37 +983,37 @@ void tu_knob(tuna_ui *u, int k, int d)
     switch (k) {
     case TU_K_MASTER: u->master = (uint8_t)tu_clampi(u->master + 2 * d, 0, 100); u->hot = -1; return;
     case TU_K_SELECT: g->bpm = (float)tu_clampi((int)(g->bpm + 0.5f) + d, 20, 300); u->hot = TU_K_SELECT; return;
-    case TU_K_PRESETS: lib_turn(u, d, false); u->hot = -1; return;
-    case TU_K_ALGO: lib_turn(u, d, true); u->hot = -1; return;
+    case TU_K_PRESETS: tu_lib_turn(u, d, false); u->hot = -1; return;
+    case TU_K_ALGO: tu_lib_turn(u, d, true); u->hot = -1; return;
     }
     int c = k - TU_K1;
     switch (u->page) {
     case TU_PG_HOME: {
         float v[4] = {g->chaos_rhythm, g->chaos_pitch, g->chaos_density, g->chaos_macro};
-        v[c] = chaos_add(v[c], d);
+        v[c] = tu_chaos_add(v[c], d);
         ta_set_chaos(a, v[0], v[1], v[2], v[3]);
         break;
     }
     case TU_PG_LIB:
-        if (c == 0) lib_turn(u, d, true);
-        else if (c == 1) lib_turn(u, d, false);
+        if (c == 0) tu_lib_turn(u, d, true);
+        else if (c == 1) tu_lib_turn(u, d, false);
         else if (c == 2) ta_seed_step(a, d);
         break;
     case TU_PG_KEY:
         if (c == 0) tg_set_root(g, (g->root_req >= 0 ? g->root_req : g->root) + d);
-        else if (c == 1) set_edit(u, 5, d);
+        else if (c == 1) tu_set_edit(u, 5, d);
         else if (c == 2) g->tuning = tu_wrap(g->tuning + d, TT_TUNE_COUNT);
         else ta_set_deja(a, tu_clampi(a->deja + d, 0, TA_DV_COUNT - 1));
         break;
     case TU_PG_TIME:
-        if (c == 0) set_edit(u, 0, d);
+        if (c == 0) tu_set_edit(u, 0, d);
         else if (c == 1) g->swing = (float)tu_clampi((int)(g->swing * 100.0f + 0.5f) + 2 * d, 0, 100) / 100.0f;
         else if (c == 2) g->humanize = (float)tu_clampi((int)(g->humanize * 100.0f + 0.5f) + 2 * d, 0, 100) / 100.0f;
         else tg_set_percussion(g, tu_clampi(g->perc_mode + d, TG_PERC_OFF, TG_PERC_KIT));
         break;
     case TU_PG_PARTS:
         if (g->style)
-            set_edit(u, 1 + c, d);
+            tu_set_edit(u, 1 + c, d);
         break;
     case TU_PG_EVOLVE:
         if (c == 0) tg_evolve(g, d > 0, g->evolve_periods, g->evolve_depth, g->evolve_modulate);
@@ -1061,13 +1067,17 @@ void tu_knob(tuna_ui *u, int k, int d)
 }
 
 /* SAVE / LOAD: OCT+ does it */
-static void slot_action(tuna_ui *u)
+static void tu_slot_action(tuna_ui *u)
 {
     tuna_app *a = u->app;
     bool used = (u->slots_used >> u->slot) & 1u;
     char m[32], n[4];
     tu_fmt_int(n, u->slot + 1);
     if (u->page == TU_PG_SAVE) {
+        if (a->playing) {                         /* (the FM-1 runs from its flash: no writing it while playing) */
+            tu_msg(u, "STOP TO SAVE");
+            return;
+        }
         if (used && !u->confirm) {
             u->confirm = 1;
             return;
@@ -1102,7 +1112,7 @@ void tu_button(tuna_ui *u, int b, bool down)
         } else if (u->home_down) {
             u->home_down = false;
             if (u->home_ms < TU_MENU_HOLD_MS)
-                goto_page(u, TU_PG_HOME);
+                tu_goto_page(u, TU_PG_HOME);
         }
         return;
     }
@@ -1121,18 +1131,18 @@ void tu_button(tuna_ui *u, int b, bool down)
     case TU_B_OCTUP: case TU_B_OCTDN: {
         int d = b == TU_B_OCTUP ? 1 : -1;
         if (u->page == TU_PG_SAVE || u->page == TU_PG_LOAD) {
-            if (d > 0) slot_action(u);
+            if (d > 0) tu_slot_action(u);
             else if (u->confirm) u->confirm = 0;
-            else goto_page(u, TU_PG_HOME);
+            else tu_goto_page(u, TU_PG_HOME);
         } else if (u->page == TU_PG_SEQ) {
             if (d > 0) {
                 if (g->frozen) tg_unfreeze(g);
                 else if (!tg_freeze(g)) tu_msg(u, "PLAY A PERIOD FIRST");
             } else {
-                goto_page(u, TU_PG_HOME);
+                tu_goto_page(u, TU_PG_HOME);
             }
         } else if (u->page == TU_PG_MENU) {
-            if (d < 0) goto_page(u, TU_PG_HOME);
+            if (d < 0) tu_goto_page(u, TU_PG_HOME);
         } else {
             char m[24];
             ta_seed_step(a, d);
@@ -1142,20 +1152,20 @@ void tu_button(tuna_ui *u, int b, bool down)
         }
         break;
     }
-    case TU_B_FX: goto_page(u, TU_PG_LIB); u->browse = a->pending >= 0 ? a->pending : a->item >= 0 ? a->item : 0; break;
-    case TU_B_SCL: goto_page(u, TU_PG_KEY); break;
-    case TU_B_EDIT: goto_page(u, u->page == TU_PG_TIME ? TU_PG_PARTS : TU_PG_TIME); break;
-    case TU_B_ARP: goto_page(u, TU_PG_EVOLVE); break;
-    case TU_B_SEQ: goto_page(u, TU_PG_SEQ); break;
-    case TU_B_GLO: goto_page(u, u->page == TU_PG_MIX ? TU_PG_FX : TU_PG_MIX); break;
-    case TU_B_SAVE: goto_page(u, u->page == TU_PG_SAVE ? TU_PG_LOAD : TU_PG_SAVE); break;
-    case TU_B_ENV: goto_page(u, TU_PG_MIDI); break;
-    case TU_B_LFO: goto_page(u, TU_PG_RESO); break;
+    case TU_B_FX: tu_goto_page(u, TU_PG_LIB); u->browse = a->pending >= 0 ? a->pending : a->item >= 0 ? a->item : 0; break;
+    case TU_B_SCL: tu_goto_page(u, TU_PG_KEY); break;
+    case TU_B_EDIT: tu_goto_page(u, u->page == TU_PG_TIME ? TU_PG_PARTS : TU_PG_TIME); break;
+    case TU_B_ARP: tu_goto_page(u, TU_PG_EVOLVE); break;
+    case TU_B_SEQ: tu_goto_page(u, TU_PG_SEQ); break;
+    case TU_B_GLO: tu_goto_page(u, u->page == TU_PG_MIX ? TU_PG_FX : TU_PG_MIX); break;
+    case TU_B_SAVE: tu_goto_page(u, u->page == TU_PG_SAVE ? TU_PG_LOAD : TU_PG_SAVE); break;
+    case TU_B_ENV: tu_goto_page(u, TU_PG_MIDI); break;
+    case TU_B_LFO: tu_goto_page(u, TU_PG_RESO); break;
     }
 }
 
 /* the keys: a tap sets the root; two or more held, a chord; SAVE / LOAD: the white keys are the slots */
-static int white_index(int note)
+static int tu_white_index(int note)
 {
     static const int8_t w[12] = {0, -1, 1, -1, 2, 3, -1, 4, -1, 5, -1, 6};
     int octave = note / 12, k = w[note % 12];
@@ -1172,7 +1182,7 @@ void tu_key(tuna_ui *u, int note, bool down)
         return;
     uint32_t bit = 1u << (note - TU_KEY_LO);
     if (u->page == TU_PG_SAVE || u->page == TU_PG_LOAD) {
-        int wi = white_index(note);
+        int wi = tu_white_index(note);
         if (down && wi >= 0 && wi < TP_SLOTS) {
             u->slot = wi;
             u->confirm = 0;
@@ -1205,13 +1215,13 @@ void tu_key(tuna_ui *u, int note, bool down)
         char m[16];
         tg_set_root(&a->g, u->key_first % 12);
         tu_cpy(m, "ROOT ", sizeof m);
-        tu_cat(m, NOTE_NAMES[u->key_first % 12], sizeof m);
+        tu_cat(m, TU_NOTE_NAMES[u->key_first % 12], sizeof m);
         tu_msg(u, m);
     }
 }
 
 /* ---- time --------------------------------------------------------------------------------------------- */
-static void spawn(tuna_ui *u, const ta_note *n)
+static void tu_spawn(tuna_ui *u, const ta_note *n)
 {
     int best = 0, life = 256;
     for (int i = 0; i < TU_PARTICLES; ++i) {     /* a free one, or the faintest */
@@ -1237,7 +1247,7 @@ void tu_tick(tuna_ui *u, int ms)
     tuna_app *a = u->app;
     ta_note n;
     while (ta_feed_pop(a, &n))
-        spawn(u, &n);
+        tu_spawn(u, &n);
     for (int i = 0; i < TU_PARTICLES; ++i) {
         tu_particle *p = &u->pt[i];
         if (!p->life)
@@ -1267,7 +1277,7 @@ void tu_tick(tuna_ui *u, int ms)
     if (u->home_down) {
         u->home_ms += ms;
         if (u->home_ms >= TU_MENU_HOLD_MS && u->page != TU_PG_MENU) {
-            goto_page(u, TU_PG_MENU);
+            tu_goto_page(u, TU_PG_MENU);
             u->home_down = false;
         }
     }

@@ -34,7 +34,8 @@ typedef struct {
     tmi_msg q[TMI_QUEUE];
     uint16_t w, r;
     uint32_t dropped;                     /* messages lost to a full queue */
-    double clock_next;                    /* the frame of the next clock */
+    uint32_t clock_next, clock_frac;      /* the frame of the next clock, and its fraction (Q16): no doubles,
+                                           * the FM-1's FPU is single precision */
     float sr;
     uint8_t act[16];                      /* activity, for the screen (set on a note, the screen fades it) */
 } tmi_out;

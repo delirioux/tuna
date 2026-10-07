@@ -1,7 +1,7 @@
 #!/bin/sh
 # SPDX-License-Identifier: GPL-3.0-only
 # All of TUNA's tests on the host: theory, mechanisms, sequencer, presets and slots, resonator, MIDI out,
-# the screen, and the composers swept over seeds.
+# the maths, the screen, the browser build, and the composers swept over seeds.
 #   tests/tuna_tests.sh [SEEDS] [SECONDS]        (defaults 10 seeds, 240 s; exit 0: all passed)
 set -eu
 SEEDS=${1:-10}
@@ -21,7 +21,16 @@ build/host/tuna_reso_test
 cc -O2 -Wall -Ifirmware/src -o build/host/tuna_midi_test tests/tuna_midi_test.c firmware/src/tuna_app.c \
     firmware/src/tuna_midi.c firmware/src/tuna_reso.c firmware/src/tuna_preset.c $SRC -lm
 build/host/tuna_midi_test
+cc -O2 -Wall -fno-builtin -o build/host/tuna_libm_test tests/tuna_libm_test.c -lm
+build/host/tuna_libm_test
 sh tests/tuna_ui_test.sh build/tuna_ui
+# the browser build, when a WebAssembly compiler is at hand (emcc, or clang with WASI_SYSROOT) and Node to run it
+if command -v node >/dev/null 2>&1 && { command -v emcc >/dev/null 2>&1 || [ -n "${WASI_SYSROOT:-}" ]; }; then
+    sh web/emu/tuna_build.sh
+    node web/emu/tuna_emu_test.mjs build/tuna_emu/tuna.wasm
+else
+    echo "tuna: browser build skipped (no emcc, no WASI_SYSROOT, or no node)"
+fi
 out=$(mktemp -d)
 TUNA_DIV=4 SWEEP=$SEEDS build/host/tuna_gen_render "$out" "$SECS"
 TUNA_DIV=4 SWEEP=$SEEDS STYLES=10-999 build/host/tuna_gen_render "$out" "$SECS"

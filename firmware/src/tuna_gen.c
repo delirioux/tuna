@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 /* TUNA generator (see tuna_gen.h). */
-#include <math.h>
+#include "tuna_sys.h"
 #include "tuna_gen.h"
 
 /* no libc here: the firmware brings its own (libc.c) */

@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 /* TUNA app (see tuna_app.h). */
 #include "tuna_app.h"
-#include <string.h>
+#include "tuna_sys.h"
 
 /* ---- the library ---------------------------------------------------------------------------------- */
 int ta_lib_count(void)

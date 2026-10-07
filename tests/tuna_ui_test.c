@@ -300,7 +300,7 @@ static void test_controls(void)
 {
     ta_play(&app, false);
     ta_select(&app, ta_lib_first(2));                /* Baroque's first */
-    goto_page(&ui, TU_PG_HOME);
+    tu_goto_page(&ui, TU_PG_HOME);
     /* chaos knobs: two per click, around 0.5 */
     tu_knob(&ui, TU_K1, 5);
     CHECK(app.g.chaos_rhythm > 0.59f && app.g.chaos_rhythm < 0.61f, "RHYTHM +5 clicks: %.2f", app.g.chaos_rhythm);
@@ -353,7 +353,7 @@ static void test_controls(void)
     CHECK(app.seed == s0 + 1, "OCT+ steps the seed");
     run_ms(500);
     /* form settings wait for the period's end */
-    goto_page(&ui, TU_PG_TIME);
+    tu_goto_page(&ui, TU_PG_TIME);
     tu_knob(&ui, TU_K1, 1);
     CHECK(app.req_on, "a meter asked for while playing waits");
     for (int i = 0; i < 400 && app.req_on; ++i)
@@ -366,7 +366,7 @@ static void test_controls(void)
     /* SAVE and LOAD through the UI: a slot by its white key */
     ta_select(&app, ta_lib_first(5) + 3);
     tu_knob(&ui, TU_K_PRESETS, 0);
-    goto_page(&ui, TU_PG_HOME);
+    tu_goto_page(&ui, TU_PG_HOME);
     tu_knob(&ui, TU_K2, 10);                         /* PITCH +20 */
     press(TU_B_SAVE);
     tu_key(&ui, 57, true);                           /* A3: the third white key, slot 3 */
@@ -384,7 +384,7 @@ static void test_controls(void)
     int saved_item = app.item;
     float saved_pitch = app.g.chaos_pitch;
     ta_select(&app, 1);
-    goto_page(&ui, TU_PG_HOME);
+    tu_goto_page(&ui, TU_PG_HOME);
     tu_knob(&ui, TU_K2, -10);
     press(TU_B_SAVE);
     press(TU_B_SAVE);
@@ -415,24 +415,24 @@ static void test_every_composer(void)
     for (int i = 0; i < ta_lib_count(); ++i) {
         ta_select(&app, i);
         ui.browse = i;
-        goto_page(&ui, TU_PG_HOME);
+        tu_goto_page(&ui, TU_PG_HOME);
         press(TU_B_PLAY);
         run_ms(1500);
         char w[48];
         snprintf(w, sizeof w, "home:%s", ta_lib_name(i));
         lint_where = w;
         tu_draw_all(&ui);
-        goto_page(&ui, TU_PG_LIB);
+        tu_goto_page(&ui, TU_PG_LIB);
         snprintf(w, sizeof w, "library:%s", ta_lib_name(i));
         lint_where = w;
         tu_draw_all(&ui);
-        goto_page(&ui, TU_PG_KEY);
+        tu_goto_page(&ui, TU_PG_KEY);
         tu_draw_all(&ui);
-        goto_page(&ui, TU_PG_TIME);
+        tu_goto_page(&ui, TU_PG_TIME);
         tu_draw_all(&ui);
-        goto_page(&ui, TU_PG_PARTS);
+        tu_goto_page(&ui, TU_PG_PARTS);
         tu_draw_all(&ui);
-        goto_page(&ui, TU_PG_MIX);
+        tu_goto_page(&ui, TU_PG_MIX);
         tu_draw_all(&ui);
         press(TU_B_PLAY);
     }
@@ -446,7 +446,7 @@ static void anim(int item, const char *tag)
     ta_play(&app, false);
     ta_select(&app, item);
     ta_set_chaos(&app, 0.5f, 0.5f, 0.5f, 0.5f);
-    goto_page(&ui, TU_PG_HOME);
+    tu_goto_page(&ui, TU_PG_HOME);
     ui.palette = 1;
     palette_set(1);
     ta_play(&app, true);

@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 /* TUNA MIDI out (see tuna_midi.h). */
 #include "tuna_midi.h"
-#include <string.h>
+#include "tuna_sys.h"
 
 static void put(tmi_out *m, uint32_t frame, uint8_t a, uint8_t b, uint8_t c, uint8_t n)
 {
@@ -123,6 +123,7 @@ void tmi_event(tmi_out *m, const tg_event *e, uint32_t frame)
 void tmi_start(tmi_out *m, uint32_t frame)
 {
     m->clock_next = frame;
+    m->clock_frac = 0;
     if (m->on && m->clock)
         put(m, frame, 0xFA, 0, 0, 1);
 }
@@ -154,11 +155,16 @@ void tmi_clock(tmi_out *m, uint32_t frame, int frames, float bpm)
 {
     if (!m->on || !m->clock || bpm <= 0.0f)
         return;
-    double step = (double)m->sr * 60.0 / ((double)bpm * 24.0);
-    if (m->clock_next < frame)
+    float step = m->sr * 60.0f / (bpm * 24.0f);          /* frames per clock */
+    uint32_t whole = (uint32_t)step, frac = (uint32_t)((step - (float)whole) * 65536.0f);
+    if ((int32_t)(m->clock_next - frame) < 0) {          /* (fell behind: from now) */
         m->clock_next = frame;
-    while (m->clock_next < (double)frame + frames) {
-        put(m, (uint32_t)m->clock_next, 0xF8, 0, 0, 1);
-        m->clock_next += step;
+        m->clock_frac = 0;
+    }
+    while ((int32_t)(m->clock_next - (frame + (uint32_t)frames)) < 0) {
+        put(m, m->clock_next, 0xF8, 0, 0, 1);
+        m->clock_frac += frac;
+        m->clock_next += whole + (m->clock_frac >> 16);
+        m->clock_frac &= 0xFFFFu;
     }
 }

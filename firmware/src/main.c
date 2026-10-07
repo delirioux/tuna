@@ -134,8 +134,13 @@ static void fm1_main(void)
     usb_serial_apply();                                 /* (#67: the saved USB SERIAL before usb_start) */
     lcd_init();
     lcd_fill(0, 0, 240, 240, T_BG);
+#if FELUCCA_TUNA
+    draw_text_box(0, 94, 240, &AF_L, "TUNA", T_THEME, 1);
+    draw_text_box(0, 134, 240, &AF_S, "GENERATIVE MUSIC", T_MID, 1);
+#else
     draw_text_box(0, 94, 240, &AF_L, "FELUCCA", T_THEME, 1);
     draw_text_box(0, 134, 240, &AF_S, "MULTI-ENGINE SYNTH", T_MID, 1);
+#endif
     if (felucca_dbg.magic != DBG_MAGIC) {
         memset(&felucca_dbg, 0, sizeof felucca_dbg);
         felucca_dbg.magic = DBG_MAGIC;
@@ -152,7 +157,11 @@ static void fm1_main(void)
     fm1_input_init();
     fm1_adc_init();
     panel_init();
+#if FELUCCA_TUNA
+    tf_init();                                          /* Tuna instead of Felucca's UI (tuna_fw.c) */
+#else
     felucca_init();
+#endif
     audio_init();
     usb_start();
 #if FELUCCA_UART
@@ -248,14 +257,25 @@ static void fm1_main(void)
         felucca_dbg.page = ui.page;
         felucca_dbg.home = ui.home;
         felucca_dbg.stage = 1;
+#if FELUCCA_TUNA
+        tf_input();
+        settings_poll();
+        felucca_dbg.stage = 2;
+        tf_frame();
+#else
         ui_input();
         settings_poll();                              /* queued settings save: only while stopped */
         felucca_dbg.stage = 2;
         ui_leds();
         ui_draw();
+#endif
         felucca_dbg.stage = 9;
         while (fm1_ms - m < 15u) {                               /* ~60 UI frames/s at most */
+#if FELUCCA_TUNA
+            tf_input();
+#else
             ui_input();
+#endif
 #if FELUCCA_OTA
             ed_service();                       /* editor replies without waiting for the next frame */
 #endif

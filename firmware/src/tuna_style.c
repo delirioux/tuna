@@ -27,6 +27,8 @@ static const tg_chord_def vocab_major[TG_VOCAB] = {
     {0, TQ_AUG, TF_T, -1, "I+"},          /* whole-tone colour */
     {10, TQ_AUG, TF_T, -1, "bVII+"},      /* whole-tone colour */
     {4, TQ_MIN7, TF_T, -1, "iii7"},
+    {11, TQ_DIM7, TF_D, -1, "vii°7"},
+    {1, TQ_MAJ, TF_S, -1, "bII"},         /* Neapolitan */
 };
 
 static const tg_chord_def vocab_minor[TG_VOCAB] = {
@@ -52,13 +54,141 @@ static const tg_chord_def vocab_minor[TG_VOCAB] = {
     {0, TQ_AUG, TF_T, -1, "I+"},          /* whole-tone colour */
     {10, TQ_AUG, TF_T, -1, "bVII+"},      /* whole-tone colour */
     {0, TQ_MAJ, TF_T, -1, "I"},           /* the major tonic: a warm shift (or a Picardy third) */
+    {11, TQ_DIM7, TF_D, -1, "vii°7"},
+    {6, TQ_DIM7, TF_S, -1, "#iv°7"},
+};
+
+/* Further vocabularies, one per harmonic language. Every one keeps the tonic at 0 and the whole-tone
+ * colour chords at TG_VOC_AUG_I and TG_VOC_AUG_BVII (19, 20). Applied chords (TF_SEC) name their target. */
+
+/* romantic: chromatic mediants, diminished sevenths, the augmented sixth, the half-diminished
+ * (Tristan) chord, the Neapolitan */
+static const tg_chord_def rom_major[TG_VOCAB] = {
+    {0, TQ_MAJ, TF_T, -1, "I"},           {9, TQ_MIN, TF_T, -1, "vi"},          {4, TQ_MIN, TF_T, -1, "iii"},
+    {5, TQ_MAJ, TF_S, -1, "IV"},          {2, TQ_MIN, TF_S, -1, "ii"},          {2, TQ_MIN7, TF_S, -1, "ii7"},
+    {7, TQ_MAJ, TF_D, -1, "V"},           {7, TQ_DOM7, TF_D, -1, "V7"},         {11, TQ_DIM7, TF_D, -1, "vii°7"},
+    {2, TQ_DOM7, TF_SEC, 6, "V7/V"},      {4, TQ_DOM7, TF_SEC, 1, "V7/vi"},     {0, TQ_DOM7, TF_SEC, 3, "V7/IV"},
+    {9, TQ_DOM7, TF_SEC, 4, "V7/ii"},     {5, TQ_MIN, TF_S, -1, "iv"},          {8, TQ_MAJ, TF_S, -1, "bVI"},
+    {3, TQ_MAJ, TF_T, -1, "bIII"},        {4, TQ_MAJ, TF_T, -1, "III"},         {9, TQ_MAJ, TF_T, -1, "VI"},
+    {8, TQ_DOM7, TF_SEC, 6, "Ger+6"},     {0, TQ_AUG, TF_T, -1, "I+"},          {10, TQ_AUG, TF_T, -1, "bVII+"},
+    {2, TQ_HDIM7, TF_S, -1, "iiø7"},      {1, TQ_MAJ, TF_S, -1, "bII"},         {6, TQ_DIM7, TF_S, -1, "#iv°7"},
+};
+static const tg_chord_def rom_minor[TG_VOCAB] = {
+    {0, TQ_MIN, TF_T, -1, "i"},           {8, TQ_MAJ, TF_T, -1, "VI"},          {3, TQ_MAJ, TF_T, -1, "III"},
+    {5, TQ_MIN, TF_S, -1, "iv"},          {2, TQ_DIM, TF_S, -1, "ii°"},         {2, TQ_HDIM7, TF_S, -1, "iiø7"},
+    {7, TQ_MAJ, TF_D, -1, "V"},           {7, TQ_DOM7, TF_D, -1, "V7"},         {11, TQ_DIM7, TF_D, -1, "vii°7"},
+    {2, TQ_DOM7, TF_SEC, 6, "V7/V"},      {10, TQ_DOM7, TF_SEC, 2, "V7/III"},   {0, TQ_DOM7, TF_SEC, 3, "V7/iv"},
+    {10, TQ_MAJ, TF_SEC, 2, "VII"},       {1, TQ_MAJ, TF_S, -1, "bII"},         {5, TQ_MIN7, TF_S, -1, "iv7"},
+    {8, TQ_DOM7, TF_SEC, 6, "Ger+6"},     {0, TQ_MAJ, TF_T, -1, "I"},           {6, TQ_DIM7, TF_S, -1, "#iv°7"},
+    {3, TQ_DOM7, TF_SEC, 1, "V7/VI"},     {0, TQ_AUG, TF_T, -1, "I+"},          {10, TQ_AUG, TF_T, -1, "bVII+"},
+    {3, TQ_AUG, TF_T, -1, "III+"},        {5, TQ_MIN6, TF_S, -1, "iv6"},        {4, TQ_MAJ, TF_T, -1, "#III"},
+};
+
+/* jazz: sevenths as the norm, ninths and thirteenths, altered dominants, tritone substitutes,
+ * the backdoor bVII9, sixth chords */
+static const tg_chord_def jazz_major[TG_VOCAB] = {
+    {0, TQ_MAJ7, TF_T, -1, "Imaj7"},      {9, TQ_MIN7, TF_T, -1, "vi7"},        {4, TQ_MIN7, TF_T, -1, "iii7"},
+    {5, TQ_MAJ7, TF_S, -1, "IVmaj7"},     {2, TQ_MIN7, TF_S, -1, "ii7"},        {2, TQ_MIN9, TF_S, -1, "ii9"},
+    {7, TQ_DOM9, TF_D, -1, "V9"},         {7, TQ_DOM13, TF_D, -1, "V13"},       {7, TQ_DOM7B9, TF_D, -1, "V7b9"},
+    {2, TQ_DOM9, TF_SEC, 6, "II9"},       {4, TQ_DOM7B9, TF_SEC, 1, "III7b9"},  {0, TQ_DOM7, TF_SEC, 3, "I7"},
+    {9, TQ_DOM7B9, TF_SEC, 4, "VI7b9"},   {5, TQ_MIN6, TF_S, -1, "iv6"},        {10, TQ_DOM9, TF_S, -1, "bVII9"},
+    {1, TQ_DOM7, TF_D, -1, "bII7"},       {0, TQ_MAJ6, TF_T, -1, "I6"},         {0, TQ_SIXNINE, TF_T, -1, "I6/9"},
+    {6, TQ_HDIM7, TF_S, -1, "#ivø7"},     {0, TQ_AUG, TF_T, -1, "I+"},          {10, TQ_AUG, TF_T, -1, "bVII+"},
+    {3, TQ_MAJ7, TF_S, -1, "bIIImaj7"},   {7, TQ_SUS7, TF_D, -1, "V7sus"},      {8, TQ_MAJ7, TF_S, -1, "bVImaj7"},
+};
+static const tg_chord_def jazz_minor[TG_VOCAB] = {
+    {0, TQ_MIN6, TF_T, -1, "i6"},         {8, TQ_MAJ7, TF_T, -1, "VImaj7"},     {3, TQ_MAJ7, TF_T, -1, "IIImaj7"},
+    {5, TQ_MIN7, TF_S, -1, "iv7"},        {2, TQ_HDIM7, TF_S, -1, "iiø7"},      {5, TQ_MIN6, TF_S, -1, "iv6"},
+    {7, TQ_DOM7B9, TF_D, -1, "V7b9"},     {7, TQ_SUS7, TF_D, -1, "V7sus"},      {11, TQ_DIM7, TF_D, -1, "vii°7"},
+    {2, TQ_DOM7, TF_SEC, 6, "V7/V"},      {10, TQ_DOM7, TF_SEC, 2, "V7/III"},   {0, TQ_DOM7B9, TF_SEC, 3, "V7/iv"},
+    {10, TQ_DOM9, TF_S, -1, "bVII9"},     {1, TQ_DOM7, TF_D, -1, "bII7"},       {5, TQ_MIN9, TF_S, -1, "iv9"},
+    {0, TQ_MINMAJ7, TF_T, -1, "imaj7"},   {0, TQ_MIN9, TF_T, -1, "im9"},        {8, TQ_DOM7, TF_S, -1, "bVI7"},
+    {3, TQ_DOM7, TF_SEC, 1, "V7/VI"},     {0, TQ_AUG, TF_T, -1, "I+"},          {10, TQ_AUG, TF_T, -1, "bVII+"},
+    {0, TQ_MAJ6, TF_T, -1, "I6"},         {9, TQ_HDIM7, TF_S, -1, "viø7"},      {2, TQ_MIN7, TF_S, -1, "ii7"},
+};
+
+/* modal: chords on the mode's own degrees (TQ_DIATONIC: semis is the degree), as the mode makes them
+ * (Dorian IV is major, Phrygian II is the flat second), with the cadential chords of modal music:
+ * the raised V (musica ficta), the flat VII, the Picardy third, the open fifth */
+static const tg_chord_def modal_both[TG_VOCAB] = {
+    {0, TQ_DIATONIC, TF_T, -1, "i"},      {5, TQ_DIATONIC, TF_T, -1, "vi"},     {2, TQ_DIATONIC, TF_T, -1, "iii"},
+    {3, TQ_DIATONIC, TF_S, -1, "iv"},     {1, TQ_DIATONIC, TF_S, -1, "ii"},     {4, TQ_DIATONIC, TF_D, -1, "v"},
+    {6, TQ_DIATONIC, TF_D, -1, "vii"},    {7, TQ_MAJ, TF_D, -1, "V"},           {1, TQ_DIATONIC, TF_D, -1, "II"},
+    {0, TQ_MAJ, TF_T, -1, "I"},           {0, TQ_FIFTH, TF_T, -1, "5"},         {0, TQ_SUS4, TF_T, -1, "isus4"},
+    {5, TQ_MAJ, TF_S, -1, "IV"},          {10, TQ_MAJ, TF_D, -1, "bVII"},       {8, TQ_MAJ, TF_S, -1, "bVI"},
+    {3, TQ_MAJ, TF_T, -1, "bIII"},        {0, TQ_SUS2, TF_T, -1, "isus2"},      {7, TQ_SUS4, TF_D, -1, "Vsus4"},
+    {2, TQ_MAJ, TF_S, -1, "II"},          {0, TQ_AUG, TF_T, -1, "I+"},          {10, TQ_AUG, TF_T, -1, "bVII+"},
+    {7, TQ_FIFTH, TF_D, -1, "V5"},        {5, TQ_FIFTH, TF_S, -1, "IV5"},       {3, TQ_DIATONIC, TF_T, -1, "iv as T"},
+};
+
+/* modern: quartal chords, the octatonic family (major triads a minor third apart, dominant and
+ * diminished sevenths), tritone pairs, bare fifths */
+static const tg_chord_def modern_both[TG_VOCAB] = {
+    {0, TQ_MAJ, TF_T, -1, "I"},           {0, TQ_MIN, TF_T, -1, "i"},           {0, TQ_QUARTAL, TF_T, -1, "I4"},
+    {3, TQ_MAJ, TF_T, -1, "bIII"},        {6, TQ_MAJ, TF_T, -1, "#IV"},         {9, TQ_MAJ, TF_T, -1, "VI"},
+    {7, TQ_DOM7, TF_D, -1, "V7"},         {1, TQ_DOM7, TF_D, -1, "bII7"},       {11, TQ_DIM7, TF_D, -1, "vii°7"},
+    {0, TQ_DIM7, TF_T, -1, "i°7"},        {5, TQ_QUARTAL, TF_S, -1, "IV4"},     {2, TQ_QUARTAL, TF_S, -1, "II4"},
+    {8, TQ_MAJ, TF_S, -1, "bVI"},         {10, TQ_MAJ, TF_S, -1, "bVII"},       {0, TQ_FIFTH, TF_T, -1, "5"},
+    {7, TQ_FIFTH, TF_D, -1, "V5"},        {1, TQ_MAJ, TF_S, -1, "bII"},         {5, TQ_MIN, TF_S, -1, "iv"},
+    {7, TQ_SUS4, TF_D, -1, "Vsus4"},      {0, TQ_AUG, TF_T, -1, "I+"},          {10, TQ_AUG, TF_T, -1, "bVII+"},
+    {0, TQ_DOM7B9, TF_T, -1, "I7b9"},     {3, TQ_DOM7, TF_T, -1, "bIII7"},      {6, TQ_DOM7, TF_D, -1, "bV7"},
+};
+
+/* pop and choral: added ninths, suspensions, the flat VII and VI, close clusters, 6/9 */
+static const tg_chord_def pop_major[TG_VOCAB] = {
+    {0, TQ_MAJ, TF_T, -1, "I"},           {0, TQ_ADD9, TF_T, -1, "Iadd9"},      {9, TQ_MIN, TF_T, -1, "vi"},
+    {9, TQ_MIN7, TF_T, -1, "vi7"},        {5, TQ_MAJ, TF_S, -1, "IV"},          {5, TQ_ADD9, TF_S, -1, "IVadd9"},
+    {5, TQ_MAJ7, TF_S, -1, "IVmaj7"},     {2, TQ_MIN7, TF_S, -1, "ii7"},        {7, TQ_MAJ, TF_D, -1, "V"},
+    {7, TQ_SUS4, TF_D, -1, "Vsus4"},      {7, TQ_SUS7, TF_D, -1, "V7sus"},      {4, TQ_MIN, TF_T, -1, "iii"},
+    {10, TQ_MAJ, TF_S, -1, "bVII"},       {8, TQ_MAJ, TF_S, -1, "bVI"},         {0, TQ_ADD2, TF_T, -1, "Iadd2"},
+    {0, TQ_SIXNINE, TF_T, -1, "I6/9"},    {4, TQ_MAJ, TF_SEC, 2, "V/vi"},       {0, TQ_SUS2, TF_T, -1, "Isus2"},
+    {5, TQ_SUS2, TF_S, -1, "IVsus2"},     {0, TQ_AUG, TF_T, -1, "I+"},          {10, TQ_AUG, TF_T, -1, "bVII+"},
+    {2, TQ_MAJ, TF_SEC, 8, "V/V"},        {2, TQ_MIN, TF_S, -1, "ii"},          {3, TQ_MAJ, TF_S, -1, "bIII"},
+};
+static const tg_chord_def pop_minor[TG_VOCAB] = {
+    {0, TQ_MIN, TF_T, -1, "i"},           {0, TQ_MADD9, TF_T, -1, "iadd9"},     {8, TQ_MAJ, TF_T, -1, "VI"},
+    {8, TQ_MAJ7, TF_T, -1, "VImaj7"},     {5, TQ_MIN, TF_S, -1, "iv"},          {5, TQ_MIN7, TF_S, -1, "iv7"},
+    {7, TQ_MAJ, TF_D, -1, "V"},           {7, TQ_MIN, TF_D, -1, "v"},           {10, TQ_MAJ, TF_D, -1, "VII"},
+    {3, TQ_MAJ, TF_T, -1, "III"},         {2, TQ_HDIM7, TF_S, -1, "iiø7"},      {10, TQ_SUS2, TF_S, -1, "VIIsus2"},
+    {7, TQ_SUS4, TF_D, -1, "Vsus4"},      {3, TQ_ADD9, TF_T, -1, "IIIadd9"},    {8, TQ_ADD9, TF_T, -1, "VIadd9"},
+    {5, TQ_MAJ, TF_S, -1, "IV"},          {0, TQ_MIN7, TF_T, -1, "i7"},         {0, TQ_SUS2, TF_T, -1, "isus2"},
+    {7, TQ_MIN7, TF_D, -1, "v7"},         {0, TQ_AUG, TF_T, -1, "I+"},          {10, TQ_AUG, TF_T, -1, "bVII+"},
+    {0, TQ_MAJ, TF_T, -1, "I"},           {1, TQ_MAJ, TF_S, -1, "bII"},         {10, TQ_DOM7, TF_S, -1, "VII7"},
 };
 
 const tg_chord_def *tg_vocab(bool minor) { return minor ? vocab_minor : vocab_major; }
 
-/* Column order of the weight tables:
- *  major: I vi iii IV ii ii7 V V7 vii° V/V V/vi V/IV V/ii iv bVI IVM7 IM7 vi7 bVII I+ bVII+ iii7
- *  minor: i VI III iv ii° iiø V V7 vii° V/V V/III V/iv VII bII iv7 VIM7 i7 IIIM7 V/VI I+ bVII+ I */
+const tg_chord_def *tg_vocab_of(int vocab, bool minor)
+{
+    switch (vocab) {
+    case TG_VOC_ROMANTIC: return minor ? rom_minor : rom_major;
+    case TG_VOC_JAZZ:     return minor ? jazz_minor : jazz_major;
+    case TG_VOC_MODAL:    return modal_both;
+    case TG_VOC_MODERN:   return modern_both;
+    case TG_VOC_POP:      return minor ? pop_minor : pop_major;
+    default:              return minor ? vocab_minor : vocab_major;
+    }
+}
+
+/* Column order of the weight tables (classic):
+ *  major: I vi iii IV ii ii7 V V7 vii° V/V V/vi V/IV V/ii iv bVI IVM7 IM7 vi7 bVII I+ bVII+ iii7 vii°7 bII
+ *  minor: i VI III iv ii° iiø V V7 vii° V/V V/III V/iv VII bII iv7 VIM7 i7 IIIM7 V/VI I+ bVII+ I vii°7 #iv°7
+ * romantic:
+ *  major: I vi iii IV ii ii7 V V7 vii°7 V/V V/vi V/IV V/ii iv bVI bIII III VI Ger+6 I+ bVII+ iiø7 bII #iv°7
+ *  minor: i VI III iv ii° iiø V V7 vii°7 V/V V/III V/iv VII bII iv7 Ger+6 I #iv°7 V/VI I+ bVII+ III+ iv6 #III
+ * jazz:
+ *  major: IM7 vi7 iii7 IVM7 ii7 ii9 V9 V13 V7b9 II9 III7b9 I7 VI7b9 iv6 bVII9 bII7 I6 I6/9 #ivø7 I+ bVII+
+ *         bIIIM7 V7sus bVIM7
+ *  minor: i6 VIM7 IIIM7 iv7 iiø7 iv6 V7b9 V7sus vii°7 V/V V/III V/iv bVII9 bII7 iv9 iM7 im9 bVI7 V/VI I+
+ *         bVII+ I6 viø7 ii7
+ * modal (both): i vi iii iv ii v vii V II(cad) I 5 isus4 IV bVII bVI bIII isus2 Vsus4 II I+ bVII+ V5 IV5 iv(T)
+ * modern (both): I i I4 bIII #IV VI V7 bII7 vii°7 i°7 IV4 II4 bVI bVII 5 V5 bII iv Vsus4 I+ bVII+ I7b9
+ *         bIII7 bV7
+ * pop:
+ *  major: I Iadd9 vi vi7 IV IVadd9 IVM7 ii7 V Vsus4 V7sus iii bVII bVI Iadd2 I6/9 V/vi Isus2 IVsus2 I+ bVII+
+ *         V/V ii bIII
+ *  minor: i iadd9 VI VIM7 iv iv7 V v VII III iiø7 VIIsus2 Vsus4 IIIadd9 VIadd9 IV i7 isus2 v7 I+ bVII+ I
+ *         bII VII7 */
 static const tg_style styles[TG_STYLE_COUNT] = {
     [TG_STYLE_BACH] = {
         .name = "BACH", .root = 2, .scale = TS_AEOLIAN,                              /* D minor */

@@ -141,6 +141,7 @@ typedef struct {
     float mel_profile[4];         /* melody interval thresholds: repeat < step < third < fourth */
     int max_leap;                 /* scale steps of the widest melody leap */
     uint16_t melody_mask;         /* restrict the melody to these pitch classes (0 = no) */
+    uint16_t mel_add;             /* pitch classes the melody may add to its scale (blue notes) */
     float syncopation;            /* 0..1: melody notes move from beats to off-beats */
     bool chromatic;               /* appoggiaturas lean from a semitone above */
     int arrival_bars;             /* how long the final tonic is held */
@@ -185,6 +186,17 @@ typedef struct {
     tm_rng hrng;                  /* the harmonizer's own randomness: Marbles stays untouched */
     tm_sequence mel_rhythm;       /* which off-beat ticks the melody plays, with deja vu */
     int8_t plan[TG_PLAN_MAX];     /* the period's chords, vocabulary indices (with a style) */
+    int8_t plan_slip[TG_PLAN_MAX];/* semitones a slot's chord is moved (side-slips, octatonic colour) */
+    int period_scale;             /* the period's colour scale (TS_*), -1: the key's own */
+    bool open_end;                /* this period ends away from the tonic, on open_chord */
+    bool open_prev;               /* this period began on the previous period's open chord */
+    int8_t open_chord;            /* vocabulary index the next period starts on when open_end */
+    int8_t open_chord_prev;
+    int8_t plan_tonic;            /* the tonic chord the planner chose for slot 0 */
+    int cycle_sel;                /* TG_HARM_CYCLE: 0 or 1 (cycle2) */
+    int home_root, home_scale;    /* the style's key, for its own modulations */
+    bool style_away;              /* a style modulation is away from home */
+    long stat_open, stat_colour, stat_slips, stat_modulations;   /* statistics for the checks */
     int plan_len;
     bool plan_minor;
     int mel_pending;              /* a melody note due at mel_pending_q (ornament resolution), -1 = none */
@@ -287,6 +299,8 @@ void tg_meter_at(const tg_gen *g, long q, tg_meter_pos *m);
 /* Apply a composer signature (TG_STYLE_*): key, tempo, meter, harmony, accompaniment, ornaments.
  * Takes effect from the next period; call tg_reseed() to start cleanly. */
 void tg_apply_style(tg_gen *g, int style);
+/* The same from a signature table (a user's own composer, or a test's). It must outlive its use. */
+void tg_apply_style_def(tg_gen *g, const tg_style *st);
 /* The chord at a chord step (the planned harmony with a style, else the progression). */
 void tg_chord_at(const tg_gen *g, int step, int tones, tt_chord *c);
 /* ---- sequencer ----

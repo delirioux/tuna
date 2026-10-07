@@ -332,4 +332,13 @@ static const tg_style styles[TG_STYLE_COUNT] = {
     },
 };
 
+static const char *const family_names[TI_COUNT] = {
+    "DEFAULT", "PIANO", "HARPSICH", "ORGAN", "STRINGS", "VIOLIN", "CELLO", "CONTRABS", "PIZZ",
+    "FLUTE", "OBOE", "CLARINET", "BASSOON", "HORN", "TRUMPET", "BRASS", "TUBA", "HARP", "GUITAR",
+    "CHOIR", "VOICE", "BELLS", "CELESTA", "MARIMBA", "BANDONEO", "SAX", "SYNTH", "PAD", "WHISTLE",
+    "DRONE", "E.PIANO",
+};
+
+const char *tg_family_name(int f) { return f >= 0 && f < TI_COUNT ? family_names[f] : "?"; }
+
 const tg_style *tg_style_get(int id) { return id >= 0 && id < TG_STYLE_COUNT ? &styles[id] : 0; }

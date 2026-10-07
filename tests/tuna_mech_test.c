@@ -929,6 +929,71 @@ static void test_form(void)
     CHECK(dn > 50 && dbad == 0, "drum pattern: %ld hits, %ld wrong", dn, dbad);
 }
 
+/* ---- instrumentation ---------------------------------------------------------------------------------- */
+static void test_orchestration(void)
+{
+    /* fixed: one program per part, at the start */
+    style_from(TG_STYLE_MOZART);
+    ts.orch_n = 1;
+    ts.orch[0][0] = TI_CELLO; ts.orch[0][1] = TI_FLUTE; ts.orch[0][2] = TI_HARP;
+    start_ts(1);
+    run_log(60);
+    int progs = 0, first_tick_ok = 1;
+    for (long i = 0; i < nlg; ++i)
+        if (lg[i].e.type == TG_EV_PROGRAM) {
+            progs++;
+            first_tick_ok &= lg[i].tick == 0;
+        }
+    CHECK(progs == 3 && first_tick_ok, "fixed instruments: %d programs, at the start: %d", progs, first_tick_ok);
+    /* the programs come before the first notes */
+    long first_note = -1, last_prog = -1;
+    for (long i = 0; i < nlg; ++i) {
+        if (lg[i].e.type == TG_EV_PROGRAM) last_prog = i;
+        else if (lg[i].e.type == TG_EV_NOTE && first_note < 0) first_note = i;
+    }
+    CHECK(last_prog < first_note, "programs before notes");
+
+    /* by turns: the melody passes from instrument to instrument each period (Bolero) */
+    style_from(TG_STYLE_MOZART);
+    ts.orch_n = 4;
+    ts.orch_mode = TG_ORCH_CYCLE;
+    static const uint8_t mel[4] = {TI_FLUTE, TI_CLARINET, TI_BASSOON, TI_SAX};
+    for (int k = 0; k < 4; ++k) { ts.orch[k][0] = TI_PIZZ; ts.orch[k][1] = mel[k]; ts.orch[k][2] = TI_STRINGS; }
+    start_ts(2);
+    run_log(120);
+    int melprogs = 0, order_bad = 0, other = 0;
+    for (long i = 0; i < nlg; ++i)
+        if (lg[i].e.type == TG_EV_PROGRAM) {
+            if (lg[i].e.part == TG_PART_MELODY) {
+                order_bad += lg[i].e.value != mel[melprogs % 4];
+                melprogs++;
+            } else {
+                other++;
+            }
+        }
+    CHECK(melprogs >= 4 && order_bad == 0 && other == 2, "cycle: %d melody programs (%d out of turn), %d others", melprogs,
+          order_bad, other);
+
+    /* contrast periods bring the second set */
+    style_from(TG_STYLE_MOZART);
+    ts.orch_n = 2;
+    ts.orch_mode = TG_ORCH_CONTRAST;
+    ts.alt_every = 1;
+    ts.orch[0][1] = TI_PIANO; ts.orch[1][1] = TI_CHOIR;
+    start_ts(3);
+    int mism = 0, seen = 0;
+    for (long i = 0; i < (long)(120 * SR) / BLOCK; ++i) {
+        tg_process(&g, BLOCK, cb, NULL);
+        if (g.orch_cur[TG_PART_MELODY] >= 0) {
+            seen++;
+            mism += g.orch_cur[TG_PART_MELODY] != (g.alt_on ? TI_CHOIR : TI_PIANO);
+        }
+    }
+    CHECK(seen > 0 && mism == 0, "contrast instruments follow the periods: %d mismatches", mism);
+    for (int f = 0; f < TI_COUNT; ++f)
+        CHECK(strlen(tg_family_name(f)) <= 8, "family name %s too long", tg_family_name(f));
+}
+
 int main(void)
 {
     test_meters();
@@ -938,6 +1003,7 @@ int main(void)
     test_melody_modes();
     test_bass_pad_modes();
     test_form();
+    test_orchestration();
     printf("tuna_mech: %d checks, %d failed\n", checks, fails);
     return fails ? 1 : 0;
 }

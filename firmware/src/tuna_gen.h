@@ -58,7 +58,7 @@ typedef struct {
     int16_t value;                /* the locked value; TG_LK_RESTORE: back to the part's own setting */
 } tg_event;
 
-enum { TG_EV_NOTE, TG_EV_PARAM };
+enum { TG_EV_NOTE, TG_EV_PARAM, TG_EV_PROGRAM };   /* PROGRAM: the part's instrument family (value: TI_*) */
 
 /* ---- the sequencer: step locks and trig conditions -------------------------------------------------
  * A step is a tick of the period (generator) or of the frozen pattern. Locks and conditions are an
@@ -231,6 +231,10 @@ typedef struct {
     long gp_from, gp_until;       /* a general pause */
     int echo_vel;                 /* an echo period's velocity offset */
     bool alt_on;                  /* a contrast period */
+    /* instrumentation */
+    int orch_cur[TG_PARTS];       /* the family each part plays now (TI_*), -1: not sent yet */
+    int orch_set;
+    tm_rng orng;                  /* the orchestrator's own randomness */
     int plan_len;
     bool plan_minor;
     int mel_pending;              /* a melody note due at mel_pending_q (ornament resolution), -1 = none */

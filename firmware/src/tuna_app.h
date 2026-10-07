@@ -83,6 +83,7 @@ void ta_set_seed(tuna_app *a, uint32_t seed);
 void ta_set_deja(tuna_app *a, int mode);
 void ta_set_chaos(tuna_app *a, float rhythm, float pitch, float density, float macro);
 /* the player's own settings: applied now and kept for the next pieces */
+void ta_set_chaos_parts(tuna_app *a, unsigned mask);   /* which parts follow the chaos knobs */
 void ta_set_tempo(tuna_app *a, float bpm);
 void ta_set_root(tuna_app *a, int pc);
 void ta_set_percussion(tuna_app *a, int mode);

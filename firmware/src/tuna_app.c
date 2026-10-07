@@ -125,6 +125,7 @@ static void load_item(tuna_app *a, int item)
 {
     tg_gen *g = &a->g;
     float c[4] = {g->chaos_rhythm, g->chaos_pitch, g->chaos_density, g->chaos_macro};
+    unsigned parts = g->chaos_parts;
     int st = ta_lib_style(item);
     if (st >= 0) {
         tg_init(g, a->seed, a->sample_rate);
@@ -133,6 +134,7 @@ static void load_item(tuna_app *a, int item)
         tp_character_apply(g, item, a->seed);   /* (tg_init inside) */
     }
     tg_set_chaos(g, c[0], c[1], c[2], c[3]);
+    tg_set_chaos_parts(g, parts);
     g->x.deja_vu = deja_value(a);
     tg_reseed(g, a->seed);
     keep_apply(a);
@@ -160,10 +162,13 @@ void ta_init(tuna_app *a, float sample_rate, uint32_t seed)
     a->reso_bright = 50;
     a->reso_mode = TR_TUNE_CHORD;
     tg_init(&a->g, seed, sample_rate);
-    int home = 0;                                /* the first piece: TUNA's GARDEN */
-    for (int i = 0; i < ta_lib_count(); ++i)
-        if (ta_lib_group(i) == 0 && !strcmp(ta_lib_name(i), "GARDEN"))
+    int home = 0;                                /* the first piece: TUNA's GARDEN (no strcmp in the firmware) */
+    for (int i = 0; i < ta_lib_count(); ++i) {
+        const char *n = ta_lib_name(i), *w = "GARDEN";
+        while (*n && *n == *w) n++, w++;
+        if (ta_lib_group(i) == 0 && *n == *w)
             home = i;
+    }
     load_item(a, home);
 }
 
@@ -189,6 +194,8 @@ void ta_select(tuna_app *a, int item)
     a->pending = -1;
     load_item(a, item);
 }
+
+void ta_set_chaos_parts(tuna_app *a, unsigned mask) { tg_set_chaos_parts(&a->g, mask); }
 
 void ta_set_tempo(tuna_app *a, float bpm)
 {

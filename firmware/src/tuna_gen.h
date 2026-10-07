@@ -319,6 +319,17 @@ typedef struct {
     float chaos_pitch;            /* 0..1: steps and repeats .. leaps */
     float chaos_density;          /* 0..1: sparse .. busy (the melody, x0.35 .. x2.8) */
     float chaos_macro;            /* 0..1: added to the three (0.5: nothing) */
+    uint8_t chaos_parts;          /* bit p: part p (TG_PART_BASS, _MELODY, _PAD) follows the chaos knobs */
+    /* chaos on bass and pad (a filter on their events): the note asked for -> the note sent (-1 dropped),
+     * the tick's facts, the notes it adds */
+    int8_t cx_map[2][128];
+    uint8_t cx_on[2][128];        /* how many of that note are sounding (a doubled note keeps its mapping) */
+    uint32_t cx_rng;
+    tg_event_fn cx_fn;
+    void *cx_ctx;
+    bool cx_fresh, cx_onbeat, cx_half, cx_adding, cx_pad_skip;
+    long cx_pad_tick, cx_bass_tick, cx_bass_end;
+    int cx_bass_note;
     int root_req;                 /* a new tonic from a key, applied at the next chord change; -1 none */
     uint16_t hold_mask;           /* a chord held on the keys: its pitch classes (absolute), 0 none */
     int8_t hold_root;             /* its lowest key's pitch class (the chord's root) */
@@ -372,6 +383,8 @@ void tg_set_percussion(tg_gen *g, int mode);
  * there whole. A chord held on the keys (absolute pitch classes, its root the lowest key): the harmony
  * until released (mask 0). */
 void tg_set_chaos(tg_gen *g, float rhythm, float pitch, float density, float macro);
+#define TG_CHAOS_ALL ((1u << TG_PART_BASS) | (1u << TG_PART_MELODY) | (1u << TG_PART_PAD))
+void tg_set_chaos_parts(tg_gen *g, unsigned mask);   /* which parts follow the knobs (TG_CHAOS_ALL default) */
 void tg_set_root(tg_gen *g, int pc);
 void tg_hold_chord(tg_gen *g, uint16_t mask, int root_pc);
 

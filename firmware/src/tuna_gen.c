@@ -21,6 +21,12 @@ static float chaos_of(const tg_gen *g, float c)
     return clamp01(c + g->chaos_macro - 0.5f) * 2.0f - 1.0f;
 }
 
+/* the same for one part: 0 when the part does not follow the knobs */
+static float chaos_part(const tg_gen *g, int part, float c)
+{
+    return (g->chaos_parts >> part) & 1u ? chaos_of(g, c) : 0.0f;
+}
+
 static bool in_mask(uint16_t mask, int note, int root) { return (mask >> pmod12(note - root)) & 1; }
 
 /* the k-th note of mask above (k > 0) or below (k < 0) note; note itself need not be in mask */
@@ -132,6 +138,12 @@ static void defaults(tg_gen *g)
     g->harmonize = true;
     g->melody_density = 0.5f;
     g->chaos_rhythm = g->chaos_pitch = g->chaos_density = g->chaos_macro = 0.5f;
+    g->chaos_parts = TG_CHAOS_ALL;
+    for (int s = 0; s < 2; ++s)
+        for (int n = 0; n < 128; ++n)
+            g->cx_map[s][n] = (int8_t)n;
+    g->cx_pad_tick = g->cx_bass_tick = g->cx_bass_end = -1;
+    g->cx_bass_note = -1;
     g->root_req = -1;
     g->hold_mask = 0;
     g->hold_root = -1;
@@ -212,6 +224,7 @@ void tg_reseed(tg_gen *g, uint32_t seed)
     tm_seq_set_length(&g->t.sequence, keep.sequence.length);
     tm_xy_init(&g->xy, &g->rng);
     tm_rng_init(&g->hrng, seed ^ 0x5eed7a4au);
+    g->cx_rng = (seed ^ 0x9e3779b9u) | 1u;          /* chaos on bass and pad: draws only when turned */
     tm_seq_init(&g->mel_rhythm, &g->hrng);
     g->ticks = 0;
     g->prev_master = 0.0f;
@@ -902,6 +915,7 @@ static void gen_release(tg_gen *g, int offset, bool sounding);
 static void pat_release(tg_gen *g, int offset);
 static void out_param(tg_gen *g, int part, int param, int value, int offset);
 
+static void cx_release(tg_gen *g, tg_event_fn fn, void *ctx);
 void tg_all_off(tg_gen *g, tg_event_fn fn, void *ctx)
 {
     /* queued by the humanizer: releases go out now, notes not yet started never will */
@@ -945,6 +959,7 @@ void tg_all_off(tg_gen *g, tg_event_fn fn, void *ctx)
         for (int n = 0; n < 128; ++n)
             g->hdue[p][n] = 0;
     g->humanize = hum;
+    cx_release(g, fn, ctx);
 }
 
 /* ---- the harmonizer -------------------------------------------------------------------------------- */
@@ -1012,8 +1027,11 @@ static float unit(const tg_gen *g, int ch, float v)
 
 /* pad: voice the chord as close as possible to the previous voicing; common tones keep sounding.
  * Options: an open (spread) voicing, a second major triad above (a polychord), strummed onsets. */
+static bool cx_pad_skip(tg_gen *g);
 static void pad_voice(tg_gen *g, int offset, int velocity, bool restrike, bool silent, tg_event_fn fn, void *ctx)
 {
+    if (restrike && !silent && !g->cx_adding && cx_pad_skip(g))
+        return;                                      /* the chaos knobs: this restrike left out, the chord rings on */
     tt_chord c;
     tg_chord_at(g, g->chord_step, g->pad_tones, &c);
     int n = c.n;
@@ -1434,7 +1452,7 @@ static void melody_tick(tg_gen *g, beat_pos b, float x2, int velocity, int offse
             /* density: downbeats always play, other beats mostly, off-beats as the density says;
              * syncopation moves weight from beats to off-beats; a hemiola plays its twos */
             /* the chaos knobs, around the composer's own values (0: exactly those) */
-            float cr = chaos_of(g, g->chaos_rhythm), cd = chaos_of(g, g->chaos_density);
+            float cr = chaos_part(g, TG_PART_MELODY, g->chaos_rhythm), cd = chaos_part(g, TG_PART_MELODY, g->chaos_density);
             float dens = g->melody_density, sync = g->syncopation, dv = g->x.deja_vu;
             if (cd != 0.0f) {
                 dens *= exp2f(1.5f * cd);                    /* x0.35 .. x2.8 */
@@ -1463,7 +1481,7 @@ static void melody_tick(tg_gen *g, beat_pos b, float x2, int velocity, int offse
             /* interval from X2: mostly steps, sometimes a leap; a style may lean downward or upward */
             int dir = x + g->direction * 0.6f < 0.0f ? -1 : 1;
             const float *pr = g->mel_profile;
-            float cp = chaos_of(g, g->chaos_pitch), prc[4];
+            float cp = chaos_part(g, TG_PART_MELODY, g->chaos_pitch), prc[4];
             int max_leap = g->max_leap;
             float octave = g->octave;
             if (cp != 0.0f) {
@@ -1552,7 +1570,7 @@ static void melody_tick(tg_gen *g, beat_pos b, float x2, int velocity, int offse
             }
         }
         int min_ticks = g->mel_min_ticks;
-        float crh = chaos_of(g, g->chaos_rhythm);
+        float crh = chaos_part(g, TG_PART_MELODY, g->chaos_rhythm);
         if (crh < 0.0f)
             min_ticks += (int)lrintf(-crh * (float)g->division);   /* RHYTHM down: longer, steadier notes */
         else if (crh > 0.0f && min_ticks > 1)
@@ -2393,6 +2411,8 @@ void tg_set_chaos(tg_gen *g, float rhythm, float pitch, float density, float mac
     g->chaos_macro = clamp01(macro);
 }
 
+void tg_set_chaos_parts(tg_gen *g, unsigned mask) { g->chaos_parts = (uint8_t)(mask & TG_CHAOS_ALL); }
+
 /* the whole music moves to another tonic: the key, home and the evolution's home with it */
 static void move_root(tg_gen *g, int pc)
 {
@@ -2645,22 +2665,37 @@ static void rec_sink(void *ctx, const tg_event *e)
 }
 
 /* release what the generator holds (through the overlay, so locked notes end right) and forget it */
+static int cx_off(tg_gen *g, int part, int note);
 static void gen_release(tg_gen *g, int offset, bool sounding)
 {
     tg_event e = {0, 0, 0, false, (uint16_t)offset, TG_EV_NOTE, 0, 0};
     for (int p = 0; p < TG_PARTS; ++p) {
-        if (sounding && g->sounding[p] >= 0) {
-            e.part = (uint8_t)p;
-            e.note = (uint8_t)g->sounding[p];
-            overlay_in(g, &e);
+        if (g->sounding[p] >= 0) {
+            int n = cx_off(g, p, g->sounding[p]);    /* (where the chaos knobs sent it) */
+            if (sounding && n >= 0) {
+                e.part = (uint8_t)p;
+                e.note = (uint8_t)n;
+                overlay_in(g, &e);
+            }
         }
         g->sounding[p] = -1;
     }
-    for (int i = 0; i < g->pad_n; ++i)
-        if (sounding && !g->pad_silent) {
-            e.part = TG_PART_PAD;
-            e.note = (uint8_t)g->pad[i];
+    if (g->cx_bass_note >= 0) {                      /* a note the chaos knobs added */
+        if (sounding) {
+            e.part = TG_PART_BASS;
+            e.note = (uint8_t)g->cx_bass_note;
             overlay_in(g, &e);
+        }
+        g->cx_bass_note = -1;
+    }
+    for (int i = 0; i < g->pad_n; ++i)
+        if (!g->pad_silent) {
+            int n = cx_off(g, TG_PART_PAD, g->pad[i]);
+            if (sounding && n >= 0) {
+                e.part = TG_PART_PAD;
+                e.note = (uint8_t)n;
+                overlay_in(g, &e);
+            }
         }
     g->pad_n = 0;
     g->pad_poly = 0;
@@ -3040,6 +3075,229 @@ void tg_evolve(tg_gen *g, bool on, int periods, float depth, bool modulate)
     g->evolve_modulate = modulate;
 }
 
+/* ---- the chaos knobs on bass and pad -------------------------------------------------------------------
+ * Bass and pad play as their modes say; their events pass through this filter on the way out, where RHYTHM,
+ * PITCH and DENSITY drop, move and add notes. A chord's first notes (on the change) keep their place, and the
+ * bass its root there. At 0 nothing moves and nothing random is drawn: the composer byte for byte. */
+static float cx_rand(tg_gen *g)
+{
+    uint32_t x = g->cx_rng;
+    x ^= x << 13;
+    x ^= x >> 17;
+    x ^= x << 5;
+    g->cx_rng = x;
+    return (float)(x >> 8) * (1.0f / 16777216.0f);
+}
+
+static uint32_t cx_hash(uint32_t a, uint32_t b, uint32_t c)
+{
+    uint32_t h = a * 2654435761u ^ b * 40503u ^ c;
+    h ^= h >> 15;
+    h *= 0x2c1b3c6du;
+    h ^= h >> 12;
+    return h;
+}
+
+/* fold a note into the bass's two octaves */
+static int cx_bass_fold(const tg_gen *g, int n)
+{
+    int lo = g->base_note[TG_PART_BASS] + g->root, hi = lo + 24;
+    while (n < lo) n += 12;
+    while (n > hi) n -= 12;
+    return n;
+}
+
+/* a tone of the chord other than its root (its fifth when it has one), in the bass */
+static int cx_bass_tone(tg_gen *g)
+{
+    const tt_chord *c = &g->chord;
+    int root = bass_root_note(g, c->root);
+    if (c->n < 2)
+        return root;
+    int t = c->n >= 3 ? c->tone[2] : c->tone[1];
+    return cx_bass_fold(g, root + t - c->tone[0]);
+}
+
+/* PITCH up on a bass note: a chord tone (the fifth), the octave, or a step of the scale either side */
+static int cx_bass_wild(tg_gen *g, int note)
+{
+    float u = cx_rand(g);
+    if (u < 0.35f)
+        return cx_bass_tone(g);
+    if (u < 0.6f)
+        return cx_bass_fold(g, note + (note + 12 <= g->base_note[TG_PART_BASS] + g->root + 24 ? 12 : -12));
+    return cx_bass_fold(g, mask_step(g->chord_scale, g->root, note, u < 0.8f ? -1 : 1));
+}
+
+static int cx_bass(tg_gen *g, int note)
+{
+    float cr = chaos_part(g, TG_PART_BASS, g->chaos_rhythm), cp = chaos_part(g, TG_PART_BASS, g->chaos_pitch);
+    float cd = chaos_part(g, TG_PART_BASS, g->chaos_density);
+    if ((cr == 0.0f && cp == 0.0f && cd == 0.0f) || g->cx_fresh)
+        return note;                                 /* (on the chord change: the root as it is) */
+    if (!g->cx_adding) {
+        if (cd < 0.0f && cx_rand(g) < -0.8f * cd)
+            return -1;                               /* DENSITY down: fewer notes */
+        if (cr < 0.0f && !g->cx_onbeat && cx_rand(g) < -cr)
+            return -1;                               /* RHYTHM down: on the beat only */
+    }
+    if (cp > 0.0f && cx_rand(g) < 0.7f * cp)
+        return cx_bass_wild(g, note);                /* PITCH up: fifths, octaves, passing notes */
+    if (cp < 0.0f && cx_rand(g) < -cp)
+        return cx_bass_fold(g, bass_root_note(g, g->chord.root));   /* down: the root */
+    return note;
+}
+
+/* the pad's restrike on this tick left out (DENSITY or RHYTHM down): one choice per tick */
+static bool cx_pad_skip(tg_gen *g)
+{
+    if (g->cx_fresh)
+        return false;
+    if (g->cx_pad_tick == g->ticks)
+        return g->cx_pad_skip;
+    float cr = chaos_part(g, TG_PART_PAD, g->chaos_rhythm), cd = chaos_part(g, TG_PART_PAD, g->chaos_density);
+    bool skip = false;
+    if (cd < 0.0f && cx_rand(g) < -0.8f * cd)
+        skip = true;
+    else if (cr < 0.0f && !g->cx_onbeat && cx_rand(g) < -cr)
+        skip = true;
+    g->cx_pad_tick = g->ticks;
+    g->cx_pad_skip = skip;
+    return skip;
+}
+
+static int cx_pad(tg_gen *g, int note)
+{
+    if (!g->cx_adding && cx_pad_skip(g))
+        return -1;
+    float cp = chaos_part(g, TG_PART_PAD, g->chaos_pitch);
+    if (cp == 0.0f)
+        return note;
+    /* PITCH: the voicing opens (voices up an octave) or closes (down to the bottom octave); the same note
+     * of the same chord always moves the same way, so its release finds it */
+    int lo = g->base_note[TG_PART_PAD] + g->root;
+    float u = (float)(cx_hash((uint32_t)note, (uint32_t)g->chord_step, g->seed) >> 8) * (1.0f / 16777216.0f);
+    if (cp > 0.0f && u < 0.6f * cp && note + 12 <= lo + 31)
+        return note + 12;
+    if (cp < 0.0f && note > lo + 12 && u < -cp)
+        return note - 12;
+    return note;
+}
+
+/* a release of a bass or pad note: where its note-on went (-1: it was left out) */
+static int cx_off(tg_gen *g, int part, int note)
+{
+    int slot = part == TG_PART_BASS ? 0 : part == TG_PART_PAD ? 1 : -1;
+    if (slot < 0 || note < 0 || note > 127)
+        return note;
+    int m = g->cx_map[slot][note];
+    if (g->cx_on[slot][note] > 0)
+        g->cx_on[slot][note]--;
+    if (!g->cx_on[slot][note])
+        g->cx_map[slot][note] = (int8_t)note;
+    return m;
+}
+
+static void cx_filter(void *ctx, const tg_event *e)
+{
+    tg_gen *g = ctx;
+    int slot = e->part == TG_PART_BASS ? 0 : e->part == TG_PART_PAD ? 1 : -1;
+    if (slot < 0 || e->type != TG_EV_NOTE) {
+        g->cx_fn(g->cx_ctx, e);
+        return;
+    }
+    int8_t *map = g->cx_map[slot];
+    uint8_t *on = g->cx_on[slot];
+    tg_event o = *e;
+    if (!e->on) {
+        int m = cx_off(g, e->part, e->note);
+        if (m < 0)
+            return;                                  /* (its note-on was left out) */
+        o.note = (uint8_t)m;
+        g->cx_fn(g->cx_ctx, &o);
+        return;
+    }
+    /* a note already sounding (a common tone struck again) keeps where it went */
+    int n = on[e->note] ? map[e->note] : slot == 0 ? cx_bass(g, e->note) : cx_pad(g, e->note);
+    map[e->note] = (int8_t)(n < 0 ? -1 : clampi(n, 0, 127));
+    if (on[e->note] < 255)
+        on[e->note]++;
+    if (n < 0)
+        return;
+    if (slot == 0)
+        g->cx_bass_tick = g->ticks;
+    o.note = (uint8_t)clampi(n, 0, 127);
+    g->cx_fn(g->cx_ctx, &o);
+}
+
+/* notes the knobs add: bass on empty beats (DENSITY up) and off-beats (RHYTHM up), short; pad restrikes in
+ * the held modes, on beats and off them */
+static bool cx_bass_mode_adds(int mode)
+{
+    return mode == TG_BASS_ROOT || mode == TG_BASS_BAR || mode == TG_BASS_WALKING || mode == TG_BASS_MARCH ||
+           mode == TG_BASS_MARBLES;
+}
+
+static void cx_add(tg_gen *g, beat_pos b, int velocity, int offset, tg_event_fn fn, void *ctx)
+{
+    /* the bass's added note ends after half a beat. (Added notes go out beside the part, not through its
+     * state: what the mode plays next, and everything that listens to it, stays the composer's.) */
+    if (g->cx_bass_note >= 0 && g->ticks >= g->cx_bass_end) {
+        emit(g->cx_fn, g->cx_ctx, TG_PART_BASS, g->cx_bass_note, 0, false, offset);
+        g->cx_bass_note = -1;
+    }
+    if (g->cx_fresh)
+        return;
+    float cr = chaos_part(g, TG_PART_BASS, g->chaos_rhythm), cd = chaos_part(g, TG_PART_BASS, g->chaos_density);
+    if ((cr > 0.0f || cd > 0.0f) && cx_bass_mode_adds(g->bass_mode) && g->cx_bass_tick != g->ticks &&
+        g->cx_bass_note < 0) {
+        bool add = (b.on_beat && cd > 0.0f && cx_rand(g) < 0.5f * cd) ||
+                   (g->cx_half && cd > 0.0f && cx_rand(g) < 0.3f * cd) ||
+                   (g->cx_half && cr > 0.0f && cx_rand(g) < 0.5f * cr);
+        if (add) {
+            /* straight out, past the filter's map: the part's own notes keep theirs */
+            float cp = chaos_part(g, TG_PART_BASS, g->chaos_pitch);
+            int n = cx_rand(g) < 0.6f ? bass_root_note(g, g->chord.root) : cx_bass_tone(g);
+            if (cp > 0.0f && cx_rand(g) < 0.7f * cp)
+                n = cx_bass_wild(g, n);
+            emit(g->cx_fn, g->cx_ctx, TG_PART_BASS, n, accent_plain(velocity, b) - 14, true, offset);
+            g->cx_bass_note = n;
+            g->cx_bass_end = g->ticks + (g->division >= 2 ? g->division / 2 : 1);
+        }
+    }
+    cr = chaos_part(g, TG_PART_PAD, g->chaos_rhythm);
+    cd = chaos_part(g, TG_PART_PAD, g->chaos_density);
+    if ((cr > 0.0f || cd > 0.0f) && (g->pad_mode == TG_PAD_BLOCK || g->pad_mode == TG_PAD_REPEAT) && g->pad_n > 0) {
+        bool add = (b.on_beat && cd > 0.0f && cx_rand(g) < 0.5f * cd) ||
+                   (g->cx_half && cr > 0.0f && cx_rand(g) < 0.5f * cr);
+        if (add) {
+            g->cx_adding = true;
+            pad_voice(g, offset, accent_plain(velocity, b) - 24, true, false, fn, ctx);
+            g->cx_adding = false;
+        }
+    }
+}
+
+/* everything the filter moved, released (stop, panic) */
+static void cx_release(tg_gen *g, tg_event_fn fn, void *ctx)
+{
+    if (g->cx_bass_note >= 0) {                     /* an added bass note still sounding */
+        tg_event e = {TG_PART_BASS, (uint8_t)g->cx_bass_note, 0, false, 0, TG_EV_NOTE, 0, 0};
+        fn(ctx, &e);
+    }
+    for (int s = 0; s < 2; ++s)
+        for (int n = 0; n < 128; ++n) {
+            int m = g->cx_map[s][n];
+            if (m != n && m >= 0) {
+                tg_event e = {(uint8_t)(s ? TG_PART_PAD : TG_PART_BASS), (uint8_t)m, 0, false, 0, TG_EV_NOTE, 0, 0};
+                fn(ctx, &e);
+            }
+            g->cx_map[s][n] = (int8_t)n;
+            g->cx_on[s][n] = 0;
+        }
+    g->cx_bass_note = -1;
+}
+
 /* ---- process --------------------------------------------------------------------------------------- */
 static void process_block(tg_gen *g, int size, tg_event_fn fn, void *ctx)
 {
@@ -3048,6 +3306,10 @@ static void process_block(tg_gen *g, int size, tg_event_fn fn, void *ctx)
     static bool gate[TG_MAX_BLOCK * TM_T_CHANNELS];
     if (size > TG_MAX_BLOCK)
         size = TG_MAX_BLOCK;
+    g->cx_fn = fn;                                   /* every event through the chaos filter first */
+    g->cx_ctx = ctx;
+    fn = cx_filter;
+    ctx = g;
 
     reload_scale(g);
     float bpm = g->bpm;
@@ -3126,6 +3388,9 @@ static void process_block(tg_gen *g, int size, tg_event_fn fn, void *ctx)
 
         beat_pos b = position(g);
         if (tick) {
+            g->cx_fresh = g->chord_fresh;            /* (bass_root clears chord_fresh as it plays) */
+            g->cx_onbeat = b.on_beat;
+            g->cx_half = g->division >= 2 && b.q % g->division == g->division / 2;
             /* held chords voice-lead on each change; Alberti keeps a silent voicing to draw its
              * figure from; the other figures fetch the chord themselves */
             if ((g->chord_fresh || g->pad_n == 0) && (g->pad_mode == TG_PAD_BLOCK || g->pad_mode == TG_PAD_ALBERTI))
@@ -3158,6 +3423,7 @@ static void process_block(tg_gen *g, int size, tg_event_fn fn, void *ctx)
                     bass_play(g, b, unit(g, TG_PART_BASS, o[0]), velocity, i, fn, ctx);
                 break;
             }
+            cx_add(g, b, velocity, i, fn, ctx);
             int before = g->sounding[TG_PART_MELODY];
             long before_count = g->motif_notes + g->free_notes;
             switch (g->mel_mode) {

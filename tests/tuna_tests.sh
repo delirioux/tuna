@@ -24,6 +24,25 @@ build/host/tuna_midi_test
 cc -O2 -Wall -fno-builtin -o build/host/tuna_libm_test tests/tuna_libm_test.c -lm
 build/host/tuna_libm_test
 sh tests/tuna_ui_test.sh build/tuna_ui
+# the firmware's side: Tuna's modules as the FM-1 builds them (no C library, single-precision floats only), for
+# a CPU like it; they may need nothing from outside but memcpy and memset (Felucca's libc.c)
+LLD=$(command -v ld.lld || command -v ld.lld-18 || true)
+NM=$(command -v llvm-nm || command -v llvm-nm-18 || true)
+if command -v clang >/dev/null 2>&1 && [ -n "$LLD" ] && [ -n "$NM" ]; then
+    fs=build/host/freestanding
+    mkdir -p $fs
+    for m in tuna_gen tuna_style tuna_theory tuna_marbles tuna_marbles_tables tuna_preset tuna_app tuna_midi tuna_reso tuna_libm; do
+        clang --target=riscv32 -march=rv32imf -mabi=ilp32f -Os -fno-builtin -ffreestanding -nostdinc \
+            -isystem "$(clang -print-resource-dir)/include" -DTUNA_FREESTANDING=1 -Wall -Werror -Wno-unused-function \
+            -Ifirmware/src -c firmware/src/$m.c -o $fs/$m.o
+    done
+    "$LLD" -r -o $fs/tuna.o $fs/tuna_*.o
+    need=$("$NM" -u $fs/tuna.o | awk '{print $2}' | grep -vx 'memcpy\|memset' || true)
+    [ -z "$need" ] || { echo "tuna: the firmware build would need: $need"; exit 1; }
+    echo "tuna_freestanding: only memcpy and memset needed"
+else
+    echo "tuna: freestanding check skipped (no clang, ld.lld or llvm-nm)"
+fi
 # the browser build, when a WebAssembly compiler is at hand (emcc, or clang with WASI_SYSROOT) and Node to run it
 if command -v node >/dev/null 2>&1 && { command -v emcc >/dev/null 2>&1 || [ -n "${WASI_SYSROOT:-}" ]; }; then
     sh web/emu/tuna_build.sh

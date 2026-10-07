@@ -10,6 +10,7 @@ typedef struct {
     uint8_t *buf;
     int pos, max;
     bool write, err;
+    int version;                          /* the record's (reading); TP_VERSION (writing) */
 } tp_io;
 
 static void io_byte(tp_io *io, uint8_t *v)
@@ -243,6 +244,14 @@ static void settings(tp_io *io, tg_gen *g, tp_head *h)
     io_f32(io, &g->chaos_pitch);
     io_f32(io, &g->chaos_density);
     io_f32(io, &g->chaos_macro);
+    /* version 2: which parts follow them (version 1: the melody alone, as it was then) */
+    int parts = g->chaos_parts;
+    if (io->version >= 2)
+        IO_U8(io, parts);
+    else
+        parts = 1 << TG_PART_MELODY;
+    if (!io->write)
+        tg_set_chaos_parts(g, (unsigned)parts);
     (void)h;
 }
 
@@ -331,7 +340,7 @@ static void host_part(tp_io *io, tp_host *hp)
 int tp_encode(const tg_gen *gc, const tp_host *host, uint8_t *buf, int max)
 {
     tg_gen *g = (tg_gen *)gc;                     /* written only when reading: never here */
-    tp_io io = {buf, 0, max - 4, true, false};
+    tp_io io = {buf, 0, max - 4, true, false, TP_VERSION};
     tp_head h;
     h.style = g->style ? tg_style_index(g->style) : -1;
     h.seed = g->seed;
@@ -410,7 +419,7 @@ int tp_decode(tg_gen *g, tp_host *host, const uint8_t *buf, int n)
     int len = check_record(buf, n);
     if (len < 0)
         return len;
-    tp_io io = {(uint8_t *)buf, 8 + TP_NAME, len, false, false};
+    tp_io io = {(uint8_t *)buf, 8 + TP_NAME, len, false, false, buf[4]};
     tp_head h = {0};
     io_int16(&io, &h.style);
     io_u32(&io, &h.seed);

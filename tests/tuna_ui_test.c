@@ -445,6 +445,36 @@ static void test_controls(void)
     CHECK(ta_lib_count() == tp_character_count() + TG_STYLE_COUNT, "library size %d", ta_lib_count());
 }
 
+/* CHAOS (EDIT a third time): which parts the HOME knobs move; kept from piece to piece and in a slot */
+static void test_chaos_page(void)
+{
+    ta_play(&app, false);
+    tu_goto_page(&ui, TU_PG_HOME);
+    press(TU_B_EDIT);
+    press(TU_B_EDIT);
+    press(TU_B_EDIT);
+    CHECK(ui.page == TU_PG_CHAOS, "EDIT, EDIT, EDIT: the CHAOS page (%d)", ui.page);
+    CHECK(app.g.chaos_parts == TG_CHAOS_ALL, "all parts follow the knobs at first (%u)", app.g.chaos_parts);
+    tu_knob(&ui, TU_K2, -1);                         /* BASS off */
+    CHECK(app.g.chaos_parts == ((1u << TG_PART_MELODY) | (1u << TG_PART_PAD)), "BASS off (%u)", app.g.chaos_parts);
+    lint_where = "chaos";
+    all_palettes("chaos");
+    ta_select(&app, ta_lib_first(3));
+    CHECK(app.g.chaos_parts == ((1u << TG_PART_MELODY) | (1u << TG_PART_PAD)), "kept for the next piece (%u)",
+          app.g.chaos_parts);
+    CHECK(ta_slot_save(&app, 5) == TP_OK, "saved slot 6");
+    tu_knob(&ui, TU_K1, -1);
+    tu_knob(&ui, TU_K3, -1);
+    CHECK(app.g.chaos_parts == 0, "all off (%u)", app.g.chaos_parts);
+    CHECK(ta_slot_load(&app, 5) == TP_OK && app.g.chaos_parts == ((1u << TG_PART_MELODY) | (1u << TG_PART_PAD)),
+          "the slot brings its parts back (%u)", app.g.chaos_parts);
+    tu_knob(&ui, TU_K2, 1);
+    CHECK(app.g.chaos_parts == TG_CHAOS_ALL, "BASS on again (%u)", app.g.chaos_parts);
+    press(TU_B_EDIT);
+    CHECK(ui.page == TU_PG_TIME, "EDIT again: back to TIME (%d)", ui.page);
+    tu_goto_page(&ui, TU_PG_HOME);
+}
+
 /* every composer drawn on HOME and LIBRARY without a lint finding (names, chords, keys) */
 static void test_every_composer(void)
 {
@@ -514,6 +544,7 @@ int main(int argc, char **argv)
     test_screens();
     test_controls();
     test_keep();
+    test_chaos_page();
     test_every_composer();
     for (int i = 0; i < ta_lib_count(); ++i) {
         if (ta_lib_style(i) == TG_STYLE_DEBUSSY) anim(i, "debussy");

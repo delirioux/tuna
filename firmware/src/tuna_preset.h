@@ -19,7 +19,7 @@
 #include <stdint.h>
 #include "tuna_gen.h"
 
-#define TP_VERSION 1
+#define TP_VERSION 2                      /* 2: which parts follow the chaos knobs */
 #define TP_SLOTS 16
 #define TP_GROUPS 4
 #define TP_SLOTS_PER_GROUP (TP_SLOTS / TP_GROUPS)

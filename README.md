@@ -27,6 +27,10 @@ preset and let it drift, from still and ambient to driving and rhythmic.
   conditions and up to 3 parameter locks per step; an evolution timer that builds an energy arc
   and modulates.
 - **16 slots** that save the whole state and play back exactly the music that was saved.
+- **MIDI out**, every part on its own channel (bass 1, melody 2, pad 3, timpani 4, drums 10), with General MIDI
+  programs for the instruments, the sound locks as controllers, historical tunings as pitch bend, and clock.
+- **A resonator**: sympathetic strings on the mix in the manner of Rings, tuned to the chord, the key or the
+  root, retuning as the harmony moves.
 
 ## Controls
 
@@ -41,6 +45,7 @@ preset and let it drift, from still and ambient to driving and rhythmic.
 | REC | memory: the phrase locked (deja vu) / the composer's own |
 | HOME | the falling notes; held: the menu (colour, style) |
 | FX · SCL · EDIT · ARP · SEQ · GLO · SAVE | library · key, scale, tuning, memory · time, then the parts · evolution · freeze · mix, then reverb · save, then load |
+| ENV · LFO | MIDI out · the resonator |
 
 ## Roadmap
 
@@ -52,8 +57,8 @@ preset and let it drift, from still and ambient to driving and rhythmic.
 | 4 | Sequencer | done |
 | 5 | Presets, slots, composers by era | done |
 | 6 | Screen and controls | done |
-| 7 | MIDI out per part, resonator | next |
-| 8 | On the FM-1: flash, measure CPU, then fine-tune every composer from their music | |
+| 7 | MIDI out per part, resonator | done |
+| 8 | On the FM-1: flash, measure CPU, then fine-tune every composer from their music | next |
 
 ## Building and testing
 

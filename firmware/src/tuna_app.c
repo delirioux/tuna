@@ -71,8 +71,9 @@ static int item_of_style(int style)
 static void on_event(void *ctx, const tg_event *e)
 {
     tuna_app *a = ctx;
-    if (a->sound)
-        a->sound(a->sound_ctx, e);
+    if (a->sound && (a->local || (e->type == TG_EV_NOTE && !e->on)))
+        a->sound(a->sound_ctx, e);               /* (local off: note-offs still go, nothing hangs) */
+    tmi_event(&a->midi, e, a->frame + e->offset);
     if (e->type == TG_EV_NOTE && e->on) {
         ta_note *n = &a->feed[a->feed_w % TA_FEED];
         n->part = e->part;
@@ -136,6 +137,12 @@ void ta_init(tuna_app *a, float sample_rate, uint32_t seed)
     for (int t = 0; t < TP_TRACKS; ++t)
         a->level[t] = 80;
     a->reverb = 30;
+    a->local = true;
+    tmi_init(&a->midi, sample_rate);
+    tr_init(&a->reso, sample_rate);
+    a->reso_decay = 50;
+    a->reso_bright = 50;
+    a->reso_mode = TR_TUNE_CHORD;
     tg_init(&a->g, seed, sample_rate);
     load_item(a, item_of_style(TG_STYLE_BACH));
 }
@@ -177,8 +184,10 @@ void ta_play(tuna_app *a, bool on)
             tg_reseed(&a->g, a->seed);           /* from the top: the same seed, the same music */
         }
         a->blocks = 0;
+        tmi_start(&a->midi, a->frame);
     } else {
         all_off(a);
+        tmi_stop(&a->midi, a->frame);
         if (a->pending >= 0) {
             load_item(a, a->pending);
             a->pending = -1;
@@ -296,6 +305,41 @@ void ta_set_chaos(tuna_app *a, float rhythm, float pitch, float density, float m
     tg_set_chaos(&a->g, rhythm, pitch, density, macro);
 }
 
+/* the resonator follows the harmony: retuned when the chord, the key or the mode changes */
+static void retune(tuna_app *a)
+{
+    const tg_gen *g = &a->g;
+    uint32_t sig = (uint32_t)g->root * 7u + (uint32_t)g->chord.root * 131u + (uint32_t)a->reso_mode * 3331u;
+    for (int k = 0; k < g->chord.n; ++k)
+        sig = sig * 31u + (uint32_t)(g->chord.tone[k] + 1);
+    if (sig == a->reso_sig)
+        return;
+    a->reso_sig = sig;
+    int notes[TR_STRINGS];
+    int n = tr_notes_for(a->reso_mode, g->root, g->chord.root, g->chord.tone, g->chord.n, notes);
+    tr_tune(&a->reso, notes, n);
+}
+
+void ta_midi_set(tuna_app *a, bool on, bool clock, bool bend)
+{
+    if (a->midi.on && !on)
+        tmi_panic(&a->midi, a->frame);           /* nothing left hanging on the other side */
+    a->midi.on = on;
+    a->midi.clock = clock;
+    a->midi.bend = bend;
+}
+
+void ta_reso_set(tuna_app *a, int amount, int decay, int bright, int mode)
+{
+    a->reso_amount = (uint8_t)(amount < 0 ? 0 : amount > 100 ? 100 : amount);
+    a->reso_decay = (uint8_t)(decay < 0 ? 0 : decay > 100 ? 100 : decay);
+    a->reso_bright = (uint8_t)(bright < 0 ? 0 : bright > 100 ? 100 : bright);
+    a->reso_mode = (uint8_t)(mode < 0 ? 0 : mode >= TR_TUNE_COUNT ? TR_TUNE_COUNT - 1 : mode);
+    tr_set(&a->reso, a->reso_amount / 100.0f, a->reso_decay / 100.0f, a->reso_bright / 100.0f);
+    a->reso_sig = 0;
+    retune(a);
+}
+
 void ta_process(tuna_app *a, int frames)
 {
     while (a->playing && frames > 0) {
@@ -311,9 +355,12 @@ void ta_process(tuna_app *a, int frames)
                 apply_req(a);
             }
         }
+        tmi_clock(&a->midi, a->frame, n, a->g.bpm);
         tg_process(&a->g, n, on_event, a);
         a->blocks++;
+        a->frame += (uint32_t)n;
         frames -= n;
+        retune(a);
     }
 }
 
@@ -341,6 +388,10 @@ int ta_slot_save(tuna_app *a, int slot)
         h.sound[t].level = a->level[t];
         h.sound[t].rev = a->reverb;
     }
+    h.reso[0] = a->reso_amount;
+    h.reso[1] = a->reso_decay;
+    h.reso[2] = a->reso_bright;
+    h.reso[3] = a->reso_mode;
     int n = tp_encode(&a->g, &h, rec_buf, sizeof rec_buf);
     if (n < 0)
         return n;
@@ -379,6 +430,7 @@ int ta_slot_load(tuna_app *a, int slot)
     for (int t = 0; t < TP_TRACKS; ++t)
         a->level[t] = h.sound[t].level;
     a->reverb = h.sound[0].rev;
+    ta_reso_set(a, h.reso[0], h.reso[1], h.reso[2], h.reso[3]);
     a->blocks = 0;
     return TP_OK;
 }

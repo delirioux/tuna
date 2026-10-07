@@ -182,7 +182,7 @@ static void test_roundtrip(void)
     ga.t.bias = 0.3f;
     ga.perc_mode = TG_PERC_OFF;
     tg_reseed(&ga, 77);
-    tp_host h = {"MY DEBUSSY", true, {{1, 2, 3, 4, 5}, {6, 7, 8, 9, 10}, {11, 12, 13, 14, 15}, {16, 17, 18, 19, 20}}};
+    tp_host h = {"MY DEBUSSY", true, {{1, 2, 3, 4, 5}, {6, 7, 8, 9, 10}, {11, 12, 13, 14, 15}, {16, 17, 18, 19, 20}}, {33, 44, 55, 2}};
     int n = tp_encode(&ga, &h, rec, sizeof rec);
     tp_host h2;
     CHECK(tp_decode(&gb, &h2, rec, n) == TP_OK && !memcmp(&h2, &h, sizeof h), "edited: host part back");

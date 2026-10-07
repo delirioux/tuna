@@ -16,6 +16,13 @@
 #include "hostsim.c"
 #undef main
 #include "tuna_gen.h"
+#include "tuna_reso.h"
+
+/* the resonator (tuna_reso.c) on the mix: RESO=amount 0..100 (0: off), RESO_DECAY, RESO_BRIGHT (0..100),
+ * RESO_MODE (0 chord, 1 key, 2 root); tuned to the harmony as the app tunes it */
+static tr_reso reso;
+static uint32_t reso_sig;
+static int env_int(const char *n, int def) { const char *v = getenv(n); return v ? atoi(v) : def; }
 
 /* Instruction counts (deterministic, unlike time on a shared host): built with -DTUNA_CALLGRIND and run
  * under valgrind --tool=callgrind --collect-atstart=no, collection is switched on around the measured
@@ -275,6 +282,21 @@ static void tune_timpani(track_t *t, int root)
     timp_hi = 48;                                     /* the tom five semitones up: the tonic */
 }
 
+static void reso_follow(void)
+{
+    if (!env_int("RESO", 0))
+        return;
+    uint32_t sig = (uint32_t)gen.root * 7u + (uint32_t)gen.chord.root * 131u;
+    for (int k = 0; k < gen.chord.n; ++k)
+        sig = sig * 31u + (uint32_t)(gen.chord.tone[k] + 1);
+    if (sig == reso_sig)
+        return;
+    reso_sig = sig;
+    int notes[TR_STRINGS];
+    int n = tr_notes_for(env_int("RESO_MODE", 0), gen.root, gen.chord.root, gen.chord.tone, gen.chord.n, notes);
+    tr_tune(&reso, notes, n);
+}
+
 static void setup(const piece_t *p)
 {
     host_tracks_init();
@@ -318,6 +340,9 @@ static void setup(const piece_t *p)
         snapshot_base(t);
     if (p->demo == 1)
         tg_evolve(&gen, true, 8, 1.0f, true);
+    tr_init(&reso, (float)FS);
+    tr_set(&reso, env_int("RESO", 0) / 100.0f, env_int("RESO_DECAY", 50) / 100.0f, env_int("RESO_BRIGHT", 50) / 100.0f);
+    reso_sig = 0;
 }
 
 /* the freeze demo: two periods of Bach, FREEZE, then on the loop: a melody note every other time
@@ -401,9 +426,18 @@ static int render(const piece_t *p, const char *dir, int seconds, stats_t *st)
         if (tail_left < 0)
             tg_process(&gen, BLOCK / tuna_div, on_event, 0);
         CG_OFF(0);
+        reso_follow();
         uint64_t t1 = now_ns();
         CG_ON(1);
         mix_block(o, BLOCK);
+        if (reso.amount > 0) {                       /* the resonator: a send of the mix, its strings added */
+            int32_t in[BLOCK];
+            for (int i = 0; i < BLOCK; ++i)
+                in[i] = (o[2 * i] + o[2 * i + 1]) >> 1;
+            tr_process(&reso, in, o, BLOCK);
+            for (int i = 0; i < 2 * BLOCK; ++i)
+                o[i] = o[i] > 32767 ? 32767 : o[i] < -32768 ? -32768 : o[i];
+        }
         CG_OFF(1);
         uint64_t t2 = now_ns();
         gen_ns += t1 - t0;

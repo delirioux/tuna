@@ -1737,6 +1737,103 @@ static const tg_style styles[TG_STYLE_COUNT] = {
         .vocab = TG_VOC_POP,
         .orch = {{TI_CONTRABASS, TI_CHOIR, TI_HARP}, {TI_ORGAN, TI_FLUTE, TI_HARP}}, .orch_n = 2, .orch_mode = TG_ORCH_RANDOM,
     },
+
+    /* ---- 9: film and musical ------------------------------------------------------------------------------ */
+    [TG_STYLE_MORRICONE] = {
+        /* the western: a whistled or sung melody leaping fifths and octaves over i VI III VII, a strummed
+         * guitar, whip cracks, a slow build */
+        .name = "MORRICONE", .root = 9, .scale = TS_AEOLIAN,                         /* A minor */
+        .bpm = 72, .division = 2, .beats_per_bar = 4, .chord_beats = 4, .period_bars = 8,
+        .melody_density = 0.3f, .melody_base = 62, .melody_range = 19,
+        .profile = {0.05f, 0.50f, 0.72f, 0.88f}, .max_leap = 7,
+        .arrival_bars = 2,
+        .bass_mode = TG_BASS_ROOT, .pad_mode = TG_PAD_REPEAT, .pad_base = 52, .pad_tones = 3,
+        .fifth_bias = 1.0f, .repeat = 1.0f,
+        .motif = 0.75f, .motif_beats = 4, .motif_use = 0.85f, .var_invert = 0.05f, .var_alter = 0.25f,
+        .swell = 0.6f,
+        .perc_mode = TG_PERC_PATTERN,
+        .harmony = TG_HARM_CYCLE, .cycle = {0, 1, 2, 12}, .cycle_len = 4,             /* i VI III VII */
+        .octave = 0.12f, .strum_ms = 12, .mel_min_ticks = 3,
+        .evolve_periods = 8, .evolve_depth = 1.0f,
+        .orch = {{TI_CONTRABASS, TI_WHISTLE, TI_GUITAR}, {TI_CONTRABASS, TI_VOICE, TI_GUITAR},
+                 {TI_CONTRABASS, TI_CHOIR, TI_STRINGS}, {TI_CONTRABASS, TI_OBOE, TI_STRINGS}}, .orch_n = 4,
+        .orch_mode = TG_ORCH_RANDOM,
+        .drum_pat = {{TG_GM_SIDE_STICK, 70, 0x44}, {TG_GM_BASS_DRUM, 60, 0x01}},
+    },
+    [TG_STYLE_JOHN_WILLIAMS] = {
+        /* the heroic march: a fifth up and triplet pickups, chromatic mediants, Lydian wonder, brass,
+         * snare and cymbals */
+        .name = "JOHN WILLIAMS", .root = 10, .scale = TS_IONIAN,                     /* B-flat major */
+        .bpm = 104, .division = 3, .beats_per_bar = 4, .chord_beats = 2, .period_bars = 4,
+        .melody_density = 0.45f, .melody_base = 62, .melody_range = 19,
+        .profile = {0.08f, 0.45f, 0.70f, 0.85f}, .max_leap = 5,
+        .appoggiatura = 0.1f, .arrival_bars = 1,
+        .bass_mode = TG_BASS_MARCH, .pad_mode = TG_PAD_BLOCK, .pad_base = 53, .pad_tones = 3,
+        .fifth_bias = 1.5f, .repeat = 0.4f,
+        .motif = 0.75f, .motif_beats = 4, .motif_use = 0.85f, .var_invert = 0.05f, .var_alter = 0.25f,
+        .swell = 0.6f,
+        .perc_mode = TG_PERC_PERIOD, .perc = {7, 4, 3, 4, 2, 0},
+        .w_major = {10, 5, 3, 6, 5, 4, 7, 7, 3, 6, 4, 3, 3, 4, 6, 6, 4, 4, 2, 0, 0, 2, 2, 2},
+        .w_minor = {10, 6, 4, 6, 3, 5, 7, 7, 4, 4, 3, 3, 3, 3, 4, 3, 3, 3, 2, 0, 0, 2, 3, 3},
+        .vocab = TG_VOC_ROMANTIC, .color_scale = TS_LYDIAN, .color = 0.3f, .octave = 0.1f,
+        .orch = {{TI_TUBA, TI_BRASS, TI_STRINGS}, {TI_CONTRABASS, TI_HORN, TI_STRINGS}, {TI_CONTRABASS, TI_FLUTE, TI_CELESTA},
+                 {TI_TUBA, TI_TRUMPET, TI_BRASS}}, .orch_n = 4, .orch_mode = TG_ORCH_RANDOM,
+    },
+    [TG_STYLE_HOWARD_SHORE] = {
+        /* the Shire: a lilting pentatonic tune with Celtic turns, flat-VII chords, whistle, choir, horn */
+        .name = "HOWARD SHORE", .root = 2, .scale = TS_IONIAN,                       /* D major */
+        .bpm = 76, .division = 4, .beats_per_bar = 4, .chord_beats = 4, .period_bars = 4,
+        .melody_density = 0.4f, .melody_base = 62, .melody_range = 14,
+        .profile = {0.06f, 0.70f, 0.90f, 0.97f}, .max_leap = 4,
+        .melody_mask = 0x295, .arrival_bars = 2,
+        .bass_mode = TG_BASS_ROOT, .pad_mode = TG_PAD_BLOCK, .pad_base = 54, .pad_tones = 3,
+        .fifth_bias = 1.0f, .repeat = 0.5f,
+        .motif = 0.7f, .motif_beats = 4, .motif_use = 0.8f, .var_invert = 0.05f, .var_alter = 0.25f,
+        .swell = 0.5f, .swing = 0.6f,
+        .perc_mode = TG_PERC_OFF,
+        .w_major = {10, 6, 3, 8, 5, 7, 0, 0, 0, 0, 2, 2, 0, 6, 2, 0, 3, 3, 2, 0, 0, 0, 0, 0},
+        .w_minor = {10, 6, 5, 7, 4, 6, 4, 4, 0, 2, 2, 2, 2, 5, 3, 3, 3, 3, 0, 0, 0, 0, 0, 0},
+        .vocab = TG_VOC_MODAL, .turn = 0.25f,
+        .orch = {{TI_CONTRABASS, TI_WHISTLE, TI_STRINGS}, {TI_CONTRABASS, TI_CHOIR, TI_STRINGS}, {TI_TUBA, TI_HORN, TI_STRINGS}},
+        .orch_n = 3, .orch_mode = TG_ORCH_RANDOM,
+    },
+    [TG_STYLE_PREISNER] = {
+        /* Kieslowski's films: a plain melancholic waltz tune repeated, sparse chords, piano, flute, organ, choir */
+        .name = "PREISNER", .root = 11, .scale = TS_AEOLIAN,                         /* B minor, 3/4 */
+        .bpm = 84, .division = 2, .beats_per_bar = 3, .chord_beats = 3, .period_bars = 8,
+        .melody_density = 0.35f, .melody_base = 62, .melody_range = 12,
+        .profile = {0.08f, 0.82f, 0.94f, 0.98f}, .max_leap = 4,
+        .arrival_bars = 2,
+        .bass_mode = TG_BASS_BAR, .pad_mode = TG_PAD_BLOCK, .pad_base = 54, .pad_tones = 3,
+        .fifth_bias = 1.5f, .repeat = 0.6f,
+        .motif = 0.8f, .motif_beats = 3, .motif_use = 0.85f, .var_invert = 0.0f, .var_alter = 0.2f,
+        .swell = 0.3f, .rubato = 0.2f,
+        .perc_mode = TG_PERC_OFF, .perc = {4, 0, 0, 0, 0, 0},
+        .w_major = {10, 6, 3, 8, 4, 3, 8, 8, 2, 3, 2, 2, 2, 1, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0},
+        .w_minor = {10, 7, 4, 8, 2, 4, 8, 8, 2, 3, 2, 2, 2, 1, 2, 0, 0, 0, 1, 0, 0, 0, 1, 0},
+        .orch = {{TI_PIANO, TI_FLUTE, TI_PIANO}, {TI_ORGAN, TI_CHOIR, TI_ORGAN}, {TI_CONTRABASS, TI_VIOLIN, TI_STRINGS}},
+        .orch_n = 3, .orch_mode = TG_ORCH_RANDOM,
+    },
+    [TG_STYLE_LLOYD_WEBBER] = {
+        /* musical theatre: a pop-rock ballad on add9 and sus chords, a rock kit, and the last chorus up a
+         * semitone (and up again next time) */
+        .name = "LLOYD WEBBER", .root = 2, .scale = TS_AEOLIAN,                      /* D minor */
+        .bpm = 100, .division = 2, .beats_per_bar = 4, .chord_beats = 4, .period_bars = 4,
+        .melody_density = 0.45f, .melody_base = 62, .melody_range = 17,
+        .profile = {0.15f, 0.60f, 0.85f, 0.95f}, .max_leap = 5,
+        .arrival_bars = 1,
+        .bass_mode = TG_BASS_REPEAT, .pad_mode = TG_PAD_BLOCK, .pad_base = 53, .pad_tones = 3,
+        .fifth_bias = 1.2f, .repeat = 0.5f,
+        .motif = 0.75f, .motif_beats = 4, .motif_use = 0.85f, .var_invert = 0.05f, .var_alter = 0.25f,
+        .swell = 0.6f,
+        .perc_mode = TG_PERC_KIT,
+        .w_major = {10, 6, 7, 4, 8, 4, 4, 3, 8, 5, 3, 2, 3, 2, 2, 2, 2, 2, 2, 0, 0, 2, 2, 2},
+        .w_minor = {10, 6, 7, 4, 7, 3, 6, 3, 5, 5, 2, 3, 4, 3, 3, 2, 2, 2, 2, 0, 0, 2, 1, 2},
+        .vocab = TG_VOC_POP, .mod_kind = TG_MOD_UP_SEMITONE,
+        .evolve_periods = 6, .evolve_depth = 0.8f, .evolve_modulate = true,
+        .orch = {{TI_SYNTH, TI_VOICE, TI_PIANO}, {TI_SYNTH, TI_VOICE, TI_ORGAN}, {TI_CONTRABASS, TI_STRINGS, TI_STRINGS}},
+        .orch_n = 3, .orch_mode = TG_ORCH_ENERGY,
+    },
 };
 
 static const char *const family_names[TI_COUNT] = {

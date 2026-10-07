@@ -169,6 +169,7 @@ static void defaults(tg_gen *g)
     g->gp = g->echo = 0.0f;
     g->tuning = TT_TUNE_EQUAL;
     g->tune_root = 0;
+    g->mod_kind = TG_MOD_RELATED;
     g->perc_mode = TG_PERC_OFF;
     for (int i = 0; i < TG_PI_COUNT; ++i)
         g->perc_w[i] = 0;
@@ -760,6 +761,7 @@ void tg_apply_style_def(tg_gen *g, const tg_style *st)
     g->echo = st->echo;
     g->tuning = st->tuning;
     g->tune_root = st->root;
+    g->mod_kind = st->mod_kind;
     apply_modes(g, false);
     g->style_away = false;
     g->period_scale = -1;
@@ -2625,9 +2627,21 @@ static void evolve_step(tg_gen *g)
     if (g->evolve_modulate && P >= 4) {
         int away = P / 2, home = P / 2 + (P >= 8 ? P / 4 : 1);
         bool minor = (tt_scale_mask(g->base_scale) >> 3) & 1;
+        if ((g->mod_kind == TG_MOD_UP_SEMITONE || g->mod_kind == TG_MOD_UP_TONE) && k == away) {
+            /* the last chorus up a step, and up again next cycle; after two steps up, home again */
+            int step = g->mod_kind == TG_MOD_UP_TONE ? 2 : 1;
+            int up = ((g->root - g->base_root) % 12 + 12) % 12;
+            g->next_root = up >= 2 * step ? g->base_root : (g->root + step) % 12;
+            g->next_scale = g->scale;
+            g->key_pending = true;
+            g->key_set_tick = g->ticks;
+            g->periods_away++;
+            return;
+        }
         if (k == away && !g->key_away) {            /* to the dominant, or the relative major */
-            g->next_root = minor ? (g->base_root + 3) % 12 : (g->base_root + 7) % 12;
-            g->next_scale = minor ? TS_IONIAN : g->base_scale;
+            g->next_root = g->mod_kind == TG_MOD_MEDIANT ? (g->base_root + (minor ? 8 : 4)) % 12 :
+                           minor ? (g->base_root + 3) % 12 : (g->base_root + 7) % 12;
+            g->next_scale = minor && g->mod_kind != TG_MOD_MEDIANT ? TS_IONIAN : g->base_scale;
             g->key_pending = true;
             g->key_away = true;
             g->key_set_tick = g->ticks;

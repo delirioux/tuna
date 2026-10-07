@@ -620,7 +620,7 @@ static void plan_period(tg_gen *g)
         /* a whole-tone period: augmented chords drift until the cadence brings the key back */
         g->plan_wt = n >= 4 && st->whole_tone > 0.0f && hrand(g) < st->whole_tone;
         if (g->plan_wt) {
-            for (int i = 0; i < n - 2; ++i)
+            for (int i = g->open_prev ? 1 : 0; i < n - 2; ++i)   /* an open arrival keeps its chord */
                 g->plan[i] = (int8_t)(i % 2 ? TG_VOC_AUG_BVII : TG_VOC_AUG_I);
             for (int i = 0; i < n; ++i)
                 if (i < n - 2) want[i] = -2;        /* taken */
@@ -629,6 +629,10 @@ static void plan_period(tg_gen *g)
         if (n >= 4 && (scale_now(g) == TS_OCT_HW || scale_now(g) == TS_OCT_WH) && g->period_scale >= 0) {
             int last = 0;
             for (int i = 0; i < n - 2; ++i) {
+                if (i == 0 && g->open_prev) {
+                    want[i] = -2;                   /* an open arrival keeps its chord */
+                    continue;
+                }
                 g->plan[i] = g->plan_tonic;
                 int k = i ? 1 + (int)(hrand(g) * 3.0f) : 0;
                 last = (last + 3 * k) % 12;
@@ -1257,6 +1261,11 @@ static void melody_tick(tg_gen *g, beat_pos b, float x2, int velocity, int offse
     }
     /* the target nearest the current note, inside the range */
     int home = mask_nearest(target, g->root, g->mel_note);
+    if (arrival && target != tonic && home == g->mel_note) {
+        /* an open ending whose approach already sits on a tone of the chord: move to its neighbour tone */
+        int a = mask_step(target, g->root, g->mel_note, 1), b = mask_step(target, g->root, g->mel_note, -1);
+        home = a - g->mel_note <= g->mel_note - b ? a : b;
+    }
     if (home > hi) home -= 12;
     if (home < lo) home += 12;
 
@@ -1732,10 +1741,17 @@ static void pad_double(tg_gen *g, int velocity, int offset, tg_event_fn fn, void
 {
     int lo = g->base_note[TG_PART_PAD] + g->root;
     int mel = g->mel_note;
-    int steps = mel - lo > 16 ? -5 : -2;
-    int note = mask_step(g->mel_scale ? g->mel_scale : g->chord_scale, g->root, mel, steps);
-    if (note < lo)
-        note = mask_step(g->chord_scale, g->root, mel, -2);
+    int note;
+    if (g->pad_interval) {
+        note = mel - g->pad_interval;                /* a fixed doubling: the octave below (Puccini) */
+        if (!in_mask(g->chord_scale | g->mel_scale, note, g->root))
+            note = mask_nearest(g->chord_scale, g->root, note);
+    } else {
+        int steps = mel - lo > 16 ? -5 : -2;
+        note = mask_step(g->mel_scale ? g->mel_scale : g->chord_scale, g->root, mel, steps);
+        if (note < lo)
+            note = mask_step(g->chord_scale, g->root, mel, -2);
+    }
     note_on(g, TG_PART_PAD, note, velocity - 16, offset, fn, ctx);
 }
 

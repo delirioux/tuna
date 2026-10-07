@@ -222,7 +222,8 @@ static void run_checked(float secs, hstat *h, void (*per_tick)(void))
             if (!e->on || e->type != TG_EV_NOTE || e->part >= TG_PART_DRUMS)
                 continue;
             h->notes++;
-            uint16_t allowed = tt_scale_mask(g.period_scale >= 0 ? g.period_scale : g.scale) | g.chord_scale | g.mel_scale;
+            uint16_t allowed = tt_scale_mask(g.period_scale >= 0 ? g.period_scale : g.scale) | tt_scale_mask(g.scale) |
+                               g.chord_scale | g.mel_scale;
             for (int c = 0; c < g.chord.n; ++c)
                 allowed |= (uint16_t)(1u << ((g.chord.root + g.chord.tone[c]) % 12));
             int pc = pc_of(e->note, g.root);

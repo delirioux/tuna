@@ -100,8 +100,8 @@ static void on_event(void *ctx, const tg_event *e)
         l->drum_hits++;
     if (e->on && e->part < TG_PART_DRUMS) {
         /* in key: the scale, the current chord, or the scale bent to the chord */
-        uint16_t allowed = tt_scale_mask(cur->period_scale >= 0 ? cur->period_scale : cur->scale) | cur->chord_scale |
-                           cur->mel_scale;
+        uint16_t allowed = tt_scale_mask(cur->period_scale >= 0 ? cur->period_scale : cur->scale) | tt_scale_mask(cur->scale) |
+                           cur->chord_scale | cur->mel_scale;     /* a coloured period is still in its key */
         for (int k = 0; k < cur->chord.n; ++k)
             allowed |= (uint16_t)(1u << ((cur->chord.root + cur->chord.tone[k]) % 12));
         int pc = ((e->note - cur->root) % 12 + 12) % 12;
@@ -573,7 +573,11 @@ static int check(const preset *p, const evlog *pa, bool same, bool verbose)
         if (verbose && (a.drum_hits || a.timp_hits))
             printf("         percussion: %ld drum strokes, %ld timpani strokes (%ld off tonic/dominant)\n",
                    a.drum_hits, a.timp_hits, a.timp_bad);
-        fails += !same || a.off_key || !count[0] || !count[1] || !count[2] || a.timp_bad;
+        {
+            const tg_style *st = p->style >= 0 ? tg_style_get(p->style) : NULL;
+            bool no_bass = st && st->bass_mode == TG_BASS_NONE, no_pad = st && st->pad_mode == TG_PAD_NONE;
+            fails += !same || a.off_key || (!count[0] && !no_bass) || !count[1] || (!count[2] && !no_pad) || a.timp_bad;
+        }
         fails += a.mel_downbeat_chord != a.mel_downbeats;
         {
             const tg_style *st = p->style >= 0 ? tg_style_get(p->style) : NULL;
@@ -585,6 +589,11 @@ static int check(const preset *p, const evlog *pa, bool same, bool verbose)
                     fails += a.arrivals_tonic_chord != a.arrivals;   /* no open endings: every arrival on the tonic */
             }
         }
+        if (getenv("WHY"))
+            printf("    why: same %d off %ld counts %ld %ld %ld timp %ld down %ld/%ld arr %ld tonic %ld/%ld step %ld open %ld/%ld halves %ld/%ld roots %ld/%ld par %ld\n",
+                   same, a.off_key, count[0], count[1], count[2], a.timp_bad, a.mel_downbeat_chord, a.mel_downbeats, a.arrivals,
+                   a.arrivals_tonic, a.arrivals_tonic_chord, a.arrivals_by_step, a.arrivals_open_ok, a.arrivals_open,
+                   a.halves_on_dominant, a.halves, a.bass_roots, a.bass_changes, a.parallels);
         if (p->style >= 0)
             fails += a.halves_on_dominant != a.halves || a.bass_roots != a.bass_changes || a.parallels;
     return fails;

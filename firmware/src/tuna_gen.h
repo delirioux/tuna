@@ -33,7 +33,7 @@
 #include "tuna_style.h"
 
 #define TG_PARTS 3
-#define TG_PAD_VOICES TT_CHORD_MAX
+#define TG_PAD_VOICES 8           /* a chord of four, and a second triad above it (polychords) */
 
 enum { TG_PART_BASS, TG_PART_MELODY, TG_PART_PAD, TG_PART_DRUMS, TG_PART_TIMPANI };
 #define TG_EVENT_PARTS 5          /* the three voices, plus drums (GM note numbers) and pitched timpani */
@@ -154,6 +154,22 @@ typedef struct {
     float sforzando;              /* chance of an accent on a weak beat */
     float swell;                  /* crescendo through the period */
     float rubato;                 /* slowing into cadences */
+    /* composer mechanisms (tuna_style.h): copied by tg_apply_style, changed by contrast periods */
+    int mel_mode;                 /* TG_MEL_* */
+    int harmony;                  /* TG_HARM_* (with a style) */
+    int mel_min_ticks;            /* the shortest free melody note */
+    float direction;              /* -1..1: the melody leans downward or upward */
+    float staccato;               /* 0..1: melody notes shorter than their time */
+    float turn;                   /* chance of a turn on a downbeat */
+    float octave;                 /* chance a wide leap is an octave */
+    int pad_interval;             /* ORGANUM, DOUBLE: semitones below the melody (0: default) */
+    int poly_semis;               /* BLOCK: a second major triad above (0: none) */
+    bool spread;                  /* BLOCK: open voicing */
+    int strum_ms;                 /* chords spread low to high */
+    float gp;                     /* chance of a general pause after an arrival */
+    float echo;                   /* chance a period is an echo (softer) */
+    int tuning;                   /* TT_TUNE_*: cents sent with each note (tg_event.value) */
+    int tune_root;                /* the pitch class the tuning is laid on */
     int perc_mode;                /* TG_PERC_OFF, TG_PERC_PERIOD (the composer's orchestra), TG_PERC_KIT */
     uint8_t perc_w[TG_PI_COUNT];  /* period percussion: 0..10 per instrument */
     const tg_style *style;        /* NULL: the fixed progression `prog` */
@@ -177,6 +193,7 @@ typedef struct {
     tt_chord chord;
     int sounding[TG_PARTS];       /* note held by bass and melody, -1 = none */
     int pad[TG_PAD_VOICES], pad_n;
+    int pad_poly;                 /* of pad_n, the notes of a polychord's upper triad */
     bool gate_prev[TG_PARTS];
     uint32_t since_note[TG_PARTS];
     int mel_note, mel_prev_interval, bass_note;
@@ -197,6 +214,23 @@ typedef struct {
     int home_root, home_scale;    /* the style's key, for its own modulations */
     bool style_away;              /* a style modulation is away from home */
     long stat_open, stat_colour, stat_slips, stat_modulations;   /* statistics for the checks */
+    /* melody modes */
+    int tinti_k, tinti_i, tinti_rest, tinti_dir;   /* tintinnabuli: phrase length, note, rest, direction */
+    int pat_i;                    /* PATTERN: the next element */
+    int bird_left, bird_rest;     /* BIRDSONG: notes left in the burst, ticks of silence */
+    int orn_q[3], orn_n;          /* a turn's remaining notes */
+    /* bass and third-part modes */
+    int bass_hit, bass_alt;       /* OSTINATO: hit of the bar; BEAT: root or fifth */
+    int pad_note;                 /* figures, canon, phase: the third part's sounding note (-1 none) */
+#define TG_CANON_MAX 128
+    int16_t canon_buf[TG_CANON_MAX];   /* the melody by tick: a note, -1 held, -2 released */
+    int add_len, add_rep, add_dir, add_pos;   /* ADDITIVE: active figure length, loops, growing or not */
+    int phase_off, phase_rep;     /* PHASE: the drift and its loop count */
+    long oompah_off;              /* OOMPAH: the tick the short chord ends */
+    /* form */
+    long gp_from, gp_until;       /* a general pause */
+    int echo_vel;                 /* an echo period's velocity offset */
+    bool alt_on;                  /* a contrast period */
     int plan_len;
     bool plan_minor;
     int mel_pending;              /* a melody note due at mel_pending_q (ornament resolution), -1 = none */

@@ -443,12 +443,501 @@ static void test_harmony_models(void)
     }
 }
 
+/* ---- melody, bass and texture modes ---------------------------------------------------------------- */
+static void start_ts(uint32_t seed)
+{
+    tg_init(&g, seed, SR);
+    tg_apply_style_def(&g, &ts);
+    tg_reseed(&g, seed);
+}
+
+/* all events of a run, for the mode checks */
+static void run_log(float secs)
+{
+    nlg = 0;
+    long n = (long)(secs * SR) / BLOCK;
+    for (long i = 0; i < n; ++i)
+        tg_process(&g, BLOCK, cb, NULL);
+}
+
+static void test_melody_modes(void)
+{
+    hstat h;
+    /* chant over a drone: no accents, the bass a held tonic, arrivals on the final */
+    style_from(TG_STYLE_MOZART);
+    ts.mel_mode = TG_MEL_CHANT;
+    ts.harmony = TG_HARM_DRONE;
+    ts.vocab = TG_VOC_MODAL;
+    ts.scale = TS_DORIAN;
+    ts.cycle[0] = 10;
+    ts.cycle_len = 1;
+    ts.bass_mode = TG_BASS_DRONE;
+    ts.pad_mode = TG_PAD_ORGANUM;
+    ts.division = 2;
+    ts.melody_density = 0.6f;
+    start_ts(3);
+    run_checked(60, &h, NULL);
+    CHECK(h.off_key == 0 && h.arrivals > 2 && h.arr_tonic_ok == h.arrivals, "chant: off key %ld, arrivals %ld/%ld",
+          h.off_key, h.arr_tonic_ok, h.arrivals);
+    start_ts(3);
+    run_log(60);
+    int bass_notes = 0, bass_pc_bad = 0, organum = 0, organum_bad = 0;
+    int last_mel = -1;
+    for (long i = 0; i < nlg; ++i) {
+        const tg_event *e = &lg[i].e;
+        if (!e->on || e->type != TG_EV_NOTE) continue;
+        if (e->part == TG_PART_MELODY) last_mel = e->note;
+        if (e->part == TG_PART_BASS) { bass_notes++; bass_pc_bad += pc_of(e->note, g.root) != 0; }
+        if (e->part == TG_PART_PAD && last_mel >= 0) {
+            organum++;
+            bool bad = last_mel - e->note != 7 && last_mel - e->note != 6 && last_mel - e->note != 8;
+            if (bad) printf("  organum mel %d pad %d tick %ld\n", last_mel, e->note, lg[i].tick);
+            organum_bad += bad;
+        }
+    }
+    CHECK(bass_notes > 0 && bass_notes < 30 && bass_pc_bad == 0, "drone bass: %d notes, %d off the tonic", bass_notes, bass_pc_bad);
+    CHECK(organum > 20 && organum_bad == 0, "organum: %d notes, %d not a fifth below", organum, organum_bad);
+
+    /* tintinnabuli: the M-voice moves by step toward the tonic, the T-voice holds to the tonic triad below */
+    style_from(TG_STYLE_MOZART);
+    ts.mel_mode = TG_MEL_TINTI;
+    ts.pad_mode = TG_PAD_TINTI;
+    ts.harmony = TG_HARM_DRONE;
+    ts.scale = TS_AEOLIAN;
+    ts.root = 9;
+    ts.bass_mode = TG_BASS_TOLL;
+    start_ts(1);
+    run_log(90);
+    int steps = 0, leaps = 0, tvoice = 0, tbad = 0, ends = 0, ends_tonic = 0;
+    last_mel = -1;
+    for (long i = 0; i < nlg; ++i) {
+        const tg_event *e = &lg[i].e;
+        if (e->type != TG_EV_NOTE) continue;
+        if (e->part == TG_PART_MELODY && !e->on) {
+            bool restarts = false;               /* a release before a new note is not a phrase end */
+            for (long j = i + 1; j < nlg && lg[j].tick == lg[i].tick; ++j)
+                restarts |= lg[j].e.part == TG_PART_MELODY && lg[j].e.on;
+            if (!restarts) {
+                ends++;
+                ends_tonic += pc_of(e->note, g.root) == 0;
+            }
+        }
+        if (!e->on) continue;
+        if (e->part == TG_PART_MELODY) {
+            if (last_mel >= 0) { int d = abs(e->note - last_mel); if (d <= 2) steps++; else leaps++; }
+            last_mel = e->note;
+        }
+        if (e->part == TG_PART_PAD) {
+            tvoice++;
+            int pc = pc_of(e->note, g.root);
+            tbad += !(pc == 0 || pc == 3 || pc == 7) || e->note >= last_mel;
+        }
+    }
+    CHECK(steps > 40 && leaps < steps / 3, "tinti M-voice: %d steps, %d leaps (phrase restarts)", steps, leaps);
+    CHECK(tvoice > 40 && tbad == 0, "tinti T-voice: %d notes, %d off the triad or not below", tvoice, tbad);
+    CHECK(ends > 5 && ends_tonic == ends, "tinti phrases end on the tonic: %d/%d", ends_tonic, ends);
+
+    /* a pattern, and its phase-shifted twin */
+    style_from(TG_STYLE_MOZART);
+    static const int8_t piano_phase[12] = {0, 1, 4, 5, 6, 1, 0, 5, 4, 1, 6, 5};
+    memcpy(ts.pattern, piano_phase, 12);
+    ts.pattern_len = 12;
+    ts.mel_mode = TG_MEL_PATTERN;
+    ts.pad_mode = TG_PAD_PHASE;
+    ts.phase_reps = 4;
+    ts.harmony = TG_HARM_DRONE;
+    ts.scale = TS_DORIAN;
+    ts.root = 4;
+    ts.bass_mode = TG_BASS_NONE;
+    start_ts(2);
+    run_log(40);
+    int mel[4000], nm = 0, pad[4000], np = 0, bass = 0;
+    for (long i = 0; i < nlg; ++i) {
+        const tg_event *e = &lg[i].e;
+        if (!e->on || e->type != TG_EV_NOTE) continue;
+        if (e->part == TG_PART_MELODY && nm < 4000) mel[nm++] = e->note;
+        if (e->part == TG_PART_PAD && np < 4000) pad[np++] = e->note;
+        bass += e->part == TG_PART_BASS;
+    }
+    int mbad = 0;
+    for (int i = 12; i < nm; ++i) mbad += mel[i] != mel[i - 12];
+    CHECK(nm > 100 && mbad == 0, "pattern loops exactly: %d notes, %d off", nm, mbad);
+    CHECK(bass == 0, "no bass: %d", bass);
+    /* the twin drifts: at first in unison, later ahead */
+    int same_early = 0, same_late = 0;
+    for (int i = 0; i < 12 && i < np; ++i) same_early += pad[i] == mel[i];
+    for (int i = np - 12; i < np && i > 0; ++i) same_late += pad[i] == mel[i];
+    CHECK(same_early == 12 && same_late < 12 && g.phase_off > 0, "phase: unison %d/12 at first, %d/12 later, drift %d",
+          same_early, same_late, g.phase_off);
+
+    /* birdsong: high, in bursts */
+    style_from(TG_STYLE_MOZART);
+    ts.mel_mode = TG_MEL_BIRDSONG;
+    ts.scale = TS_MESSIAEN3;
+    ts.harmony = TG_HARM_DRONE;
+    start_ts(4);
+    run_checked(40, &h, NULL);
+    CHECK(h.off_key == 0, "birdsong in the mode: %ld off", h.off_key);
+    start_ts(4);
+    run_log(40);
+    int low = 0, birds = 0;
+    for (long i = 0; i < nlg; ++i)
+        if (lg[i].e.on && lg[i].e.part == TG_PART_MELODY && lg[i].e.type == TG_EV_NOTE) {
+            birds++;
+            low += lg[i].e.note < ts.melody_base + 12 - 2;
+        }
+    CHECK(birds > 50 && low == 0, "birdsong: %d notes, %d below the high register", birds, low);
+
+    /* the phrase's options: staccato, long notes, a falling line, octave leaps, turns */
+    style_from(TG_STYLE_MOZART);
+    ts.staccato = 0.8f;
+    start_ts(5);
+    run_log(30);
+    long on_at[128], shorts = 0, longs = 0;
+    for (int i = 0; i < 128; ++i) on_at[i] = -1;
+    for (long i = 0; i < nlg; ++i) {
+        const tg_event *e = &lg[i].e;
+        if (e->part != TG_PART_MELODY || e->type != TG_EV_NOTE) continue;
+        if (e->on) on_at[e->note] = lg[i].tick;
+        else if (on_at[e->note] >= 0) { long len = lg[i].tick - on_at[e->note]; shorts += len <= 1; longs += len > 1; on_at[e->note] = -1; }
+    }
+    CHECK(shorts > 3 * longs, "staccato: %ld short, %ld long", shorts, longs);
+
+    style_from(TG_STYLE_MOZART);
+    ts.mel_min_ticks = 8;
+    ts.appoggiatura = 0;
+    ts.trill = false;
+    start_ts(5);
+    run_log(60);
+    long prev_tick = -1, too_short = 0, mnotes = 0;
+    for (long i = 0; i < nlg; ++i) {
+        const tg_event *e = &lg[i].e;
+        if (e->part != TG_PART_MELODY || !e->on || e->type != TG_EV_NOTE) continue;
+        int period, pos = 0;
+        (void)period; (void)pos;
+        if (prev_tick >= 0 && lg[i].tick - prev_tick < 8) too_short++;
+        prev_tick = lg[i].tick;
+        mnotes++;
+    }
+    CHECK(mnotes > 20 && too_short < mnotes / 5, "long notes: %ld of %ld shorter than 8 ticks (cadences only)", too_short, mnotes);
+
+    for (int d = -1; d <= 1; d += 2) {
+        style_from(TG_STYLE_MOZART);
+        ts.direction = (float)d;
+        start_ts(6);
+        run_log(90);
+        long up = 0, down = 0;
+        int lm = -1;
+        for (long i = 0; i < nlg; ++i) {
+            const tg_event *e = &lg[i].e;
+            if (e->part != TG_PART_MELODY || !e->on || e->type != TG_EV_NOTE) continue;
+            if (lm >= 0) { up += e->note > lm; down += e->note < lm; }
+            lm = e->note;
+        }
+        CHECK(d < 0 ? down > up : up > down, "direction %d: %ld up, %ld down", d, up, down);
+    }
+
+    style_from(TG_STYLE_MOZART);
+    ts.octave = 0.6f;
+    ts.melody_range = 24;
+    start_ts(7);
+    run_checked(60, &h, NULL);
+    CHECK(h.off_key == 0 && h.arr_tonic_ok == h.arrivals, "octaves: in key, arrivals %ld/%ld", h.arr_tonic_ok, h.arrivals);
+    start_ts(7);
+    run_log(60);
+    long octs = 0;
+    int lm = -1;
+    for (long i = 0; i < nlg; ++i) {
+        const tg_event *e = &lg[i].e;
+        if (e->part != TG_PART_MELODY || !e->on || e->type != TG_EV_NOTE) continue;
+        octs += lm >= 0 && abs(e->note - lm) == 12;
+        lm = e->note;
+    }
+    CHECK(octs > 5, "octave leaps: %ld", octs);
+
+    style_from(TG_STYLE_CHOPIN);                       /* division 3: room for a turn */
+    ts.turn = 0.5f;
+    ts.appoggiatura = 0;
+    start_ts(8);
+    run_checked(60, &h, NULL);
+    CHECK(h.off_key == 0 && h.arr_tonic_ok == h.arrivals, "turns: in key %ld, arrivals %ld/%ld", h.off_key, h.arr_tonic_ok,
+          h.arrivals);
+    start_ts(8);
+    run_log(60);
+    int seq[8], ns = 0;
+    long turns = 0;
+    for (long i = 0; i < nlg; ++i) {
+        const tg_event *e = &lg[i].e;
+        if (e->part != TG_PART_MELODY || !e->on || e->type != TG_EV_NOTE) continue;
+        if (ns == 4) { memmove(seq, seq + 1, 3 * sizeof(int)); ns = 3; }
+        seq[ns++] = e->note;
+        if (ns == 4 && seq[0] > seq[1] && seq[2] < seq[1] && seq[3] == seq[1] && seq[0] - seq[1] <= 2 && seq[1] - seq[2] <= 2)
+            turns++;
+    }
+    CHECK(turns > 5, "turns heard: %ld", turns);
+}
+
+static void test_bass_pad_modes(void)
+{
+    hstat h;
+    /* ostinato: the habanera rhythm in 2/4 sixteenths: ticks 0, 3, 4, 6 */
+    style_from(TG_STYLE_MOZART);
+    ts.beats_per_bar = 2;
+    ts.division = 4;
+    ts.chord_beats = 2;
+    ts.period_bars = 8;
+    ts.bass_mode = TG_BASS_OSTINATO;
+    ts.bass_rhythm = (1u << 0) | (1u << 3) | (1u << 4) | (1u << 6);
+    static const int8_t hab[4] = {0, 0, 2, 0};
+    memcpy(ts.bass_notes, hab, 4);
+    ts.bass_len = 4;
+    start_ts(2);
+    run_checked(40, &h, NULL);
+    CHECK(h.off_key == 0, "ostinato in key: %ld", h.off_key);
+    start_ts(2);
+    run_log(40);
+    int hits = 0, wrong_tick = 0;
+    for (long i = 0; i < nlg; ++i)
+        if (lg[i].e.on && lg[i].e.part == TG_PART_BASS && lg[i].e.type == TG_EV_NOTE) {
+            hits++;
+            int t = (int)(lg[i].tick % 8);
+            wrong_tick += !(t == 0 || t == 3 || t == 4 || t == 6);
+        }
+    CHECK(hits > 50 && wrong_tick == 0, "habanera bass: %d hits, %d off the rhythm", hits, wrong_tick);
+
+    /* a lament line over a cycle: G F# F E Eb D */
+    style_from(TG_STYLE_MOZART);
+    ts.vocab = TG_VOC_MODAL;
+    ts.harmony = TG_HARM_CYCLE;
+    ts.root = 7;
+    ts.scale = TS_AEOLIAN;
+    static const int8_t lam_c[6] = {0, 7, 13, 12, 3, 7};       /* i V bVII IV iv V */
+    memcpy(ts.cycle, lam_c, 6);
+    ts.cycle_len = 6;
+    static const int8_t lam_b[6] = {0, -1, -2, -3, -4, -5};
+    memcpy(ts.bass_notes, lam_b, 6);
+    ts.bass_len = 6;
+    ts.bass_mode = TG_BASS_LINE;
+    ts.beats_per_bar = 3;
+    ts.division = 2;
+    ts.chord_beats = 3;
+    ts.period_bars = 6;
+    start_ts(3);
+    run_log(60);
+    int line[64], nl = 0;
+    for (long i = 0; i < nlg && nl < 64; ++i)
+        if (lg[i].e.on && lg[i].e.part == TG_PART_BASS && lg[i].e.type == TG_EV_NOTE)
+            line[nl++] = pc_of(lg[i].e.note, 7);
+    int lbad = 0;
+    for (int i = 0; i < nl; ++i) lbad += line[i] != (12 - i % 6) % 12;
+    CHECK(nl >= 12 && lbad == 0, "lament line: %d notes, %d off", nl, lbad);
+
+    /* repeated eighths, tolling, alternating beats */
+    int modes[3] = {TG_BASS_REPEAT, TG_BASS_TOLL, TG_BASS_BEAT};
+    for (int mi = 0; mi < 3; ++mi) {
+        style_from(TG_STYLE_MOZART);
+        ts.bass_mode = (uint8_t)modes[mi];
+        start_ts(4);
+        run_checked(30, &h, NULL);
+        CHECK(h.off_key == 0, "bass mode %d in key", modes[mi]);
+        start_ts(4);
+        run_log(30);
+        int n = 0, bad = 0;
+        for (long i = 0; i < nlg; ++i) {
+            if (!lg[i].e.on || lg[i].e.part != TG_PART_BASS || lg[i].e.type != TG_EV_NOTE) continue;
+            n++;
+            long t = lg[i].tick;
+            if (modes[mi] == TG_BASS_REPEAT) bad += t % 2 != 0;
+            if (modes[mi] == TG_BASS_TOLL) bad += t % 32 != 0;
+            if (modes[mi] == TG_BASS_BEAT) bad += t % 4 != 0;
+        }
+        CHECK(n > 5 && bad == 0, "bass mode %d: %d notes, %d off their ticks", modes[mi], n, bad);
+    }
+
+    /* oom-pah in 3/4: chords on beats 2 and 3 */
+    style_from(TG_STYLE_BRAHMS);
+    ts.pad_mode = TG_PAD_OOMPAH;
+    ts.hemiola = false;
+    start_ts(5);
+    run_log(40);
+    int pahs = 0, pbad = 0;
+    for (long i = 0; i < nlg; ++i)
+        if (lg[i].e.on && lg[i].e.part == TG_PART_PAD && lg[i].e.type == TG_EV_NOTE) {
+            pahs++;
+            int t = (int)(lg[i].tick % 6);
+            pbad += !(t == 2 || t == 4);
+        }
+    CHECK(pahs > 50 && pbad == 0, "oom-pah-pah: %d chord notes, %d off beats 2 and 3", pahs, pbad);
+
+    /* tremolo, figure, additive, canon, spread, polychord, strum: in key, and their shapes */
+    style_from(TG_STYLE_MOZART);
+    ts.pad_mode = TG_PAD_TREMOLO;
+    start_ts(6);
+    run_checked(20, &h, NULL);
+    CHECK(h.off_key == 0, "tremolo in key");
+
+    style_from(TG_STYLE_MOZART);
+    ts.pad_mode = TG_PAD_FIGURE;
+    static const int8_t prel[8] = {0, 1, 2, 3, 4, 2, 3, 4};      /* Bach's C major prelude */
+    memcpy(ts.pad_figure, prel, 8);
+    ts.figure_len = 8;
+    start_ts(6);
+    run_checked(30, &h, NULL);
+    CHECK(h.off_key == 0, "figure in key");
+
+    style_from(TG_STYLE_MOZART);
+    ts.pad_mode = TG_PAD_ADDITIVE;
+    static const int8_t glass[6] = {0, 1, 2, 3, 2, 1};
+    memcpy(ts.pad_figure, glass, 6);
+    ts.figure_len = 6;
+    ts.phase_reps = 2;
+    start_ts(6);
+    int lens_seen = 0, seen_mask = 0;
+    for (long i = 0; i < (long)(40 * SR) / BLOCK; ++i) {
+        tg_process(&g, BLOCK, cb, NULL);
+        seen_mask |= 1 << g.add_len;
+    }
+    for (int k = 0; k < 8; ++k) lens_seen += (seen_mask >> k) & 1;
+    CHECK(lens_seen >= 4, "additive: figure lengths seen %x", seen_mask);
+
+    style_from(TG_STYLE_MOZART);
+    ts.pad_mode = TG_PAD_CANON;
+    ts.canon_ticks = 32;
+    ts.canon_steps = -7;
+    start_ts(7);
+    run_checked(40, &h, NULL);
+    CHECK(h.off_key == 0, "canon in key: %ld", h.off_key);
+    start_ts(7);
+    run_log(40);
+    /* the canon voice repeats the melody's pitch classes 32 ticks later (an octave down), mostly */
+    long cm = 0, cmatch = 0;
+    static int mel_at[20000];
+    memset(mel_at, -1, sizeof mel_at);
+    for (long i = 0; i < nlg; ++i)
+        if (lg[i].e.on && lg[i].e.part == TG_PART_MELODY && lg[i].e.type == TG_EV_NOTE && lg[i].tick < 20000)
+            mel_at[lg[i].tick] = lg[i].e.note;
+    for (long i = 0; i < nlg; ++i)
+        if (lg[i].e.on && lg[i].e.part == TG_PART_PAD && lg[i].e.type == TG_EV_NOTE && lg[i].tick >= 32) {
+            int src = mel_at[lg[i].tick - 32];
+            if (src < 0) continue;
+            cm++;
+            cmatch += abs(src - 12 - lg[i].e.note) <= 2;
+        }
+    CHECK(cm > 30 && cmatch * 10 >= cm * 8, "canon follows the melody an octave down: %ld of %ld", cmatch, cm);
+
+    style_from(TG_STYLE_MOZART);
+    ts.pad_mode = TG_PAD_BLOCK;
+    ts.spread = true;
+    ts.poly_semis = 6;
+    start_ts(8);
+    run_log(20);
+    CHECK(g.pad_n == 6 && g.pad[g.pad_n - 1] - g.pad[0] > 12, "spread polychord: %d notes over %d semitones", g.pad_n,
+          g.pad[g.pad_n - 1] - g.pad[0]);
+
+    style_from(TG_STYLE_MOZART);
+    ts.pad_mode = TG_PAD_REPEAT;
+    ts.strum_ms = 20;
+    start_ts(9);
+    run_log(10);
+    long first = -1, spread_max = 0;
+    long tick_now = -1;
+    for (long i = 0; i < nlg; ++i)
+        if (lg[i].e.on && lg[i].e.part == TG_PART_PAD && lg[i].e.type == TG_EV_NOTE) {
+            if (lg[i].tick != tick_now) { tick_now = lg[i].tick; first = lg[i].sample; }
+            if (lg[i].sample - first > spread_max) spread_max = lg[i].sample - first;
+        }
+    CHECK(spread_max >= (long)(0.035f * SR) && spread_max <= (long)(0.045f * SR), "strum spreads a chord over %ld samples",
+          spread_max);
+}
+
+static void test_form(void)
+{
+    /* contrast: every other period other modes and tempo */
+    style_from(TG_STYLE_MOZART);
+    ts.alt_every = 1;
+    ts.alt.bpm = 0.6f;
+    ts.alt.pad_mode = TG_PAD_BLOCK + 1;
+    ts.alt.bass_mode = TG_BASS_DRONE + 1;
+    start_ts(1);
+    int switches = 0;
+    bool last = false;
+    float bpm_alt = 0;
+    for (long i = 0; i < (long)(120 * SR) / BLOCK; ++i) {
+        tg_process(&g, BLOCK, cb, NULL);
+        if (g.alt_on != last) { switches++; last = g.alt_on; if (last) bpm_alt = g.bpm; }
+    }
+    CHECK(switches >= 2 && fabsf(bpm_alt - ts.bpm * 0.6f) < 0.01f, "contrast: %d switches, tempo %.1f", switches, bpm_alt);
+
+    /* general pause: a bar of silence after some arrivals */
+    style_from(TG_STYLE_MOZART);
+    ts.gp = 1.0f;
+    start_ts(2);
+    run_log(60);
+    long silent_ok = 0, gps = 0;
+    for (long i = 0; i < nlg; ++i)
+        if (lg[i].e.on && lg[i].e.type == TG_EV_NOTE && g.gp_from >= 0 && lg[i].tick >= g.gp_from && lg[i].tick < g.gp_until)
+            gps++;
+    silent_ok = gps == 0;
+    CHECK(silent_ok && g.gp_from > 0, "general pause silent (%ld notes inside)", gps);
+
+    /* echo periods are softer */
+    style_from(TG_STYLE_MOZART);
+    ts.echo = 0.5f;
+    start_ts(3);
+    long sum_echo = 0, n_echo = 0, sum_norm = 0, n_norm = 0;
+    for (long i = 0; i < (long)(120 * SR) / BLOCK; ++i) {
+        nlg = 0;
+        tg_process(&g, BLOCK, cb, NULL);
+        for (long k = 0; k < nlg; ++k)
+            if (lg[k].e.on && lg[k].e.type == TG_EV_NOTE) {
+                if (g.echo_vel) { sum_echo += lg[k].e.velocity; n_echo++; }
+                else { sum_norm += lg[k].e.velocity; n_norm++; }
+            }
+    }
+    CHECK(n_echo > 20 && n_norm > 20 && sum_echo * n_norm < sum_norm * n_echo - 10 * n_echo * n_norm,
+          "echo softer: %.1f against %.1f", n_echo ? (double)sum_echo / n_echo : 0, n_norm ? (double)sum_norm / n_norm : 0);
+
+    /* tuning: each note carries its cents */
+    style_from(TG_STYLE_MOZART);
+    ts.tuning = TT_TUNE_MEANTONE;
+    start_ts(4);
+    run_log(20);
+    long tn = 0, tbad = 0;
+    for (long i = 0; i < nlg; ++i)
+        if (lg[i].e.on && lg[i].e.type == TG_EV_NOTE && lg[i].e.part < TG_PART_DRUMS) {
+            tn++;
+            tbad += lg[i].e.value != tt_tuning_cents10(TT_TUNE_MEANTONE, lg[i].e.note - ts.root);
+        }
+    CHECK(tn > 50 && tbad == 0, "tuning cents on %ld notes, %ld wrong", tn, tbad);
+
+    /* a drum pattern: the Bolero snare on its ticks only */
+    style_from(TG_STYLE_MOZART);
+    ts.beats_per_bar = 3;
+    ts.division = 4;
+    ts.perc_mode = TG_PERC_PATTERN;
+    ts.drum_pat[0].note = TG_GM_SNARE;
+    ts.drum_pat[0].vel = 70;
+    ts.drum_pat[0].ticks = 0x0FFF & 0xDBF;  /* a figure over 12 sixteenths */
+    start_ts(5);
+    run_log(20);
+    long dn = 0, dbad = 0;
+    for (long i = 0; i < nlg; ++i)
+        if (lg[i].e.on && lg[i].e.part == TG_PART_DRUMS && lg[i].e.type == TG_EV_NOTE) {
+            dn++;
+            dbad += !((0xDBF >> (lg[i].tick % 12)) & 1) || lg[i].e.note != TG_GM_SNARE;
+        }
+    CHECK(dn > 50 && dbad == 0, "drum pattern: %ld hits, %ld wrong", dn, dbad);
+}
+
 int main(void)
 {
     test_meters();
     test_swing_lilt();
     test_vocabs();
     test_harmony_models();
+    test_melody_modes();
+    test_bass_pad_modes();
+    test_form();
     printf("tuna_mech: %d checks, %d failed\n", checks, fails);
     return fails ? 1 : 0;
 }

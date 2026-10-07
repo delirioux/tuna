@@ -3,6 +3,14 @@
 #include <math.h>
 #include "tuna_gen.h"
 
+/* no libc here: the firmware brings its own (libc.c) */
+static void zero(void *p, unsigned n)
+{
+    unsigned char *b = p;
+    while (n--)
+        *b++ = 0;
+}
+
 /* ---- pitch-class helpers --------------------------------------------------------------------------- */
 static int pmod12(int n) { return ((n % 12) + 12) % 12; }
 
@@ -222,6 +230,38 @@ void tg_reseed(tg_gen *g, uint32_t seed)
     tm_rng_init(&g->hum_rng, seed ^ 0x48756d61u);
     g->hq_n = 0;
     g->clock = 0;
+    /* sequencer: recording from the start; the overlay's steps and FILL are settings and stay */
+    g->rec_cur = 0;
+    g->rec_valid = false;
+    g->rec[0].n = g->rec[1].n = 0;
+    g->rec[0].len = g->rec[1].len = 0;
+    for (int p = 0; p < TG_EVENT_PARTS; ++p) {
+        for (int n = 0; n < 128; ++n)
+            g->rec_open[p][n] = g->xmap[p][n] = -1;
+        g->sound_locked[p] = 0;
+        g->cond_tick[p] = -1;
+        g->cond_loop[p] = 0;
+        g->cond_pass[p] = true;
+        g->cond_pre[p] = false;
+    }
+    zero(g->lenlocked, sizeof g->lenlocked);
+    g->loff_n = 0;
+    g->frozen = g->freeze_req = g->unfreeze_req = false;
+    g->pat_pos = 0;
+    g->pat_loop = 0;
+    g->play_n = 0;
+    tm_rng_init(&g->srng, seed ^ 0x53746570u);
+    g->period_index = 0;
+    g->energy_vel = 0;
+    g->energy = 0.0f;
+    g->key_pending = g->key_away = false;
+    g->periods_away = 0;
+    g->key_set_tick = 0;
+    g->perc_quiet = false;
+    if (g->evolve) {                                /* a restart starts the cycle at home */
+        g->root = g->base_root;
+        g->scale = g->base_scale;
+    }
     g->plan_len = 0;
     plan_period(g);
 }
@@ -229,6 +269,14 @@ void tg_reseed(tg_gen *g, uint32_t seed)
 void tg_init(tg_gen *g, uint32_t seed, float sample_rate)
 {
     defaults(g);
+    g->nsteps = 0;
+    g->fill = false;
+    g->evolve = false;
+    g->evolve_modulate = false;
+    g->evolve_periods = 8;
+    g->evolve_depth = 0.0f;
+    g->pat.n = 0;
+    g->pat.len = 0;
     g->sample_rate = sample_rate;
     tm_rng_init(&g->rng, seed);
     tm_t_init(&g->t, &g->rng, sample_rate);
@@ -242,15 +290,25 @@ static bool key_is_minor(const tg_gen *g) { return (tt_scale_mask(g->scale) >> 3
 
 void tg_chord_at(const tg_gen *g, int step, int tones, tt_chord *c)
 {
+    /* a modulation decided at the period's start applies from its second chord on: later steps are
+     * already in the new key (relative to the old tonic until it applies) */
+    bool future = g->key_pending && step > g->chord_step;
+    int shift = future ? g->next_root - g->root : 0;
     if (!g->style || g->plan_len <= 0) {
-        tt_prog_chord(c, g->prog, step, g->scale, tones);
+        tt_prog_chord(c, g->prog, step, future ? g->next_scale : g->scale, tones);
+        c->root = (int8_t)pmod12(c->root + shift);
         return;
     }
     int slot = ((step % g->plan_len) + g->plan_len) % g->plan_len;
     /* a step in the next period that is not planned yet starts on the tonic */
     int idx = step / g->plan_len > g->chord_step / g->plan_len ? 0 : g->plan[slot];
-    const tg_chord_def *d = &tg_vocab(g->plan_minor)[idx];
-    tt_chord_fixed(c, d->semis, d->quality);
+    bool minor = g->plan_minor;
+    if (g->key_pending && !future) {
+        idx = 0;                                    /* the period's first chord: the old key's tonic */
+        minor = g->plan_minor0;
+    }
+    const tg_chord_def *d = &tg_vocab(minor)[idx];
+    tt_chord_fixed(c, d->semis + shift, d->quality);
     if (tones < c->n)
         c->n = (uint8_t)tones;
 }
@@ -290,8 +348,12 @@ static void plan_period(tg_gen *g)
     if (n < 2) n = 2;
     if (n > TG_PLAN_MAX) n = TG_PLAN_MAX;
     bool minor = key_is_minor(g);
-    if (g->plan_len == n && g->plan_minor == minor && hrand(g) < st->repeat)
+    if (g->key_pending) {
+        g->plan_minor0 = minor;                     /* slot 0 stays the old key's tonic (the pivot) */
+        minor = (tt_scale_mask(g->next_scale) >> 3) & 1;
+    } else if (g->plan_len == n && g->plan_minor == minor && hrand(g) < st->repeat) {
         return;                                     /* the period repeats its harmony: A A */
+    }
     g->plan_len = n;
     g->plan_minor = minor;
     const tg_chord_def *v = tg_vocab(minor);
@@ -451,7 +513,7 @@ static void reload_scale(tg_gen *g)
 static void emit(tg_event_fn fn, void *ctx, int part, int note, int velocity, bool on, int offset)
 {
     tg_event e = {(uint8_t)part, (uint8_t)clampi(note, 0, 127), (uint8_t)clampi(velocity, 1, 127), on,
-                  (uint16_t)offset};
+                  (uint16_t)offset, TG_EV_NOTE, 0, 0};
     if (!on)
         e.velocity = 0;
     fn(ctx, &e);
@@ -483,6 +545,10 @@ static void pad_off(tg_gen *g, int offset, tg_event_fn fn, void *ctx)
 
 static void drums_release(tg_gen *g, int offset, tg_event_fn fn, void *ctx);
 
+static void gen_release(tg_gen *g, int offset, bool sounding);
+static void pat_release(tg_gen *g, int offset);
+static void out_param(tg_gen *g, int part, int param, int value, int offset);
+
 void tg_all_off(tg_gen *g, tg_event_fn fn, void *ctx)
 {
     /* queued by the humanizer: releases go out now, notes not yet started never will */
@@ -493,13 +559,28 @@ void tg_all_off(tg_gen *g, tg_event_fn fn, void *ctx)
             fn(ctx, &e);
         }
     g->hq_n = 0;
-    for (int p = 0; p < TG_PARTS; ++p)
-        note_off(g, p, 0, fn, ctx);
-    pad_off(g, 0, fn, ctx);
-    drums_release(g, 0, fn, ctx);
-    if (g->timp_note >= 0)
-        emit(fn, ctx, TG_PART_TIMPANI, g->timp_note, 0, false, 0);
-    g->timp_note = -1;
+    float hum = g->humanize;                        /* the rest at once, past the humanizer */
+    g->humanize = 0.0f;
+    g->user_fn = fn;
+    g->user_ctx = ctx;
+    if (!g->frozen)
+        gen_release(g, 0, true);
+    pat_release(g, 0);
+    for (int i = 0; i < g->loff_n; ++i) {
+        tg_event e = {g->loff[i].part, g->loff[i].note, 0, false, 0, TG_EV_NOTE, 0, 0};
+        fn(ctx, &e);
+    }
+    g->loff_n = 0;
+    zero(g->lenlocked, sizeof g->lenlocked);
+    for (int p = 0; p < TG_EVENT_PARTS; ++p) {
+        for (int prm = TG_LK_E0; prm < TG_LK_COUNT; ++prm)
+            if ((g->sound_locked[p] >> prm) & 1u)
+                out_param(g, p, prm, TG_LK_RESTORE, 0);
+        g->sound_locked[p] = 0;
+        for (int n = 0; n < 128; ++n)
+            g->xmap[p][n] = -1;
+    }
+    g->humanize = hum;
 }
 
 /* ---- the harmonizer -------------------------------------------------------------------------------- */
@@ -1371,6 +1452,8 @@ static void perc_period(tg_gen *g, beat_pos b, int velocity, int offset, tg_even
  * a fill into each arrival and a crash on it */
 static void perc_kit(tg_gen *g, beat_pos b, int velocity, bool t1, bool t3, int offset, tg_event_fn fn, void *ctx)
 {
+    if (g->perc_quiet)
+        return;
     int period, d = tg_period_position(g, &period);
     int to_arrival = period - d;
     bool arrival = d == 0 && b.q > 0;
@@ -1421,7 +1504,9 @@ static void hum_collect(void *ctx, const tg_event *e)
     }
     tg_event x = *e;
     long d;
-    if (x.on) {
+    if (x.type != TG_EV_NOTE) {
+        d = 0;                                      /* a sound lock: before its note, never late */
+    } else if (x.on) {
         float r = tm_rng_float(&g->hum_rng);
         d = (long)(r * r * HUMAN_MS[x.part] * 0.001f * g->sample_rate * g->humanize);   /* mostly small */
         g->hdelay[x.part][x.note] = (uint16_t)d;
@@ -1454,21 +1539,532 @@ static void hum_deliver(tg_gen *g, long end)
 }
 
 static void process_block(tg_gen *g, int size, tg_event_fn fn, void *ctx);
+static void rec_sink(void *ctx, const tg_event *e);
+static void seq_tick(tg_gen *g, int offset);
+static void key_apply(tg_gen *g);
 
 void tg_process(tg_gen *g, int size, tg_event_fn fn, void *ctx)
 {
     if (size > TG_MAX_BLOCK)
         size = TG_MAX_BLOCK;
-    if (g->humanize <= 0.0f && g->hq_n == 0) {
-        process_block(g, size, fn, ctx);
-        g->clock += size;
-        return;
-    }
     g->user_fn = fn;
     g->user_ctx = ctx;
-    process_block(g, size, hum_collect, g);
-    hum_deliver(g, g->clock + size);
+    process_block(g, size, rec_sink, g);            /* -> recording -> overlay -> humanizer -> fn */
+    if (g->hq_n)
+        hum_deliver(g, g->clock + size);
     g->clock += size;
+}
+
+/* ---- sequencer ---------------------------------------------------------------------------------------
+ * Event path: the generator -> rec_sink (records the period; drops everything while frozen) -> the step
+ * overlay (conditions, locks, evolution's dynamics) -> the humanizer -> the caller. The frozen pattern
+ * enters at the overlay, so locks and conditions treat both alike. */
+static void out_event(tg_gen *g, const tg_event *e)
+{
+    if (g->humanize > 0.0f || g->hq_n)
+        hum_collect(g, e);
+    else
+        g->user_fn(g->user_ctx, e);
+}
+
+static void out_param(tg_gen *g, int part, int param, int value, int offset)
+{
+    tg_event e = {(uint8_t)part, 0, 0, false, (uint16_t)offset, TG_EV_PARAM, (uint8_t)param, (int16_t)value};
+    out_event(g, &e);
+}
+
+/* the step's position and loop: the pattern's while frozen, else the period's */
+static int seq_pos(const tg_gen *g, uint32_t *loop)
+{
+    if (g->frozen) {
+        *loop = g->pat_loop;
+        return g->pat_pos;
+    }
+    *loop = (uint32_t)g->period_index;
+    return tg_period_position(g, NULL);
+}
+
+static tg_step *step_find(tg_gen *g, int part, int tick)
+{
+    for (int i = 0; i < g->nsteps; ++i)
+        if (g->steps[i].part == part && g->steps[i].tick == tick)
+            return &g->steps[i];
+    return 0;
+}
+
+static bool cond_eval(tg_gen *g, const tg_step *st, int part, int pos, uint32_t loop)
+{
+    if (g->cond_tick[part] == pos && g->cond_loop[part] == loop)
+        return g->cond_pass[part];                  /* one verdict per step: a chord stays whole */
+    bool r = true;
+    switch (st->cond) {
+    case TG_C_PROB:      r = tm_rng_float(&g->srng) * 100.0f < (float)st->ca; break;
+    case TG_C_RATIO:     r = st->cb ? (int)(loop % st->cb) == (st->ca + st->cb - 1) % st->cb : true; break;
+    case TG_C_FILL:      r = g->fill; break;
+    case TG_C_NOT_FILL:  r = !g->fill; break;
+    case TG_C_FIRST:     r = loop == 0; break;
+    case TG_C_NOT_FIRST: r = loop > 0; break;
+    case TG_C_PRE:       r = g->cond_pre[part]; break;
+    case TG_C_NOT_PRE:   r = !g->cond_pre[part]; break;
+    default: break;
+    }
+    if (st->cond != TG_C_ALWAYS && st->cond != TG_C_PRE && st->cond != TG_C_NOT_PRE)
+        g->cond_pre[part] = r;
+    g->cond_tick[part] = pos;
+    g->cond_loop[part] = loop;
+    g->cond_pass[part] = r;
+    return r;
+}
+
+static bool len_bit(const tg_gen *g, int part, int note) { return (g->lenlocked[part][note >> 3] >> (note & 7)) & 1; }
+static void len_set(tg_gen *g, int part, int note, bool on)
+{
+    if (on) g->lenlocked[part][note >> 3] |= (uint8_t)(1u << (note & 7));
+    else g->lenlocked[part][note >> 3] &= (uint8_t)~(1u << (note & 7));
+}
+
+static void loff_cancel(tg_gen *g, int part, int note)
+{
+    for (int i = 0; i < g->loff_n; ++i)
+        if (g->loff[i].part == part && g->loff[i].note == note) {
+            g->loff[i] = g->loff[--g->loff_n];
+            len_set(g, part, note, false);
+            return;
+        }
+}
+
+/* the overlay: everything that plays passes here */
+static void overlay_in(tg_gen *g, const tg_event *ein)
+{
+    if (ein->type != TG_EV_NOTE || ein->part >= TG_EVENT_PARTS) {
+        out_event(g, ein);
+        return;
+    }
+    tg_event e = *ein;
+    int part = e.part;
+    if (!e.on) {
+        int m = g->xmap[part][e.note];
+        g->xmap[part][e.note] = -1;
+        if (m == -2)
+            return;                                 /* its start was skipped by a condition */
+        if (m >= 0) {
+            if (len_bit(g, part, m))
+                return;                             /* a LEN lock releases it */
+            e.note = (uint8_t)m;
+        }
+        out_event(g, &e);
+        return;
+    }
+    uint32_t loop;
+    int pos = seq_pos(g, &loop);
+    tg_step *st = g->nsteps ? step_find(g, part, pos) : 0;
+    /* sound locks of the part's previous note go back, unless this step locks them again */
+    if (g->sound_locked[part]) {
+        uint32_t keep = 0;
+        for (int k = 0; st && k < st->nlock; ++k)
+            keep |= 1u << st->lock[k].param;
+        for (int prm = TG_LK_E0; prm < TG_LK_COUNT; ++prm)
+            if ((g->sound_locked[part] >> prm) & 1u && !((keep >> prm) & 1u)) {
+                out_param(g, part, prm, TG_LK_RESTORE, e.offset);
+                g->sound_locked[part] &= ~(1u << prm);
+            }
+    }
+    if (st && !cond_eval(g, st, part, pos, loop)) {
+        g->xmap[part][e.note] = -2;
+        return;
+    }
+    int note = e.note, vel = e.velocity + (g->evolve ? g->energy_vel : 0), len = 0;
+    bool pitched = part != TG_PART_DRUMS && part != TG_PART_TIMPANI;
+    for (int k = 0; st && k < st->nlock; ++k) {
+        int prm = st->lock[k].param, v = st->lock[k].value;
+        switch (prm) {
+        case TG_LK_VEL:   vel = v; break;
+        case TG_LK_STEPS: if (pitched) note = mask_step(tt_scale_mask(g->scale), g->root, note, v); break;
+        case TG_LK_OCT:   if (part != TG_PART_DRUMS) note += 12 * v; break;
+        case TG_LK_LEN:   len = v; break;
+        default:
+            out_param(g, part, prm, v, e.offset);
+            g->sound_locked[part] |= 1u << prm;
+            break;
+        }
+    }
+    note = clampi(note, 0, 127);
+    loff_cancel(g, part, note);
+    if (len > 0 && g->loff_n < 16) {
+        g->loff[g->loff_n].part = (uint8_t)part;
+        g->loff[g->loff_n].note = (uint8_t)note;
+        g->loff[g->loff_n].left = (uint16_t)len;
+        g->loff_n++;
+        len_set(g, part, note, true);
+    }
+    g->xmap[part][e.note] = (int16_t)note;
+    e.note = (uint8_t)note;
+    e.velocity = (uint8_t)clampi(vel, 1, 127);
+    out_event(g, &e);
+}
+
+/* LEN-locked releases, once per tick */
+static void loff_tick(tg_gen *g, int offset)
+{
+    for (int i = 0; i < g->loff_n;) {
+        if (--g->loff[i].left == 0) {
+            tg_event e = {g->loff[i].part, g->loff[i].note, 0, false, (uint16_t)offset, TG_EV_NOTE, 0, 0};
+            len_set(g, e.part, e.note, false);
+            g->loff[i] = g->loff[--g->loff_n];
+            out_event(g, &e);
+        } else {
+            ++i;
+        }
+    }
+}
+
+/* recording: every note the generator plays, by tick of the period */
+static void rec_sink(void *ctx, const tg_event *e)
+{
+    tg_gen *g = ctx;
+    if (g->frozen)
+        return;                                     /* the generator runs on silently */
+    if (e->type == TG_EV_NOTE && e->part < TG_EVENT_PARTS) {
+        tg_pattern *r = &g->rec[g->rec_cur];
+        int d = tg_period_position(g, NULL);
+        int open = g->rec_open[e->part][e->note];
+        if (open >= 0) {                            /* its release, or a new start of the same note */
+            int l = d - r->ev[open].tick;
+            r->ev[open].len = (uint16_t)(l > 0 ? l : 1);
+            g->rec_open[e->part][e->note] = -1;
+        }
+        if (e->on && r->n < TG_PAT_MAX) {
+            tg_pnote *x = &r->ev[r->n];
+            x->tick = (uint16_t)d;
+            x->len = 0;
+            x->part = e->part;
+            x->note = e->note;
+            x->vel = e->velocity;
+            x->pad = 0;
+            g->rec_open[e->part][e->note] = (int16_t)r->n++;
+        }
+    }
+    overlay_in(g, e);
+}
+
+/* release what the generator holds (through the overlay, so locked notes end right) and forget it */
+static void gen_release(tg_gen *g, int offset, bool sounding)
+{
+    tg_event e = {0, 0, 0, false, (uint16_t)offset, TG_EV_NOTE, 0, 0};
+    for (int p = 0; p < TG_PARTS; ++p) {
+        if (sounding && g->sounding[p] >= 0) {
+            e.part = (uint8_t)p;
+            e.note = (uint8_t)g->sounding[p];
+            overlay_in(g, &e);
+        }
+        g->sounding[p] = -1;
+    }
+    for (int i = 0; i < g->pad_n; ++i)
+        if (sounding && !g->pad_silent) {
+            e.part = TG_PART_PAD;
+            e.note = (uint8_t)g->pad[i];
+            overlay_in(g, &e);
+        }
+    g->pad_n = 0;
+    for (int i = 0; i < g->drum_n; ++i)
+        if (sounding) {
+            e.part = TG_PART_DRUMS;
+            e.note = (uint8_t)g->drum_on[i];
+            overlay_in(g, &e);
+        }
+    g->drum_n = 0;
+    if (sounding && g->timp_note >= 0) {
+        e.part = TG_PART_TIMPANI;
+        e.note = (uint8_t)g->timp_note;
+        overlay_in(g, &e);
+    }
+    g->timp_note = -1;
+    g->roll_until = -1;
+    g->counter_note = -1;
+    g->trill_until = -1;
+    g->mel_pending = -1;
+}
+
+static void pat_release(tg_gen *g, int offset)
+{
+    for (int i = 0; i < g->play_n; ++i) {
+        tg_event e = {g->play[i].part, g->play[i].note, 0, false, (uint16_t)offset, TG_EV_NOTE, 0, 0};
+        overlay_in(g, &e);
+    }
+    g->play_n = 0;
+}
+
+/* one tick of the frozen pattern */
+static void pat_tick(tg_gen *g, int offset)
+{
+    for (int i = 0; i < g->play_n;) {
+        if (--g->play[i].left == 0) {
+            tg_event e = {g->play[i].part, g->play[i].note, 0, false, (uint16_t)offset, TG_EV_NOTE, 0, 0};
+            g->play[i] = g->play[--g->play_n];
+            overlay_in(g, &e);
+        } else {
+            ++i;
+        }
+    }
+    for (int i = 0; i < g->pat.n; ++i) {
+        const tg_pnote *x = &g->pat.ev[i];
+        if (x->tick != g->pat_pos)
+            continue;
+        for (int k = 0; k < g->play_n; ++k)         /* the same note again: end it first */
+            if (g->play[k].part == x->part && g->play[k].note == x->note) {
+                tg_event e = {x->part, x->note, 0, false, (uint16_t)offset, TG_EV_NOTE, 0, 0};
+                g->play[k] = g->play[--g->play_n];
+                overlay_in(g, &e);
+                break;
+            }
+        tg_event e = {x->part, x->note, x->vel, true, (uint16_t)offset, TG_EV_NOTE, 0, 0};
+        overlay_in(g, &e);
+        if (g->play_n < 48) {
+            g->play[g->play_n].part = x->part;
+            g->play[g->play_n].note = x->note;
+            g->play[g->play_n].left = (uint16_t)(x->len ? x->len : 1);
+            g->play_n++;
+        }
+    }
+}
+
+/* evolution: the energy and the key of the period about to start */
+static void evolve_step(tg_gen *g)
+{
+    int P = g->evolve_periods > 1 ? g->evolve_periods : 8;
+    int k = (int)(g->period_index % P);
+    float e = sinf(3.14159265f * ((float)k + 0.5f) / (float)P);
+    float dpt = g->evolve_depth;
+    g->energy = e;
+    float dens = g->base_density * (1.0f - 0.5f * dpt + dpt * e);
+    g->melody_density = dens < 0.05f ? 0.05f : dens > 1.0f ? 1.0f : dens;
+    g->energy_vel = (int)lrintf((e - 0.5f) * 24.0f * dpt);
+    for (int i = 0; i < TG_PI_COUNT; ++i) {
+        int w = (int)lrintf((float)g->base_perc[i] * (1.0f - 0.7f * dpt + 1.0f * dpt * e));
+        g->perc_w[i] = (uint8_t)(w > 10 ? 10 : w);
+    }
+    g->perc_quiet = g->perc_mode == TG_PERC_KIT && e < 0.35f * dpt;
+    if (g->evolve_modulate && P >= 4) {
+        int away = P / 2, home = P / 2 + (P >= 8 ? P / 4 : 1);
+        bool minor = (tt_scale_mask(g->base_scale) >> 3) & 1;
+        if (k == away && !g->key_away) {            /* to the dominant, or the relative major */
+            g->next_root = minor ? (g->base_root + 3) % 12 : (g->base_root + 7) % 12;
+            g->next_scale = minor ? TS_IONIAN : g->base_scale;
+            g->key_pending = true;
+            g->key_away = true;
+            g->key_set_tick = g->ticks;
+        } else if (k == home && g->key_away) {
+            g->next_root = g->base_root;
+            g->next_scale = g->base_scale;
+            g->key_pending = true;
+            g->key_away = false;
+            g->key_set_tick = g->ticks;
+        }
+    }
+    if (g->key_away)
+        g->periods_away++;
+}
+
+/* a modulation applies at the first chord change after the period's start */
+static void key_apply(tg_gen *g)
+{
+    if (!g->key_pending || g->ticks <= g->key_set_tick)
+        return;
+    g->root = g->next_root;
+    g->scale = g->next_scale;
+    g->plan_minor = (tt_scale_mask(g->scale) >> 3) & 1;
+    g->key_pending = false;
+}
+
+/* every tick, before the parts: period boundaries (recording, freeze, evolution), LEN releases, the
+ * frozen pattern */
+static void seq_tick(tg_gen *g, int offset)
+{
+    int period, d = tg_period_position(g, &period);
+    if (d == 0 && g->ticks > 1) {
+        /* the period just heard is complete */
+        tg_pattern *r = &g->rec[g->rec_cur];
+        for (int p = 0; p < TG_EVENT_PARTS; ++p)
+            for (int n = 0; n < 128; ++n)
+                if (g->rec_open[p][n] >= 0) {
+                    tg_pnote *x = &r->ev[g->rec_open[p][n]];
+                    x->len = (uint16_t)(r->len > x->tick ? r->len - x->tick : 1);
+                    g->rec_open[p][n] = -1;
+                }
+        g->rec_valid = !g->frozen && r->len > 0;
+        g->rec_cur ^= 1;
+        if (g->unfreeze_req && g->frozen) {
+            pat_release(g, offset);
+            g->frozen = false;
+            g->unfreeze_req = false;
+            gen_release(g, offset, false);          /* it never sounded: just forget it */
+            g->rec_valid = false;
+        }
+        if (g->freeze_req && !g->frozen && g->rec_valid) {
+            gen_release(g, offset, true);
+            g->pat = g->rec[!g->rec_cur];
+            g->frozen = true;
+            g->pat_pos = 0;
+            g->pat_loop = 0;
+            g->play_n = 0;
+        }
+        g->freeze_req = false;
+        g->period_index++;
+        if (g->evolve && !g->frozen)
+            evolve_step(g);
+        /* the next recording */
+        r = &g->rec[g->rec_cur];
+        r->n = 0;
+        r->len = (uint16_t)period;
+        r->root = (int8_t)(g->key_pending ? g->next_root : g->root);
+        r->scale = (int8_t)(g->key_pending ? g->next_scale : g->scale);
+    } else if (g->ticks == 1) {
+        g->rec[g->rec_cur].n = 0;
+        g->rec[g->rec_cur].len = (uint16_t)period;
+        g->rec[g->rec_cur].root = (int8_t)g->root;
+        g->rec[g->rec_cur].scale = (int8_t)g->scale;
+    }
+    if (g->loff_n)
+        loff_tick(g, offset);
+    if (g->frozen) {
+        pat_tick(g, offset);
+        if (++g->pat_pos >= g->pat.len) {
+            g->pat_pos = 0;
+            g->pat_loop++;
+        }
+    }
+}
+
+bool tg_freeze(tg_gen *g)
+{
+    if (g->frozen)
+        return false;
+    g->freeze_req = true;
+    g->unfreeze_req = false;
+    return true;
+}
+
+void tg_unfreeze(tg_gen *g)
+{
+    if (g->frozen)
+        g->unfreeze_req = true;
+    g->freeze_req = false;
+}
+
+int tg_pat_add(tg_gen *g, int tick, int part, int note, int vel, int len)
+{
+    tg_pattern *pt = &g->pat;
+    if (pt->n >= TG_PAT_MAX || tick < 0 || tick >= pt->len || part < 0 || part >= TG_EVENT_PARTS)
+        return -1;
+    int i = pt->n;
+    while (i > 0 && pt->ev[i - 1].tick > tick) {
+        pt->ev[i] = pt->ev[i - 1];
+        --i;
+    }
+    pt->ev[i].tick = (uint16_t)tick;
+    pt->ev[i].len = (uint16_t)(len > 0 ? len : 1);
+    pt->ev[i].part = (uint8_t)part;
+    pt->ev[i].note = (uint8_t)clampi(note, 0, 127);
+    pt->ev[i].vel = (uint8_t)clampi(vel, 1, 127);
+    pt->ev[i].pad = 0;
+    pt->n++;
+    return i;
+}
+
+void tg_pat_remove(tg_gen *g, int index)
+{
+    tg_pattern *pt = &g->pat;
+    if (index < 0 || index >= pt->n)
+        return;
+    for (int i = index; i + 1 < pt->n; ++i)
+        pt->ev[i] = pt->ev[i + 1];
+    pt->n--;
+}
+
+void tg_pat_transpose(tg_gen *g, int part, int steps)
+{
+    tg_pattern *pt = &g->pat;
+    uint16_t mask = tt_scale_mask(pt->scale);
+    for (int i = 0; i < pt->n; ++i) {
+        tg_pnote *x = &pt->ev[i];
+        if (x->part == TG_PART_DRUMS || x->part == TG_PART_TIMPANI || (part >= 0 && x->part != part))
+            continue;
+        x->note = (uint8_t)clampi(mask_step(mask, pt->root, x->note, steps), 0, 127);
+    }
+}
+
+int tg_step_cond(tg_gen *g, int part, int tick, int cond, int a, int b)
+{
+    tg_step *st = step_find(g, part, tick);
+    if (!st) {
+        if (g->nsteps >= TG_STEPS)
+            return -1;
+        st = &g->steps[g->nsteps++];
+        zero(st, sizeof *st);
+        st->part = (uint8_t)part;
+        st->tick = (uint16_t)tick;
+    }
+    st->cond = (uint8_t)(cond >= 0 && cond < TG_C_COUNT ? cond : TG_C_ALWAYS);
+    st->ca = (uint8_t)a;
+    st->cb = (uint8_t)b;
+    return 0;
+}
+
+int tg_step_lock(tg_gen *g, int part, int tick, int param, int value)
+{
+    tg_step *st = step_find(g, part, tick);
+    if (!st) {
+        if (tg_step_cond(g, part, tick, TG_C_ALWAYS, 0, 0))
+            return -1;
+        st = step_find(g, part, tick);
+    }
+    for (int k = 0; k < st->nlock; ++k)
+        if (st->lock[k].param == param) {
+            st->lock[k].value = (int16_t)value;
+            return 0;
+        }
+    if (st->nlock >= TG_STEP_LOCKS || param < 0 || param >= TG_LK_COUNT)
+        return -1;
+    st->lock[st->nlock].param = (uint8_t)param;
+    st->lock[st->nlock].value = (int16_t)value;
+    st->nlock++;
+    return 0;
+}
+
+void tg_step_clear(tg_gen *g, int part, int tick)
+{
+    tg_step *st = step_find(g, part, tick);
+    if (st)
+        *st = g->steps[--g->nsteps];
+}
+
+void tg_evolve(tg_gen *g, bool on, int periods, float depth, bool modulate)
+{
+    if (on && !g->evolve) {                         /* the settings now are the cycle's home */
+        g->base_density = g->melody_density;
+        g->base_root = g->root;
+        g->base_scale = g->scale;
+        for (int i = 0; i < TG_PI_COUNT; ++i)
+            g->base_perc[i] = g->perc_w[i];
+    }
+    if (!on && g->evolve) {
+        g->melody_density = g->base_density;
+        for (int i = 0; i < TG_PI_COUNT; ++i)
+            g->perc_w[i] = g->base_perc[i];
+        g->energy_vel = 0;
+        g->perc_quiet = false;
+        if (g->key_away || g->key_pending) {        /* home at the next period */
+            g->next_root = g->base_root;
+            g->next_scale = g->base_scale;
+            g->key_pending = true;
+            g->key_away = false;
+            g->key_set_tick = g->ticks;
+        }
+    }
+    g->evolve = on;
+    g->evolve_periods = periods > 1 ? periods : 8;
+    g->evolve_depth = depth < 0.0f ? 0.0f : depth > 1.0f ? 1.0f : depth;
+    g->evolve_modulate = modulate;
 }
 
 /* ---- process --------------------------------------------------------------------------------------- */
@@ -1506,9 +2102,11 @@ static void process_block(tg_gen *g, int size, tg_event_fn fn, void *ctx)
 
         if (tick) {
             g->ticks++;
+            seq_tick(g, i);                          /* boundaries, freeze, evolution, the pattern */
             if (g->chord_ticks > 0 && g->ticks > 1 && (g->ticks - 1) % g->chord_ticks == 0) {
                 g->chord_step++;
                 g->chord_fresh = true;
+                key_apply(g);
                 if (g->style && g->plan_len > 0 && g->chord_step % g->plan_len == 0)
                     plan_period(g);                  /* a new period: plan its harmony */
             }

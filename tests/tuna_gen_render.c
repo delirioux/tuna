@@ -32,13 +32,14 @@ typedef struct {
     int style;                /* TG_STYLE_*, -1 = the settings above */
     bool keys;                /* sketch synth: a keyboard sound for the third part (figures) */
     int drums;                /* 0: the style's default, 1: off, 2: period, 3: kit */
+    bool evolve;              /* the evolution timer: 8-period cycles, full depth, with modulation */
 } preset;
 
 static const preset presets[] = {
     /* name     bpm  div root scale        prog           chord  T model                   bias  jit   dv    pw    pwstd len  spread xbias steps xdv  xlen ctrl                  seed dens pad restrike */
-    {"garden",  72,  2,  2,  TS_DORIAN,     TP_MODAL_VAMP,  16, TM_T_COMPLEMENTARY_BERNOULLI, 0.5f, 0.15f, 0.6f, 0.75f, 0.2f, 8,  0.40f, 0.5f, 0.80f, 0.70f, 8, TM_CONTROL_TILT,      1,  0.35f, 4, false, -1, false, 0},
-    {"rhythm",  104, 4,  9,  TS_AEOLIAN,    TP_ANDALUSIAN,  32, TM_T_DRUMS,                 0.8f, 0.0f,  0.75f, 0.3f, 0.0f, 16, 0.55f, 0.5f, 0.68f, 0.80f, 16, TM_CONTROL_IDENTICAL, 7,  0.55f, 3, true, -1, false, 3},
-    {"lydian",  84,  2,  5,  TS_LYDIAN,     TP_MODAL_VAMP,  16, TM_T_CLUSTERS,              0.65f, 0.3f, 0.4f, 0.6f, 0.4f, 8,  0.50f, 0.55f, 0.75f, 0.55f, 8, TM_CONTROL_BUMP,      42, 0.40f, 4, false, -1, false, 0},
+    {"garden",  72,  2,  2,  TS_DORIAN,     TP_MODAL_VAMP,  16, TM_T_COMPLEMENTARY_BERNOULLI, 0.5f, 0.15f, 0.6f, 0.75f, 0.2f, 8,  0.40f, 0.5f, 0.80f, 0.70f, 8, TM_CONTROL_TILT,      1,  0.35f, 4, false, -1, false, 0, false},
+    {"rhythm",  104, 4,  9,  TS_AEOLIAN,    TP_ANDALUSIAN,  32, TM_T_DRUMS,                 0.8f, 0.0f,  0.75f, 0.3f, 0.0f, 16, 0.55f, 0.5f, 0.68f, 0.80f, 16, TM_CONTROL_IDENTICAL, 7,  0.55f, 3, true, -1, false, 3, false},
+    {"lydian",  84,  2,  5,  TS_LYDIAN,     TP_MODAL_VAMP,  16, TM_T_CLUSTERS,              0.65f, 0.3f, 0.4f, 0.6f, 0.4f, 8,  0.50f, 0.55f, 0.75f, 0.55f, 8, TM_CONTROL_BUMP,      42, 0.40f, 4, false, -1, false, 0, false},
     /* composer signatures: everything comes from the style; only name, seed and synth matter here */
     {.name = "bach",        .seed = 11, .style = TG_STYLE_BACH,        .keys = true},
     {.name = "mozart",      .seed = 5,  .style = TG_STYLE_MOZART,      .keys = true},
@@ -53,6 +54,11 @@ static const preset presets[] = {
     /* percussion is a switch on every composer */
     {.name = "bach-timpani", .seed = 11, .style = TG_STYLE_BACH,       .keys = true, .drums = 2},
     {.name = "mozart-kit",   .seed = 5,  .style = TG_STYLE_MOZART,     .keys = true, .drums = 3},
+    /* the evolution timer: an arc of energy and a modulation away and home */
+    {.name = "mozart-evolve",  .seed = 5,  .style = TG_STYLE_MOZART,  .keys = true, .evolve = true},
+    {.name = "bach-evolve",    .seed = 11, .style = TG_STYLE_BACH,    .keys = true, .evolve = true},
+    {.name = "mahler-evolve",  .seed = 2,  .style = TG_STYLE_MAHLER,  .evolve = true},
+    {.name = "dvorak-evolve",  .seed = 12, .style = TG_STYLE_DVORAK,  .evolve = true},
 };
 
 /* ---- event log (for MIDI and the synth) ------------------------------------------------------- */
@@ -76,6 +82,8 @@ static int gen_div = 1;   /* TUNA_DIV: the generator at SR / gen_div, as the fir
 static void on_event(void *ctx, const tg_event *e)
 {
     evlog *l = ctx;
+    if (e->type != TG_EV_NOTE)
+        return;                                   /* sound locks: for the host, not the notes */
     if (l->n == l->cap) {
         l->cap = l->cap ? l->cap * 2 : 1024;
         l->ev = realloc(l->ev, (size_t)l->cap * sizeof *l->ev);
@@ -187,6 +195,8 @@ styled:
     }
     if (p->drums)
         tg_set_percussion(&g, p->drums - 1);
+    if (p->evolve)
+        tg_evolve(&g, true, 8, 1.0f, true);
     cur = &g;
     memset(l, 0, sizeof *l);
     l->mel_prev = -1;

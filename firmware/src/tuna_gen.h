@@ -53,7 +53,60 @@ typedef struct {
     uint8_t part, note, velocity;
     bool on;
     uint16_t offset;              /* sample offset in the processed block */
+    uint8_t type;                 /* TG_EV_NOTE, or TG_EV_PARAM: a p-locked sound parameter (param, value) */
+    uint8_t param;                /* TG_LK_* (TG_EV_PARAM) */
+    int16_t value;                /* the locked value; TG_LK_RESTORE: back to the part's own setting */
 } tg_event;
+
+enum { TG_EV_NOTE, TG_EV_PARAM };
+
+/* ---- the sequencer: step locks and trig conditions -------------------------------------------------
+ * A step is a tick of the period (generator) or of the frozen pattern. Locks and conditions are an
+ * overlay on top of whatever plays: they apply the same to generated and to frozen music. */
+enum {
+    TG_C_ALWAYS,
+    TG_C_PROB,                    /* plays with a chance of a percent */
+    TG_C_RATIO,                   /* a:b, plays on loop a of every b (1:2, 2:2, 1:4, 3:4 ...) */
+    TG_C_FILL, TG_C_NOT_FILL,     /* only while FILL is held / only while it is not */
+    TG_C_FIRST, TG_C_NOT_FIRST,   /* only the first loop / every loop but the first */
+    TG_C_PRE, TG_C_NOT_PRE,       /* as the previous conditional step of the part went / the opposite */
+    TG_C_COUNT
+};
+enum {
+    /* note locks, applied by Tuna */
+    TG_LK_VEL,                    /* velocity 1..127 */
+    TG_LK_STEPS,                  /* move the note by scale steps, staying in key */
+    TG_LK_OCT,                    /* octaves */
+    TG_LK_LEN,                    /* length in ticks */
+    /* sound locks, sent as TG_EV_PARAM for the host to apply to the part, restored at its next note */
+    TG_LK_E0, TG_LK_E1, TG_LK_E2, TG_LK_E3, TG_LK_E4, TG_LK_E5, TG_LK_E6, TG_LK_E7,   /* engine knobs */
+    TG_LK_LEVEL, TG_LK_PAN, TG_LK_DIST, TG_LK_CHO, TG_LK_DLY, TG_LK_REV,
+    TG_LK_COUNT
+};
+#define TG_LK_RESTORE (-32768)
+#define TG_STEP_LOCKS 3
+#define TG_STEPS 64
+
+typedef struct {
+    uint16_t tick;
+    uint8_t part, cond, ca, cb, nlock;
+    struct { uint8_t param; int16_t value; } lock[TG_STEP_LOCKS];
+} tg_step;
+
+/* ---- frozen patterns ------------------------------------------------------------------------------- */
+typedef struct {
+    uint16_t tick, len;           /* start and length in ticks */
+    uint8_t part, note, vel, pad;
+} tg_pnote;
+
+#define TG_PAT_MAX 384
+
+typedef struct {
+    uint16_t len;                 /* ticks: one period */
+    uint16_t n;
+    int8_t root, scale;           /* the key it was recorded in (for transposing in key) */
+    tg_pnote ev[TG_PAT_MAX];      /* sorted by tick */
+} tg_pattern;
 
 typedef void (*tg_event_fn)(void *ctx, const tg_event *e);
 
@@ -163,6 +216,49 @@ typedef struct {
     tm_rng hum_rng;
     tg_event_fn user_fn;
     void *user_ctx;
+
+    /* sequencer (tuna_gen.c, "sequencer"): the last complete period is always recorded, so FREEZE can
+     * keep what was just heard; the frozen pattern loops until UNFREEZE */
+    tg_pattern rec[2];            /* recording and the last complete period, swapped at each boundary */
+    int rec_cur;
+    bool rec_valid;               /* rec[!rec_cur] holds a complete period */
+    int16_t rec_open[TG_EVENT_PARTS][128];   /* index of a recorded note still sounding, -1 none */
+    tg_pattern pat;               /* the frozen pattern */
+    bool frozen, freeze_req, unfreeze_req;
+    uint16_t pat_pos;             /* the pattern's tick now playing */
+    uint32_t pat_loop;
+    struct { uint8_t part, note; uint16_t left; } play[48];   /* pattern notes sounding */
+    int play_n;
+    /* step overlay */
+    tg_step steps[TG_STEPS];
+    int nsteps;
+    bool fill;                    /* FILL held */
+    int16_t xmap[TG_EVENT_PARTS][128];       /* a passed note -> the note sent (locks), -1 none, -2 dropped */
+    uint8_t lenlocked[TG_EVENT_PARTS][16];   /* bit per note: its release comes from a LEN lock */
+    struct { uint8_t part, note; uint16_t left; } loff[16];  /* LEN-locked releases due */
+    int loff_n;
+    uint32_t sound_locked[TG_EVENT_PARTS];   /* sound locks active per part (bit per TG_LK_*) */
+    int cond_tick[TG_EVENT_PARTS];           /* the step a part's condition was last evaluated for */
+    uint32_t cond_loop[TG_EVENT_PARTS];
+    bool cond_pass[TG_EVENT_PARTS], cond_pre[TG_EVENT_PARTS];
+    tm_rng srng;                  /* conditions' chances */
+
+    /* evolution: an arc of energy over a cycle of periods, and a modulation away and home */
+    bool evolve, evolve_modulate;
+    int evolve_periods;           /* periods per cycle */
+    float evolve_depth;           /* 0..1 */
+    float base_density;
+    int base_root, base_scale;
+    uint8_t base_perc[TG_PI_COUNT];
+    int energy_vel;               /* velocity offset now */
+    float energy;                 /* 0..1 now */
+    long period_index;
+    bool key_pending, key_away;
+    int next_root, next_scale;
+    bool plan_minor0;             /* slot 0's key while a modulation is pending */
+    long periods_away;            /* statistics: periods that started in the away key */
+    long key_set_tick;            /* the tick a modulation was decided (it applies at the next chord) */
+    bool perc_quiet;              /* evolution: the kit waits for the energy to build */
 } tg_gen;
 
 void tg_init(tg_gen *g, uint32_t seed, float sample_rate);
@@ -181,6 +277,24 @@ int tg_half_position(const tg_gen *g);
 void tg_apply_style(tg_gen *g, int style);
 /* The chord at a chord step (the planned harmony with a style, else the progression). */
 void tg_chord_at(const tg_gen *g, int step, int tones, tt_chord *c);
+/* ---- sequencer ----
+ * FREEZE: at the next period boundary the period just heard becomes a loop (returns false if no
+ * complete period was recorded yet). UNFREEZE: the generator takes over again at the next boundary. */
+bool tg_freeze(tg_gen *g);
+void tg_unfreeze(tg_gen *g);
+/* The frozen pattern, to edit: notes sorted by tick */
+int tg_pat_add(tg_gen *g, int tick, int part, int note, int vel, int len);   /* index, or -1 if full */
+void tg_pat_remove(tg_gen *g, int index);
+void tg_pat_transpose(tg_gen *g, int part, int steps);   /* scale steps in the pattern's key; part -1: all
+                                                            pitched parts (not drums, not timpani) */
+/* Step overlay: a condition and up to TG_STEP_LOCKS locks per (part, tick). 0 on success. */
+int tg_step_cond(tg_gen *g, int part, int tick, int cond, int a, int b);
+int tg_step_lock(tg_gen *g, int part, int tick, int param, int value);
+void tg_step_clear(tg_gen *g, int part, int tick);
+/* Evolution: an energy arc over `periods` periods (density, dynamics, percussion), with an optional
+ * modulation to the dominant (major) or the relative major (minor) and back, by pivot chords. */
+void tg_evolve(tg_gen *g, bool on, int periods, float depth, bool modulate);
+
 /* Percussion: TG_PERC_OFF, TG_PERC_PERIOD or TG_PERC_KIT. A style sets its default. */
 void tg_set_percussion(tg_gen *g, int mode);
 /* Release every sounding note (stop). */

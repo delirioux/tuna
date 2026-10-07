@@ -26,10 +26,20 @@ static uint32_t audio_cpu_rem;                         /* keep the fractional II
 static int16_t scope_buf[SCOPE_N];
 static uint32_t scope_w;
 
+#if FELUCCA_TUNA
+static void tf_audio_pre(uint32_t n);                   /* Tuna (tuna_fw.c): its notes into the tracks, */
+static void tf_audio_post(int32_t *out, uint32_t n);    /* the resonator on the master */
+#endif
 static void audio_block(int32_t *out, uint32_t n)       /* mix (fx.c), then Q15 -> 24 bit */
 {
     uint32_t i;
+#if FELUCCA_TUNA
+    tf_audio_pre(n);
+#endif
     mix_block(out, n);
+#if FELUCCA_TUNA
+    tf_audio_post(out, n);
+#endif
 #if FELUCCA_UAC
     uac_tap(out, n);                                    /* the USB audio input: the same master output */
 #endif

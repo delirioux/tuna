@@ -58,7 +58,7 @@ preset and let it drift, from still and ambient to driving and rhythmic.
 | 5 | Presets, slots, composers by era | done |
 | 6 | Screen and controls | done |
 | 7 | MIDI out per part, resonator | done |
-| 8 | On the FM-1: flash, measure CPU, then fine-tune every composer from their music | next |
+| 8 | On the FM-1: flash, measure CPU, then fine-tune every composer from their music | prepared: firmware glue, maths, browser build; waiting for the hardware |
 
 ## Building and testing
 
@@ -70,7 +70,16 @@ sh tests/tuna_ui_test.sh          # the screen alone: every page as PNG, two GIF
 sh tests/tuna_felucca.sh out 60   # render every composer through Felucca's engines to WAV
 ```
 
-Building Felucca itself for the FM-1 is described in [BUILDING.md](BUILDING.md).
+Tuna in the browser, the whole firmware on a simulated FM-1 (needs `emcc`, or clang with a WASI sysroot in
+`WASI_SYSROOT`; run `./build.sh` once first for `build/gen`):
+
+```
+sh web/emu/tuna_build.sh                                # build/tuna_emu: serve it and open index.html
+node web/emu/tuna_emu_test.mjs build/tuna_emu/tuna.wasm  # boot, play, browse, root, pages, stop, save
+```
+
+For the FM-1 itself: `FELUCCA_TUNA=1` with Felucca's build, described in [BUILDING.md](BUILDING.md). Untested
+on hardware so far.
 
 ## Credits and licence
 

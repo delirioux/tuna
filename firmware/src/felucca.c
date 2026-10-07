@@ -31,6 +31,9 @@
 #ifndef FELUCCA_ID
 #define FELUCCA_ID "FM-1_900"    /* package identity (build.py: the .fwsc marker string) */
 #endif
+#ifndef FELUCCA_TUNA
+#define FELUCCA_TUNA 0           /* 1: Tuna, the generative firmware, on Felucca's sound and hardware (tuna_fw.c) */
+#endif
 #ifndef FELUCCA_VERSION
 #define FELUCCA_VERSION "v1.0.5.2" /* shown in the menu, the console and the editor; build.py --release X.Y */
 #endif
@@ -93,6 +96,9 @@
 #endif
 #include "upreset.c"             /* user presets (RAM mirror; flash with FELUCCA_FLASH) */
 #include "project.c"
+#if FELUCCA_TUNA
+#include "tuna_fw.c"             /* Tuna's screen and its glue; its other modules link beside (build.py) */
+#endif
 #if FELUCCA_OTA
 #include "ota.c"
 #include "ota_hw.c"

@@ -2,7 +2,7 @@
 /* TUNA's C port of Mutable Instruments Marbles' random section. See tuna_marbles.h.
  * Original code Copyright 2015 Emilie Gillet, MIT License. Port: the structure, names and the
  * order of every floating-point operation follow the original, so results are bit-exact. */
-#include <math.h>
+#include "tuna_sys.h"
 #include "tuna_marbles.h"
 #include "tuna_marbles_tables.h"
 

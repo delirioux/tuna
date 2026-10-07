@@ -1,8 +1,7 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 /* TUNA resonator (see tuna_reso.h). */
 #include "tuna_reso.h"
-#include <math.h>
-#include <string.h>
+#include "tuna_sys.h"
 
 #define TR_MASK (TR_LINE - 1)
 

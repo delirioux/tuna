@@ -39,6 +39,8 @@ APP_SLOT = fm1pkg_make.APP_SLOT
 LOADER_LOAD = 0x01C0A800
 LOADER_NAME = b"usb_hid_ota.bin"    # the file name the SPL looks for
 DOCKER_IMAGE = os.environ.get("JIELI_DOCKER_IMAGE", "debian:bookworm-slim")
+TUNA_MODULES = ("tuna_gen", "tuna_style", "tuna_theory", "tuna_marbles", "tuna_marbles_tables", "tuna_preset",
+                "tuna_app", "tuna_midi", "tuna_reso", "tuna_libm")
 CFLAGS = ["-Os", "-ffunction-sections", "-fno-builtin", "-Wall", "-Wno-unused-function"]
 LINE = re.compile(r"^\s*([0-9a-f]+):\s+((?:[0-9a-f]{2} )+)\s*\t(.*)$")
 
@@ -180,7 +182,7 @@ def build_app():
     flags = [*CFLAGS, "-Ifirmware/hal", "-Ifirmware/src", "-Ibuild/gen"]
     for flag in ("FELUCCA_FLASH", "FELUCCA_OTA", "FELUCCA_OTA_DRYRUN", "FELUCCA_OTA_RAMONLY", "FELUCCA_CDC",
                  "FELUCCA_UART", "FELUCCA_UAC", "FELUCCA_UAC_TONE", "FELUCCA_ICONS", "FELUCCA_SLICE", "FELUCCA_FM4",
-                 "FELUCCA_CDC_DEFAULT"):
+                 "FELUCCA_CDC_DEFAULT", "FELUCCA_TUNA"):
         v = os.environ.get(flag)    # unset: the default in firmware/src/felucca.c
         if v in ("0", "1"):
             flags.append(f"-D{flag}={v}")
@@ -205,9 +207,16 @@ def build_app():
                        check=True)
         tc("cc", *[f for f in flags if not f.startswith(("-I", "-D", "-W"))], "-c",
            OUT / "felucca_size.ll", "-o", OUT / "felucca.o")
+    # FELUCCA_TUNA=1: Tuna, the generative firmware. Its UI and glue are in felucca.c's unit (tuna_fw.c); the
+    # composer, the sequencer, MIDI, the resonator and its own single-precision maths are objects of their own
+    tuna = []
+    if os.environ.get("FELUCCA_TUNA") == "1":
+        for m in TUNA_MODULES:
+            tuna.append(OUT / f"{m}.o")
+        tc_all(*[("cc", *flags, "-DTUNA_FREESTANDING=1", "-c", FW / "src" / f"{m}.c", "-o", OUT / f"{m}.o") for m in TUNA_MODULES])
     elf = OUT / "felucca.elf"
     tc("pi32v2/bin/ld", "-T", FW / "app.ld", OUT / "crt0.o", OUT / "fm1_vec.o", OUT / "fm1_isr.o",
-       OUT / "felucca.o", "-o", elf)
+       OUT / "felucca.o", *tuna, "-o", elf)
     for sect in ("text.bin", "data.bin", "ramtext.bin"):
         (OUT / sect).unlink(missing_ok=True)
     *_, syms, dis, rt = tc_all(("common/bin/objcopy", "-O", "binary", "-j", ".text", elf, OUT / "text.bin"),

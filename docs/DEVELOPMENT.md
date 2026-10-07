@@ -62,7 +62,9 @@ touched only where Tuna hooks in (`felucca.c`, `main.c`, `audio.c`, `tools/build
   run with the audio interrupt off; sound changes that load presets are deferred to the main loop.
 - **Saving only while stopped.** Felucca runs from flash (XIP); writing it while playing would stall the
   audio. Tuna says `STOP TO SAVE`.
-- **Deterministic.** The same seed plays the same music; a slot loads exactly the music that was saved. The
+- **A new seed at every power-on, then deterministic.** The seed comes from the ADC's low bits and the timer
+  at start (the browser: the page's random number), mixed with the moment of the first PLAY unless a seed was
+  chosen by then. From there the same seed plays the same music; a slot loads exactly the music that was saved. The
   chaos knobs at 0 are the composer byte for byte. The tests depend on this.
 - **The player's settings carry over.** A new composer brings its own key, tempo, scale, meter and sounds,
   except what the player set: the tempo (SELECT), the root (a key tapped, or KEY's knob), percussion, and

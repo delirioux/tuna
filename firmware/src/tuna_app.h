@@ -79,6 +79,7 @@ int ta_lib_style(int item);               /* TG_STYLE_*, -1 for a character */
 void ta_select(tuna_app *a, int item);    /* at once (stopped) or at the period's end (playing) */
 void ta_play(tuna_app *a, bool on);
 void ta_seed_step(tuna_app *a, int delta);
+void ta_set_seed(tuna_app *a, uint32_t seed);
 void ta_set_deja(tuna_app *a, int mode);
 void ta_set_chaos(tuna_app *a, float rhythm, float pitch, float density, float macro);
 /* the player's own settings: applied now and kept for the next pieces */

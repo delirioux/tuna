@@ -247,6 +247,9 @@ void tg_reseed(tg_gen *g, uint32_t seed)
     tm_rng_init(&g->hum_rng, seed ^ 0x48756d61u);
     g->hq_n = 0;
     g->hq_order = 0;
+    for (int p = 0; p < TG_EVENT_PARTS; ++p)
+        for (int n = 0; n < 128; ++n)
+            g->hdue[p][n] = 0;
     g->clock = 0;
     g->tick_delay = 0;
     /* sequencer: recording from the start; the overlay's steps and FILL are settings and stay */
@@ -892,6 +895,17 @@ void tg_all_off(tg_gen *g, tg_event_fn fn, void *ctx)
         for (int n = 0; n < 128; ++n)
             g->xmap[p][n] = -1;
     }
+    /* what the releases above queued (swing, strum keep the queue in use) goes out now as well */
+    for (int i = 0; i < g->hq_n; ++i)
+        if (g->hq[i].e.type != TG_EV_NOTE || !g->hq[i].e.on) {
+            tg_event e = g->hq[i].e;
+            e.offset = 0;
+            fn(ctx, &e);
+        }
+    g->hq_n = 0;
+    for (int p = 0; p < TG_EVENT_PARTS; ++p)
+        for (int n = 0; n < 128; ++n)
+            g->hdue[p][n] = 0;
     g->humanize = hum;
 }
 
@@ -2245,7 +2259,13 @@ static void hum_collect(void *ctx, const tg_event *e)
     } else {
         d = g->hdelay[x.part][x.note];
     }
-    g->hq[g->hq_n].due = g->clock + x.offset + d;
+    long due = g->clock + x.offset + d;
+    if (x.type == TG_EV_NOTE && x.part < TG_EVENT_PARTS) {
+        if (due < g->hdue[x.part][x.note])
+            due = g->hdue[x.part][x.note];          /* keep start and end of one note in order */
+        g->hdue[x.part][x.note] = due;
+    }
+    g->hq[g->hq_n].due = due;
     g->hq[g->hq_n].order = g->hq_order++;
     g->hq[g->hq_n].e = x;
     g->hq_n++;

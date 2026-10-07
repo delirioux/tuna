@@ -262,6 +262,8 @@ typedef struct {
     long clock;                    /* samples rendered */
     int tick_delay;                /* swing and lilt: samples the events of this tick come late */
     uint16_t hdelay[TG_EVENT_PARTS][128];
+    long hdue[TG_EVENT_PARTS][128];  /* when the note's last start or end leaves the queue: a note never
+                                        ends before it starts, nor starts again before it ended */
     tm_rng hum_rng;
     tg_event_fn user_fn;
     void *user_ctx;

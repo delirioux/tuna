@@ -102,6 +102,9 @@ enum { TT_TUNE_EQUAL, TT_TUNE_MEANTONE, TT_TUNE_WERCKMEISTER, TT_TUNE_PYTHAGOREA
 const char *tt_tuning_name(int tuning);
 /* cents (x10) from equal temperament of pitch class pc_rel above the tuning root */
 int  tt_tuning_cents10(int tuning, int pc_rel);
+/* the same for a key: in a minor key the meantone and Pythagorean chains move a fifth flatwards (A-flat,
+ * the minor sixth, instead of G-sharp), so the wolf falls where the key does not go */
+int  tt_tuning_cents10_key(int tuning, int pc_rel, int minor);
 /* set the user table: 12 values, cents x10 */
 void tt_tuning_set_user(const int16_t *cents10);
 

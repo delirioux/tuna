@@ -2423,7 +2423,7 @@ static void overlay_in(tg_gen *g, const tg_event *ein)
     e.note = (uint8_t)note;
     e.velocity = (uint8_t)clampi(vel, 1, 127);
     if (g->tuning && pitched)
-        e.value = (int16_t)tt_tuning_cents10(g->tuning, note - g->tune_root);   /* cents x10 off equal */
+        e.value = (int16_t)tt_tuning_cents10_key(g->tuning, note - g->tune_root, scale_is_minor(g->home_scale));
     out_event(g, &e);
 }
 

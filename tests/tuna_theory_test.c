@@ -157,6 +157,10 @@ static void test_tunings(void)
     tt_tuning_set_user(u);
     CHECK(tt_tuning_cents10(TT_TUNE_USER, 13) == 10 && tt_tuning_cents10(TT_TUNE_USER, -1) == 110, "user table wraps");
     CHECK(tt_tuning_cents10(TT_TUNE_EQUAL, 5) == 0, "equal is equal");
+    /* minor keys: the minor sixth above the tonic is a true A-flat (a pure major third below the octave) */
+    CHECK(abs(12000 - (8000 + tt_tuning_cents10_key(TT_TUNE_MEANTONE, 8, 1)) - 3863) <= 2, "meantone minor sixth: %d",
+          8000 + tt_tuning_cents10_key(TT_TUNE_MEANTONE, 8, 1));
+    CHECK(tt_tuning_cents10_key(TT_TUNE_MEANTONE, 8, 0) == tt_tuning_cents10(TT_TUNE_MEANTONE, 8), "major keys keep G-sharp");
 }
 
 static void test_progressions(int verbose)

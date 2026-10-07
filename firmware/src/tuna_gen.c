@@ -1864,6 +1864,8 @@ static void melody_bird(tg_gen *g, beat_pos b, int velocity, int offset, tg_even
             note = mask_step(ms, g->root, note, -2 * dir * k);
         note = clampi(note, lo, hi);
     }
+    if (!in_mask(ms, note, g->root))
+        note = mask_nearest(ms, g->root, note);         /* a repeated note outlived its chord */
     g->mel_note = note;
     note_on(g, TG_PART_MELODY, note, velocity + (first ? 10 : -6), offset, fn, ctx);
     g->free_notes++;

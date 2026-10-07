@@ -74,6 +74,7 @@ typedef struct {
     long timp_bad, drum_hits, timp_hits;
     int counter_prev, counter_prev_iv, counter_prev_mel;
     int mel_prev;
+    bool mel_prev_phrase;
 } evlog;
 
 static tg_gen *cur;
@@ -104,6 +105,9 @@ static void on_event(void *ctx, const tg_event *e)
                            cur->chord_scale | cur->mel_scale;     /* a coloured period is still in its key */
         for (int k = 0; k < cur->chord.n; ++k)
             allowed |= (uint16_t)(1u << ((cur->chord.root + cur->chord.tone[k]) % 12));
+        if (cur->poly_semis && e->part == TG_PART_PAD)      /* a polychord's upper triad, bitonal on purpose */
+            for (int k = 0; k < 3; ++k)
+                allowed |= (uint16_t)(1u << ((cur->chord.root + cur->poly_semis + (k == 0 ? 0 : k == 1 ? 4 : 7)) % 12));
         int pc = ((e->note - cur->root) % 12 + 12) % 12;
         bool leaning = e->part == TG_PART_MELODY && cur->mel_pending >= 0;   /* a chromatic appoggiatura */
         if (!((allowed >> pc) & 1) && !leaning && getenv("OFFKEY"))
@@ -138,8 +142,11 @@ static void on_event(void *ctx, const tg_event *e)
             l->mel_notes++;
         }
         l->mel_prev = e->note;
-        /* the phrase checks hold for phrases (and chant); the other melody modes have their own tests */
-        bool phrase = cur->mel_mode == TG_MEL_PHRASE || cur->mel_mode == TG_MEL_CHANT;
+        /* the phrase checks hold for phrases (and chant); the other melody modes have their own tests; an
+         * arrival counts when the note before it was a phrase's too (contrast periods change the mode) */
+        bool phrase_now = cur->mel_mode == TG_MEL_PHRASE || cur->mel_mode == TG_MEL_CHANT;
+        bool phrase = phrase_now && l->mel_prev_phrase;
+        l->mel_prev_phrase = phrase_now;
         int q = (int)(cur->ticks - 1);
         int period = 0, ppos = tg_period_position(cur, &period);
         bool aug = cur->chord.n >= 3 && cur->chord.tone[1] == 4 && cur->chord.tone[2] == 8;
@@ -224,6 +231,7 @@ styled:
     cur = &g;
     memset(l, 0, sizeof *l);
     l->mel_prev = -1;
+    l->mel_prev_phrase = true;
     l->counter_prev = -1;
     long total = (long)seconds * SR;
     for (l->now = 0; l->now < total; l->now += BLOCK)
@@ -583,7 +591,8 @@ static int check(const preset *p, const evlog *pa, bool same, bool verbose)
             const tg_style *st = p->style >= 0 ? tg_style_get(p->style) : NULL;
             bool phrase = !st || st->mel_mode == TG_MEL_PHRASE || st->mel_mode == TG_MEL_CHANT;
             if (phrase) {
-                fails += !a.arrivals || a.arrivals_tonic != a.arrivals_tonic_chord || a.arrivals_by_step != a.arrivals ||
+                fails += (!a.arrivals && !(st && st->alt.mel_mode)) || a.arrivals_tonic != a.arrivals_tonic_chord ||
+                         a.arrivals_by_step != a.arrivals ||
                          a.arrivals_open_ok != a.arrivals_open;
                 if (!st || st->open <= 0.0f)
                     fails += a.arrivals_tonic_chord != a.arrivals;   /* no open endings: every arrival on the tonic */

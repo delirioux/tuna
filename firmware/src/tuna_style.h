@@ -40,6 +40,9 @@ enum {
     TG_PAD_REPEAT,     /* the chord repeated in eighths, driving */
     TG_PAD_ARPEGGIO,   /* rising and falling arpeggios in sixteenths */
 };
+enum { TG_PERC_OFF, TG_PERC_PERIOD, TG_PERC_KIT };
+/* period percussion instruments, the order of tg_style.perc */
+enum { TG_PI_TIMPANI, TG_PI_SNARE, TG_PI_BASS_DRUM, TG_PI_CYMBAL, TG_PI_TRIANGLE, TG_PI_TAMBOURINE, TG_PI_COUNT };
 enum {
     TG_STYLE_BACH, TG_STYLE_MOZART, TG_STYLE_BEETHOVEN, TG_STYLE_BRAHMS, TG_STYLE_MAHLER,
     TG_STYLE_CHOPIN, TG_STYLE_SATIE, TG_STYLE_DEBUSSY, TG_STYLE_DVORAK, TG_STYLE_SAINT_SAENS,
@@ -89,6 +92,8 @@ typedef struct {
     float sforzando;                 /* chance of a sudden accent on a weak beat */
     float swell;                     /* 0..1: crescendo through the period into the arrival */
     float rubato;                    /* 0..1: slow into cadences, a tempo after */
+    int perc_mode;                   /* TG_PERC_*: the default percussion */
+    uint8_t perc[TG_PI_COUNT];       /* period percussion, 0..10 per instrument */
     uint8_t w_major[TG_VOCAB];       /* chord weights, major keys */
     uint8_t w_minor[TG_VOCAB];       /* chord weights, minor keys */
 } tg_style;

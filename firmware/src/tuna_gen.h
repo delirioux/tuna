@@ -35,7 +35,19 @@
 #define TG_PARTS 3
 #define TG_PAD_VOICES TT_CHORD_MAX
 
-enum { TG_PART_BASS, TG_PART_MELODY, TG_PART_PAD };
+enum { TG_PART_BASS, TG_PART_MELODY, TG_PART_PAD, TG_PART_DRUMS, TG_PART_TIMPANI };
+#define TG_EVENT_PARTS 5          /* the three voices, plus drums (GM note numbers) and pitched timpani */
+
+/* General MIDI percussion notes used by the drum part */
+#define TG_GM_BASS_DRUM 35
+#define TG_GM_KICK 36
+#define TG_GM_SIDE_STICK 37
+#define TG_GM_SNARE 38
+#define TG_GM_HAT_CLOSED 42
+#define TG_GM_HAT_OPEN 46
+#define TG_GM_CRASH 49
+#define TG_GM_TAMBOURINE 54
+#define TG_GM_TRIANGLE 81
 
 typedef struct {
     uint8_t part, note, velocity;
@@ -82,6 +94,8 @@ typedef struct {
     float sforzando;              /* chance of an accent on a weak beat */
     float swell;                  /* crescendo through the period */
     float rubato;                 /* slowing into cadences */
+    int perc_mode;                /* TG_PERC_OFF, TG_PERC_PERIOD (the composer's orchestra), TG_PERC_KIT */
+    uint8_t perc_w[TG_PI_COUNT];  /* period percussion: 0..10 per instrument */
     const tg_style *style;        /* NULL: the fixed progression `prog` */
 
     /* Marbles */
@@ -130,6 +144,15 @@ typedef struct {
     int motif_len, motif_seg, motif_start_note, motif_last;
     bool motif_valid, motif_recording, motif_active, motif_invert, motif_alter;
     long motif_notes, free_notes;  /* statistics: notes from development vs free invention */
+    /* percussion: its own randomness, so switching drums on or off never changes the notes */
+    tm_rng prng;
+    int drum_on[8], drum_n;
+    int timp_note;
+    long timp_off_at, roll_until;
+    int roll_note;
+    float roll_countdown;          /* samples to the roll's in-between stroke */
+    bool march_on, kit_g1_prev, kit_g3_prev;
+    long perc_hits;
 } tg_gen;
 
 void tg_init(tg_gen *g, uint32_t seed, float sample_rate);
@@ -148,6 +171,8 @@ int tg_half_position(const tg_gen *g);
 void tg_apply_style(tg_gen *g, int style);
 /* The chord at a chord step (the planned harmony with a style, else the progression). */
 void tg_chord_at(const tg_gen *g, int step, int tones, tt_chord *c);
+/* Percussion: TG_PERC_OFF, TG_PERC_PERIOD or TG_PERC_KIT. A style sets its default. */
+void tg_set_percussion(tg_gen *g, int mode);
 /* Release every sounding note (stop). */
 void tg_all_off(tg_gen *g, tg_event_fn fn, void *ctx);
 

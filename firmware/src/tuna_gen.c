@@ -144,6 +144,11 @@ static void defaults(tg_gen *g)
     g->sforzando = 0.0f;
     g->swell = 0.0f;
     g->rubato = 0.0f;
+    g->perc_mode = TG_PERC_OFF;
+    for (int i = 0; i < TG_PI_COUNT; ++i)
+        g->perc_w[i] = 0;
+    g->perc_w[TG_PI_TIMPANI] = 6;
+    g->perc_w[TG_PI_CYMBAL] = 3;
     g->style = 0;
     g->clock_source = TM_CLOCK_T1_T2_T3;
     tm_group x = {TM_CONTROL_IDENTICAL, TM_RANGE_NARROW, 0.5f, 0.5f, 0.75f, 0.0f, 8, {1, 1}};
@@ -204,6 +209,15 @@ void tg_reseed(tg_gen *g, uint32_t seed)
     g->motif_start_note = -1;
     g->motif_last = -1;
     g->motif_notes = g->free_notes = 0;
+    tm_rng_init(&g->prng, seed ^ 0xd7a3b1c5u);
+    g->drum_n = 0;
+    g->timp_note = -1;
+    g->timp_off_at = -1;
+    g->roll_until = -1;
+    g->roll_note = -1;
+    g->roll_countdown = 0.0f;
+    g->march_on = g->kit_g1_prev = g->kit_g3_prev = false;
+    g->perc_hits = 0;
     g->plan_len = 0;
     plan_period(g);
 }
@@ -385,6 +399,9 @@ void tg_apply_style(tg_gen *g, int id)
     g->sforzando = st->sforzando;
     g->swell = st->swell;
     g->rubato = st->rubato;
+    g->perc_mode = st->perc_mode;
+    for (int i = 0; i < TG_PI_COUNT; ++i)
+        g->perc_w[i] = st->perc[i];
     /* Marbles as the style wants it: a centred, moderately wide X, motifs recurring by deja vu */
     g->x.control_mode = TM_CONTROL_IDENTICAL;
     g->x.spread = 0.5f;
@@ -460,11 +477,17 @@ static void pad_off(tg_gen *g, int offset, tg_event_fn fn, void *ctx)
     g->pad_n = 0;
 }
 
+static void drums_release(tg_gen *g, int offset, tg_event_fn fn, void *ctx);
+
 void tg_all_off(tg_gen *g, tg_event_fn fn, void *ctx)
 {
     for (int p = 0; p < TG_PARTS; ++p)
         note_off(g, p, 0, fn, ctx);
     pad_off(g, 0, fn, ctx);
+    drums_release(g, 0, fn, ctx);
+    if (g->timp_note >= 0)
+        emit(fn, ctx, TG_PART_TIMPANI, g->timp_note, 0, false, 0);
+    g->timp_note = -1;
 }
 
 /* ---- the harmonizer -------------------------------------------------------------------------------- */
@@ -1205,6 +1228,172 @@ static void pad_arpeggio(tg_gen *g, beat_pos b, int velocity, int offset, tg_eve
     note_on(g, TG_PART_PAD, note, accent(velocity, b) - (pos == 0 ? 18 : 28), offset, fn, ctx);
 }
 
+/* ---- percussion -------------------------------------------------------------------------------------- */
+/* Percussion never draws from the harmonizer's randomness (g->hrng): it has its own (g->prng), so
+ * switching it on or off leaves every note of the three voices exactly as it was. */
+static float prand(tg_gen *g) { return tm_rng_float(&g->prng); }
+
+void tg_set_percussion(tg_gen *g, int mode) { g->perc_mode = mode; }
+
+static void drum_hit(tg_gen *g, int note, int velocity, int offset, tg_event_fn fn, void *ctx)
+{
+    for (int i = 0; i < g->drum_n; ++i)
+        if (g->drum_on[i] == note)
+            return;                                 /* one stroke per instrument per tick */
+    if (g->drum_n < 8)
+        g->drum_on[g->drum_n++] = note;
+    emit(fn, ctx, TG_PART_DRUMS, note, velocity, true, offset);
+    g->perc_hits++;
+}
+
+static void drums_release(tg_gen *g, int offset, tg_event_fn fn, void *ctx)
+{
+    for (int i = 0; i < g->drum_n; ++i)
+        emit(fn, ctx, TG_PART_DRUMS, g->drum_on[i], 0, false, offset);
+    g->drum_n = 0;
+}
+
+/* the two kettledrums: the tonic, and the dominant a fourth below it, in the timpani's range */
+static int timp_pitch(const tg_gen *g, bool dominant)
+{
+    int tonic = 40 + pmod12(g->root - 4);           /* E2 .. D#3 */
+    if (!dominant)
+        return tonic;
+    int d = tonic - 5;
+    return d < 36 ? d + 12 : d;
+}
+
+static void timp_hit(tg_gen *g, int note, int velocity, int offset, tg_event_fn fn, void *ctx)
+{
+    if (g->timp_note >= 0)
+        emit(fn, ctx, TG_PART_TIMPANI, g->timp_note, 0, false, offset);
+    emit(fn, ctx, TG_PART_TIMPANI, note, velocity, true, offset);
+    g->timp_note = note;
+    g->timp_off_at = g->ticks - 1 + 2 * g->division;
+    g->perc_hits++;
+}
+
+/* the composer's own percussion */
+static void perc_period(tg_gen *g, beat_pos b, int velocity, int offset, tg_event_fn fn, void *ctx)
+{
+    const uint8_t *w = g->perc_w;
+    int period, d = tg_period_position(g, &period);
+    int to_arrival = period - d;
+    bool arrival = d == 0 && b.q > 0;
+    bool chord_change = g->chord_ticks > 0 && b.q % g->chord_ticks == 0;
+    int pos = b.q % b.bar_ticks, beat = pos / g->division, sub = pos % g->division;
+    uint16_t cm = chord_mask(&g->chord, 3);
+    bool has_tonic = cm & 1, has_dom = (cm >> 7) & 1;
+    float swell = (float)d / (float)period;
+    if (d == 0)
+        g->march_on = w[TG_PI_SNARE] && prand(g) * 10.0f < (float)w[TG_PI_SNARE];   /* decided per period */
+
+    /* timpani: tonic and dominant only, as the instrument was tuned */
+    if (w[TG_PI_TIMPANI]) {
+        float wt = (float)w[TG_PI_TIMPANI] / 10.0f;
+        int tonic = timp_pitch(g, false), dom = timp_pitch(g, true);
+        if (arrival) {
+            g->roll_until = -1;
+            timp_hit(g, tonic, velocity + 18, offset, fn, ctx);
+        } else if (b.q < g->roll_until) {
+            timp_hit(g, g->roll_note, velocity - 18 + 24 * (g->division - (int)(g->roll_until - b.q)) / g->division,
+                     offset, fn, ctx);
+            g->roll_countdown = g->sample_rate / g->t.rate_hz * 0.5f;
+        } else if (to_arrival <= g->division && to_arrival > 0 && wt >= 0.5f && (has_tonic || has_dom)) {
+            /* a roll into the arrival, on the dominant if the chord has it */
+            g->roll_note = has_dom ? dom : tonic;
+            g->roll_until = b.q + to_arrival;
+            timp_hit(g, g->roll_note, velocity - 18, offset, fn, ctx);
+            g->roll_countdown = g->sample_rate / g->t.rate_hz * 0.5f;
+        } else if (d == tg_half_position(g) && d > 0 && has_dom) {
+            timp_hit(g, dom, velocity + 8, offset, fn, ctx);           /* the half cadence */
+        } else if (b.downbeat && (has_tonic || has_dom) && prand(g) < wt * (chord_change ? 0.55f : 0.15f)) {
+            timp_hit(g, has_tonic && (!has_dom || prand(g) < 0.6f) ? tonic : dom, velocity - 4, offset, fn, ctx);
+        } else if (wt >= 0.8f && b.on_beat && swell > 0.75f && (has_tonic || has_dom) && prand(g) < 0.25f) {
+            timp_hit(g, has_dom ? dom : tonic, velocity - 10, offset, fn, ctx);    /* building to the end */
+        }
+    }
+
+    /* the march: snare 1 2-and 3 4, bass drum on 1 and 3, a snare roll into the arrival */
+    if (g->march_on) {
+        int sv = velocity - 16;
+        if (to_arrival <= b.bar_ticks && to_arrival > 0)
+            drum_hit(g, TG_GM_SNARE, sv + 20 * (b.bar_ticks - to_arrival) / b.bar_ticks, offset, fn, ctx);
+        else if (sub == 0 || (beat == 1 && g->division >= 2 && sub == g->division / 2))
+            drum_hit(g, TG_GM_SNARE, sv + (beat == 0 ? 14 : 0), offset, fn, ctx);
+        if (w[TG_PI_BASS_DRUM] && sub == 0 && (beat == 0 || (g->beats_per_bar == 4 && beat == 2)))
+            drum_hit(g, TG_GM_BASS_DRUM, velocity - 4, offset, fn, ctx);
+    } else if (w[TG_PI_BASS_DRUM]) {
+        float wb = (float)w[TG_PI_BASS_DRUM] / 10.0f;
+        if (arrival || (b.downbeat && chord_change && prand(g) < wb * 0.4f))
+            drum_hit(g, TG_GM_BASS_DRUM, velocity - (arrival ? 0 : 14), offset, fn, ctx);
+    }
+
+    /* cymbal: a crash at the arrival, soft strokes for the colourists */
+    if (w[TG_PI_CYMBAL]) {
+        float wc = (float)w[TG_PI_CYMBAL] / 10.0f;
+        bool soft = g->whole_tone > 0.0f || g->style == tg_style_get(TG_STYLE_SATIE);
+        if (arrival && prand(g) < wc * 1.4f)
+            drum_hit(g, TG_GM_CRASH, soft ? velocity - 30 : velocity + 14, offset, fn, ctx);
+        else if (soft && b.downbeat && chord_change && prand(g) < wc * 0.4f)
+            drum_hit(g, TG_GM_CRASH, velocity - 40, offset, fn, ctx);
+    }
+
+    /* triangle: the arrival and a few downbeats */
+    if (w[TG_PI_TRIANGLE]) {
+        float wt = (float)w[TG_PI_TRIANGLE] / 10.0f;
+        if ((arrival && prand(g) < wt * 1.5f) || (b.downbeat && prand(g) < wt * 0.35f))
+            drum_hit(g, TG_GM_TRIANGLE, velocity - 18, offset, fn, ctx);
+    }
+
+    /* tambourine: off-beats in the second half of the period, as the music gathers */
+    if (w[TG_PI_TAMBOURINE]) {
+        float wt = (float)w[TG_PI_TAMBOURINE] / 10.0f;
+        bool off = g->division >= 2 ? sub == g->division / 2 : !b.on_beat;
+        if ((swell > 0.5f && off && prand(g) < wt * 0.8f) || (arrival && prand(g) < wt))
+            drum_hit(g, TG_GM_TAMBOURINE, velocity - 20, offset, fn, ctx);
+    }
+}
+
+/* a modern kit: kick and backbeat, hats, Marbles adding kicks (T1) and ghost notes (T3),
+ * a fill into each arrival and a crash on it */
+static void perc_kit(tg_gen *g, beat_pos b, int velocity, bool t1, bool t3, int offset, tg_event_fn fn, void *ctx)
+{
+    int period, d = tg_period_position(g, &period);
+    int to_arrival = period - d;
+    bool arrival = d == 0 && b.q > 0;
+    int pos = b.q % b.bar_ticks, beat = pos / g->division, sub = pos % g->division;
+    bool eighth = sub == 0 || (g->division >= 2 && sub == g->division / 2);
+    if (arrival) {
+        drum_hit(g, TG_GM_CRASH, velocity + 14, offset, fn, ctx);
+        drum_hit(g, TG_GM_KICK, velocity + 14, offset, fn, ctx);
+        return;
+    }
+    if (to_arrival <= g->division && to_arrival > 0) {                  /* the fill */
+        drum_hit(g, TG_GM_SNARE, velocity - 12 + 20 * (g->division - to_arrival) / g->division, offset, fn, ctx);
+        return;
+    }
+    if (g->beats_per_bar == 3) {                                        /* waltz: kick on one, side stick after */
+        if (b.downbeat)
+            drum_hit(g, TG_GM_KICK, velocity + 6, offset, fn, ctx);
+        else if (sub == 0)
+            drum_hit(g, TG_GM_SIDE_STICK, velocity - 14, offset, fn, ctx);
+    } else {
+        if (sub == 0 && (beat == 0 || beat == 2))
+            drum_hit(g, TG_GM_KICK, velocity + (beat == 0 ? 8 : 0), offset, fn, ctx);
+        if (sub == 0 && (beat == 1 || beat == 3))
+            drum_hit(g, TG_GM_SNARE, velocity + 2, offset, fn, ctx);
+    }
+    if (t1 && eighth && sub != 0 && prand(g) < 0.5f)
+        drum_hit(g, TG_GM_KICK, velocity - 10, offset, fn, ctx);       /* Marbles' syncopated kicks */
+    if (t3 && !b.on_beat && prand(g) < 0.3f)
+        drum_hit(g, TG_GM_SNARE, velocity - 38, offset, fn, ctx);      /* ghost notes */
+    if (eighth) {
+        bool open = beat == g->beats_per_bar - 1 && sub != 0 && prand(g) < 0.35f;
+        drum_hit(g, open ? TG_GM_HAT_OPEN : TG_GM_HAT_CLOSED, velocity - (sub == 0 ? 18 : 28), offset, fn, ctx);
+    }
+}
+
 /* ---- process --------------------------------------------------------------------------------------- */
 void tg_process(tg_gen *g, int size, tg_event_fn fn, void *ctx)
 {
@@ -1309,6 +1498,24 @@ void tg_process(tg_gen *g, int size, tg_event_fn fn, void *ctx)
                 pad_parallel(g, accent(velocity, b), i, fn, ctx);
             else if (g->pad_mode == TG_PAD_DOUBLE && new_note && g->since_note[TG_PART_MELODY] == 0)
                 pad_double(g, accent(velocity, b), i, fn, ctx);
+
+            /* percussion, last, on its own randomness */
+            drums_release(g, i, fn, ctx);
+            if (g->timp_note >= 0 && b.q >= g->timp_off_at) {
+                emit(fn, ctx, TG_PART_TIMPANI, g->timp_note, 0, false, i);
+                g->timp_note = -1;
+            }
+            if (g->perc_mode == TG_PERC_PERIOD)
+                perc_period(g, b, velocity, i, fn, ctx);
+            else if (g->perc_mode == TG_PERC_KIT)
+                perc_kit(g, b, velocity, gate[i * 2] && !g->kit_g1_prev, gate[i * 2 + 1] && !g->kit_g3_prev, i, fn, ctx);
+        }
+        g->kit_g1_prev = gate[i * 2];
+        g->kit_g3_prev = gate[i * 2 + 1];
+        if (g->roll_countdown > 0.0f) {
+            g->roll_countdown -= 1.0f;
+            if (g->roll_countdown <= 0.0f && g->roll_note >= 0 && g->ticks - 1 < g->roll_until)
+                timp_hit(g, g->roll_note, velocity - 16, i, fn, ctx);   /* the roll's in-between stroke */
         }
         if (g->bass_mode != TG_BASS_MARBLES && g->pad_mode != TG_PAD_BLOCK)
             continue;                                /* the figures run on the clock, not on T1/T3 */

@@ -254,6 +254,11 @@ void ta_seed_step(tuna_app *a, int delta)
     tg_reseed(&a->g, a->seed);
 }
 
+void ta_set_seed(tuna_app *a, uint32_t seed)
+{
+    ta_seed_step(a, (int)(seed - a->seed));
+}
+
 void ta_set_deja(tuna_app *a, int mode)
 {
     a->deja = mode < 0 ? 0 : mode >= TA_DV_COUNT ? TA_DV_COUNT - 1 : mode;

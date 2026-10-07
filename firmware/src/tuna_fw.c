@@ -209,6 +209,27 @@ static int tf_store_save(void *ctx, int group, const uint8_t *buf, int n)
 static const tp_store tf_store = {tf_store_load, tf_store_save, 0};
 #endif
 
+/* a seed of its own at every power-on: the ADC's low bits (noise on the battery divider, where the MASTER pot
+ * stands) and the timer between the reads, through FNV-1a */
+static uint32_t tf_seed_boot;
+static bool tf_seed_mixed;
+static uint32_t tf_mix(uint32_t h, uint32_t v)
+{
+    for (int i = 0; i < 4; i++, v >>= 8)
+        h = (h ^ (v & 0xFFu)) * 16777619u;
+    return h;
+}
+static uint32_t tf_entropy(void)
+{
+    uint32_t h = 2166136261u;
+    for (int i = 0; i < 64; i++) {
+        h = tf_mix(h, (uint32_t)fm1_adc_read(FM1_ADC_BATT));
+        h = tf_mix(h, (uint32_t)fm1_adc_read(FM1_ADC_MASTER));
+        h = tf_mix(h, fm1_ticks());
+    }
+    return h ? h : 1u;
+}
+
 /* ---- start ------------------------------------------------------------------------------------------- */
 static void tf_init(void)
 {
@@ -228,7 +249,8 @@ static void tf_init(void)
     undo_depth--;
     song.sel = 0;
     song.master_q12 = 2048;
-    ta_init(&tf_app, (float)FS / (float)TF_DIV, 1);
+    tf_seed_boot = tf_entropy();                   /* another piece at every power-on */
+    ta_init(&tf_app, (float)FS / (float)TF_DIV, tf_seed_boot);
     tr_init(&tf_app.reso, (float)FS);              /* (the resonator runs at the audio rate) */
     ta_reso_set(&tf_app, tf_app.reso_amount, tf_app.reso_decay, tf_app.reso_bright, tf_app.reso_mode);
     ta_set_sound(&tf_app, tf_sound, 0);
@@ -258,6 +280,11 @@ static void tf_input(void)
         uint32_t bit = 1u << panel.btn[b];
         if (pressed & bit) {
             fm1_irq_off();
+            /* the first PLAY mixes in when it came (the ADC may be quiet), unless a seed was chosen since */
+            if (b == TU_B_PLAY && !tf_seed_mixed && !tf_app.playing && tf_app.seed == tf_seed_boot)
+                ta_set_seed(&tf_app, tf_mix(tf_seed_boot, fm1_ticks()));
+            if (b == TU_B_PLAY)
+                tf_seed_mixed = true;
             tu_button(&tf_ui, (int)b, true);
             fm1_irq_on();
         }

@@ -56,6 +56,7 @@ if (typeof registerProcessor === "function") {
           restoreSectors(new Uint8Array(ex.memory.buffer, ex.web_nor(), ex.web_nor_size()), m.sectors);
           ex.web_master(m.master ?? 700);
           ex.web_boot();
+          if (ex.web_tuna_seed && m.seed) ex.web_tuna_seed(m.seed >>> 0);   // Tuna: another piece at every switch-on
           this.ex = ex;
           this.sentWrites = ex.web_flash_writes_count();
           this.port.postMessage({ type: "ready", rate: ex.web_sample_rate() });

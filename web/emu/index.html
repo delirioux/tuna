@@ -469,7 +469,8 @@ async function switchOn() {
           }
         }
       };
-      node.port.postMessage({ type: "load", wasm, sectors: loadFlash(), master: masterValue }, [wasm]);
+      const seed = (globalThis.crypto ? crypto.getRandomValues(new Uint32Array(1))[0] : Math.random() * 4294967296) >>> 0 || 1;
+      node.port.postMessage({ type: "load", wasm, sectors: loadFlash(), master: masterValue, seed }, [wasm]);
     });
     await ac.resume();
     document.getElementById("start").hidden = true;

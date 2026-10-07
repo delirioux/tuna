@@ -162,6 +162,9 @@ static void fl_plain_window_init(void) {}
 #include "../../firmware/src/storage.c"
 #include "../../firmware/src/upreset.c"
 #include "../../firmware/src/project.c"
+static uint32_t web_master_adc = 700;   /* (before tuna_fw.c: its seed reads it) MASTER, 0..1023 as the ADC reads it */
+enum { FM1_ADC_BATT = 3, FM1_ADC_MASTER = 4 };
+static int32_t fm1_adc_read(uint32_t ch) { return ch == FM1_ADC_MASTER ? (int32_t)web_master_adc : 620; }
 #include "../../firmware/src/tuna_fw.c"
 
 /* ------------------------------------------------- main.c and its HAL --- */
@@ -169,9 +172,6 @@ typedef struct { uint32_t vec, pc, emu, dbg, rets; } fm1_crash_t;
 static struct { uint8_t p3_rst, wdt_con; uint32_t rst_src; } fm1_boot;
 uint32_t _data_start[1], _data_end[1], _data_load[1], _bss_start[1], _bss_end[1];
 uint32_t _pool_start[1], _pool_end[1], _rt_start[1], _rt_end[1], _rt_load[1];
-static uint32_t web_master_adc = 700;   /* MASTER, 0..1023 as the ADC reads it */
-enum { FM1_ADC_BATT = 3, FM1_ADC_MASTER = 4 };
-static int32_t fm1_adc_read(uint32_t ch) { return ch == FM1_ADC_MASTER ? (int32_t)web_master_adc : 620; }
 static void fm1_adc_init(void) {}
 static void fm1_timer5_ack(void) {}
 static void fm1_timer5_start(void (*isr)(void), uint32_t prio) { (void)isr; (void)prio; }
@@ -394,5 +394,12 @@ EXPORT const char *web_tuna_piece(void) { return tf_app.item >= 0 ? ta_lib_name(
 EXPORT const char *web_tuna_era(void) { return tf_app.item >= 0 ? ta_group_name(ta_lib_group(tf_app.item)) : ""; }
 EXPORT uint32_t web_tuna_page(void) { return (uint32_t)tf_ui.page; }
 EXPORT uint32_t web_tuna_root(void) { return (uint32_t)tf_app.g.root; }
+/* the page's own random seed at switch-on (the browser's ADC and timer are not random) */
+EXPORT void web_tuna_seed(uint32_t s)
+{
+    ta_set_seed(&tf_app, s ? s : 1u);
+    tf_seed_boot = tf_app.seed;
+}
+EXPORT uint32_t web_tuna_seed_now(void) { return tf_app.seed; }
 EXPORT uint32_t web_tuna_ticks(void) { return (uint32_t)tf_app.g.ticks; }
 EXPORT uint32_t web_sample_rate(void) { return FS; }

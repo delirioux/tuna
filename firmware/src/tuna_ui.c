@@ -134,7 +134,7 @@ static const char *const SCALE_SHORT[TS_COUNT] = {"MAJ", "DOR", "PHRY", "LYD", "
 static const char *const PERC_NAMES[] = {"OFF", "PERIOD", "KIT", "PATTERN"};
 static const char *const DEJA_NAMES[TA_DV_COUNT] = {"OFF", "OWN", "LOCK"};
 static const char *const PAGE_NAMES[TU_PAGES] = {"HOME", "LIBRARY", "KEY", "TIME", "PARTS", "EVOLVE", "FREEZE",
-                                                 "MIX", "REVERB", "SAVE", "LOAD", "MENU"};
+                                                 "MIX", "REVERB", "SAVE", "LOAD", "MENU", "MIDI", "RESONATOR"};
 const char *tu_page_name(int page) { return page >= 0 && page < TU_PAGES ? PAGE_NAMES[page] : ""; }
 #define NAMES_N(a) ((int)(sizeof a / sizeof a[0]))
 
@@ -318,6 +318,20 @@ static void page_cards(tuna_ui *u, tu_card *c)
         card_text(&c[1], "NAME", used ? u->slot_names[u->slot] : "EMPTY", -1);
         c[1].name = true;
         c[2].off = c[3].off = true;
+        break;
+    }
+    case TU_PG_MIDI:
+        card_text(&c[0], "OUT", a->midi.on ? "ON" : "OFF", a->midi.on ? 1000 : 0);
+        card_text(&c[1], "SOUND", a->local ? "ON" : "OFF", a->local ? 1000 : 0);
+        card_text(&c[2], "CLOCK", a->midi.clock ? "ON" : "OFF", a->midi.clock ? 1000 : 0);
+        card_text(&c[3], "BEND", a->midi.bend ? "ON" : "OFF", a->midi.bend ? 1000 : 0);
+        break;
+    case TU_PG_RESO: {
+        static const char *const TN[TR_TUNE_COUNT] = {"CHORD", "KEY", "ROOT"};
+        card_int(&c[0], "AMOUNT", a->reso_amount, 0, 100);
+        card_int(&c[1], "DECAY", a->reso_decay, 0, 100);
+        card_int(&c[2], "BRIGHT", a->reso_bright, 0, 100);
+        card_text(&c[3], "TUNE", TN[a->reso_mode % TR_TUNE_COUNT], a->reso_mode * 500);
         break;
     }
     case TU_PG_MENU:
@@ -755,6 +769,70 @@ static void panel_menu(tuna_ui *u)
     cv_text_on(20, 98, &AF_S, "GPL-3.0, HOME CLOSES", T_DIM, T_SURF);
 }
 
+/* MIDI: the parts, their channels, a light as each plays */
+static void panel_midi(tuna_ui *u)
+{
+    tuna_app *a = u->app;
+    static const char *const P[5] = {"BASS", "MELODY", "PAD", "TIMPANI", "DRUMS"};
+    static const uint8_t part[5] = {TG_PART_BASS, TG_PART_MELODY, TG_PART_PAD, TG_PART_TIMPANI, TG_PART_DRUMS};
+    for (int i = 0; i < 5; ++i) {
+        int32_t y = 6 + i * 21;
+        int ch = a->midi.ch[part[i]] & 15;
+        uint8_t act = a->midi.act[ch];
+        uint16_t led = !a->midi.on ? T_DIM : act ? ux_mix(T_RAISE, part_color(part[i]), 30 + act * 70 / 255) : T_RAISE;
+        cv_rrect(12, y + 4, 10, 10, 5, led, T_SURF);
+        cv_text_on(30, y + CAP_IN(S, 18), &AF_S, P[i], T_MID, T_SURF);
+        char t[8];
+        tu_cpy(t, "CH ", sizeof t);
+        char n[4];
+        tu_fmt_int(n, ch + 1);
+        tu_cat(t, n, sizeof t);
+        cv_text_on(110, y + CAP_IN(M, 18), &AF_M, t, a->midi.on ? T_THEME : T_DIM, T_SURF);
+        if (i < 3 && a->g.orch_cur[part[i]] >= 0) {
+            char gm[8];
+            tu_cpy(gm, "PRG ", sizeof gm);
+            tu_fmt_int(n, tmi_gm_program(a->g.orch_cur[part[i]]) + 1);
+            tu_cat(gm, n, sizeof gm);
+            cv_text_r(228, y + CAP_IN(S, 18), &AF_S, gm, T_MID, T_SURF);
+        } else if (i == 4) {
+            cv_text_r(228, y + CAP_IN(S, 18), &AF_S, "GM KIT", T_MID, T_SURF);
+        }
+    }
+}
+
+/* RESONATOR: its strings, each a line that shakes as it rings, its note at the left */
+static void panel_reso(tuna_ui *u)
+{
+    tuna_app *a = u->app;
+    const tr_reso *r = &a->reso;
+    for (int k = 0; k < TR_STRINGS; ++k) {
+        int32_t y = 12 + k * 18;
+        int note = r->note[k];
+        uint16_t c = note < 0 || !a->reso_amount ? T_DIM : k & 1 ? T_THEME : T_ACCENT;
+        if (note >= 0) {
+            char t[8];
+            tu_cpy(t, NOTE_NAMES[note % 12], sizeof t);
+            char o[4];
+            tu_fmt_int(o, note / 12 - 1);
+            tu_cat(t, o, sizeof t);
+            cv_text_on(12, y - 6 + CAP_IN(S, 12), &AF_S, t, note < 0 ? T_DIM : T_MID, T_SURF);
+        }
+        int32_t amp = r->lp[k] < 0 ? -r->lp[k] : r->lp[k];
+        amp = a->reso_amount ? (amp >> 8) / 64 : 0;       /* a sample of 64: 1 px, up to 6 px */
+        if (amp > 6) amp = 6;
+        int32_t prev = y;
+        for (int32_t x = 48; x < 230; x += 2) {
+            /* a standing wave: still at both ends, its amplitude in the middle */
+            int32_t env = (x - 48) * (230 - x) * 1024 / ((230 - 48) * (230 - 48));   /* 0..256 */
+            int32_t ph = (int32_t)((x * (note > 0 ? note : 40) / 8 + (int32_t)u->frame * 3) % 32);
+            int32_t sw = ph < 16 ? ph - 8 : 24 - ph;              /* a triangle -8..8 */
+            int32_t yy = y + sw * amp * env / (8 * 256);
+            cv_line(x - 2, prev, x, yy, c);
+            prev = yy;
+        }
+    }
+}
+
 static void draw_panel(tuna_ui *u)
 {
     panel_begin();
@@ -772,6 +850,8 @@ static void draw_panel(tuna_ui *u)
         case TU_PG_FX: panel_fx(u); break;
         case TU_PG_SAVE: case TU_PG_LOAD: panel_slots(u); break;
         case TU_PG_MENU: panel_menu(u); break;
+        case TU_PG_MIDI: panel_midi(u); break;
+        case TU_PG_RESO: panel_reso(u); break;
         }
     }
     cv_blit(0, TU_PANEL_Y);
@@ -952,6 +1032,19 @@ void tu_knob(tuna_ui *u, int k, int d)
             u->confirm = 0;
         }
         break;
+    case TU_PG_MIDI:
+        if (c == 0) ta_midi_set(a, d > 0, a->midi.clock, a->midi.bend);
+        else if (c == 1) a->local = d > 0;
+        else if (c == 2) ta_midi_set(a, a->midi.on, d > 0, a->midi.bend);
+        else ta_midi_set(a, a->midi.on, a->midi.clock, d > 0);
+        break;
+    case TU_PG_RESO: {
+        int v[4] = {a->reso_amount, a->reso_decay, a->reso_bright, a->reso_mode};
+        if (c < 3) v[c] = tu_clampi(v[c] + 2 * d, 0, 100);
+        else v[3] = tu_wrap(v[3] + d, TR_TUNE_COUNT);
+        ta_reso_set(a, v[0], v[1], v[2], v[3]);
+        break;
+    }
     case TU_PG_MENU:
         if (c == 0) {
             u->palette = tu_wrap(u->palette + d, (int)NPALETTES);
@@ -1056,7 +1149,8 @@ void tu_button(tuna_ui *u, int b, bool down)
     case TU_B_SEQ: goto_page(u, TU_PG_SEQ); break;
     case TU_B_GLO: goto_page(u, u->page == TU_PG_MIX ? TU_PG_FX : TU_PG_MIX); break;
     case TU_B_SAVE: goto_page(u, u->page == TU_PG_SAVE ? TU_PG_LOAD : TU_PG_SAVE); break;
-    case TU_B_ENV: case TU_B_LFO: tu_msg(u, "NOT USED IN TUNA"); break;
+    case TU_B_ENV: goto_page(u, TU_PG_MIDI); break;
+    case TU_B_LFO: goto_page(u, TU_PG_RESO); break;
     }
 }
 
@@ -1162,6 +1256,8 @@ void tu_tick(tuna_ui *u, int ms)
             p->life = (uint8_t)(p->life > f ? p->life - f : 0);
         }
     }
+    for (int c = 0; c < 16; ++c)                  /* the MIDI lights fade */
+        a->midi.act[c] = (uint8_t)(a->midi.act[c] > ms ? a->midi.act[c] - ms : 0);
     if (u->hot_ms > 0) u->hot_ms -= ms;
     if (u->browse_ms > 0 && (u->browse_ms -= ms) <= 0) {
         u->browse_ms = 0;

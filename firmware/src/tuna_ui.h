@@ -18,7 +18,8 @@
  *   EDIT       time (meter, swing, humanize, percussion), again: the parts (melody, bass, pad, harmony)
  *   ARP        evolution               SEQ   freeze the period into a loop, transpose it
  *   GLO        the mix (four levels), again: reverb       SAVE  save to a slot, again: load
- *   ENV, LFO   nothing (Felucca's sound pages are not part of Tuna) */
+ *   ENV        MIDI out: on, the FM-1's own sound, clock, tunings as bend; the channels and what they play
+ *   LFO        the resonator: amount, decay, brightness, what its strings are tuned to */
 #ifndef TUNA_UI_H
 #define TUNA_UI_H
 
@@ -34,11 +35,11 @@ enum {
 };
 enum {
     TU_PG_HOME, TU_PG_LIB, TU_PG_KEY, TU_PG_TIME, TU_PG_PARTS, TU_PG_EVOLVE, TU_PG_SEQ,
-    TU_PG_MIX, TU_PG_FX, TU_PG_SAVE, TU_PG_LOAD, TU_PG_MENU, TU_PAGES
+    TU_PG_MIX, TU_PG_FX, TU_PG_SAVE, TU_PG_LOAD, TU_PG_MENU, TU_PG_MIDI, TU_PG_RESO, TU_PAGES
 };
 #define TU_KEY_LO 53                      /* F3: the FM-1's lowest key */
 #define TU_KEY_HI 79                      /* G5 */
-#define TU_PARTICLES 48
+#define TU_PARTICLES 64
 
 typedef struct {
     int16_t x, y, vy;                     /* 1/16 px */

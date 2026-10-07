@@ -15,6 +15,8 @@
 #include <stdint.h>
 #include "tuna_gen.h"
 #include "tuna_preset.h"
+#include "tuna_midi.h"
+#include "tuna_reso.h"
 
 #define TA_GROUPS (1 + TP_ERA_COUNT)      /* TUNA's characters, then the eras */
 #define TA_FEED 32                        /* note-ons waiting for the screen */
@@ -43,6 +45,12 @@ typedef struct {
     uint8_t feed_w, feed_r;
     void (*sound)(void *ctx, const tg_event *e);
     void *sound_ctx;
+    bool local;                           /* the FM-1's own sound (off: MIDI only) */
+    tmi_out midi;                         /* MIDI out (tuna_midi.h): the host sends what it queues */
+    uint32_t frame;                       /* audio frames since start, the MIDI time stamps */
+    tr_reso reso;                         /* the resonator (tuna_reso.h): the host runs it on its mix */
+    uint8_t reso_amount, reso_decay, reso_bright, reso_mode;   /* 0..100, TR_TUNE_* */
+    uint32_t reso_sig;                    /* the harmony it is tuned to */
     tp_store store;
     long blocks;                          /* blocks rendered while playing */
 } tuna_app;
@@ -72,6 +80,10 @@ const char *ta_meter_name(int m);
 int ta_meter_now(const tg_gen *g);        /* TA_M_*, or -1: the composer's own (another) meter */
 void ta_process(tuna_app *a, int frames); /* render (any size; nothing while stopped) */
 bool ta_feed_pop(tuna_app *a, ta_note *n);
+
+/* MIDI out and the resonator */
+void ta_midi_set(tuna_app *a, bool on, bool clock, bool bend);
+void ta_reso_set(tuna_app *a, int amount, int decay, int bright, int mode);   /* 0..100, TR_TUNE_* */
 
 /* the 16 slots: the whole state (tuna_preset.h) */
 int ta_slot_save(tuna_app *a, int slot);  /* TP_OK or TP_ERR_* */

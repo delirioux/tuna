@@ -323,6 +323,8 @@ static void host_part(tp_io *io, tp_host *hp)
         io_byte(io, &s->pan);
         io_byte(io, &s->rev);
     }
+    for (int i = 0; i < 4; ++i)
+        io_byte(io, &hp->reso[i]);
 }
 
 /* ---- encode / decode ------------------------------------------------------------------------------------ */
@@ -348,7 +350,7 @@ int tp_encode(const tg_gen *gc, const tp_host *host, uint8_t *buf, int max)
     io_byte(&io, &version);
     io_byte(&io, &flags);
     io_u16(&io, &len);                            /* filled in below */
-    tp_host blank = {{0}, false, {{0}}};
+    tp_host blank = {{0}, false, {{0}}, {0}};
     const tp_host *hp = host ? host : &blank;
     for (int i = 0; i < TP_NAME; ++i) {
         uint8_t c = (uint8_t)hp->name[i];

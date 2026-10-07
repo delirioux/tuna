@@ -44,6 +44,7 @@ typedef struct {
     char name[TP_NAME + 1];
     bool sounds_set;                      /* false: the composer's own instruments */
     tp_sound sound[TP_TRACKS];
+    uint8_t reso[4];                      /* the resonator: amount, decay, brightness (0..100), tuning mode */
 } tp_host;
 
 /* record <-> generator */

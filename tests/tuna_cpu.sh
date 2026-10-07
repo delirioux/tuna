@@ -10,12 +10,12 @@ SECS=${1:-30}
 shift || true
 OUT=build/host/cpu
 rm -rf "$OUT"; mkdir -p "$OUT"
-for f in tuna_gen tuna_style tuna_marbles tuna_marbles_tables tuna_theory; do
+for f in tuna_gen tuna_style tuna_marbles tuna_marbles_tables tuna_theory tuna_reso; do
     cc -O2 -c -Ifirmware/src "firmware/src/$f.c" -o "build/host/$f.o"
 done
 cc -O2 -w -DTUNA_CALLGRIND -Ibuild/gen -Ifirmware/src -o build/host/tuna_felucca_cg tests/tuna_felucca.c \
     build/host/tuna_gen.o build/host/tuna_style.o build/host/tuna_marbles.o build/host/tuna_marbles_tables.o \
-    build/host/tuna_theory.o -lm
+    build/host/tuna_theory.o build/host/tuna_reso.o -lm
 cg() {   # cg TAG [env ...]
     tag=$1; shift
     env "$@" valgrind -q --tool=callgrind --collect-atstart=no --callgrind-out-file="$OUT/$tag.%p" \

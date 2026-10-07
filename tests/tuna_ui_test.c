@@ -134,13 +134,25 @@ static const tp_store store = {mem_load, mem_save, 0};
 
 /* ---- the sound: counts what reaches it ---------------------------------------------------------------- */
 static long ev_on, ev_off;
+/* a stand-in for the FM-1's sound, for the resonator to hear: a decaying sine per note (four at most) */
+#include <math.h>
+static struct { double ph, inc, amp; } osc[4];
+static int osc_next;
 static int sounding[8][128];
 static void sound(void *ctx, const tg_event *e)
 {
     (void)ctx;
     if (e->type != TG_EV_NOTE)
         return;
-    if (e->on) { ev_on++; sounding[e->part][e->note]++; }
+    if (e->on) {
+        ev_on++;
+        sounding[e->part][e->note]++;
+        if (e->part < 3) {
+            osc[osc_next].inc = 2.0 * 3.14159265 * 440.0 * pow(2.0, (e->note - 69) / 12.0) / 11025.0;
+            osc[osc_next].amp = 6000.0;
+            osc_next = (osc_next + 1) % 4;
+        }
+    }
     else { ev_off++; if (sounding[e->part][e->note] > 0) sounding[e->part][e->note]--; }
 }
 static int still_sounding(void)
@@ -160,7 +172,21 @@ static tuna_ui ui;
 static void run_ms(int ms)
 {
     for (int t = 0; t < ms; t += 16) {
-        ta_process(&app, (int)(SR * 16 / 1000));
+        int n = (int)(SR * 16 / 1000);
+        ta_process(&app, n);
+        if (app.playing && app.reso.amount > 0) {      /* the host's part: the mix through the resonator */
+            int32_t in[256], o[512] = {0};
+            for (int i = 0; i < n; ++i) {
+                double v = 0;
+                for (int k = 0; k < 4; ++k) {
+                    v += osc[k].amp * sin(osc[k].ph);
+                    osc[k].ph += osc[k].inc;
+                    osc[k].amp *= 0.9997;
+                }
+                in[i] = (int32_t)v;
+            }
+            tr_process(&app.reso, in, o, n);
+        }
         tu_tick(&ui, 16);
         tu_draw(&ui);
     }
@@ -218,13 +244,24 @@ static void test_screens(void)
     struct { int btn, times; const char *name; } pages[] = {
         {TU_B_FX, 1, "library"}, {TU_B_SCL, 1, "key"}, {TU_B_EDIT, 1, "time"}, {TU_B_EDIT, 1, "parts"},
         {TU_B_ARP, 1, "evolve"}, {TU_B_SEQ, 1, "seq_live"}, {TU_B_GLO, 1, "mix"}, {TU_B_GLO, 1, "reverb"},
-        {TU_B_SAVE, 1, "save"}, {TU_B_SAVE, 1, "load"},
+        {TU_B_SAVE, 1, "save"}, {TU_B_SAVE, 1, "load"}, {TU_B_ENV, 1, "midi"}, {TU_B_LFO, 1, "reso_off"},
     };
     for (unsigned i = 0; i < sizeof pages / sizeof pages[0]; ++i) {
         press(pages[i].btn);
         run_ms(200);
         all_palettes(pages[i].name);
     }
+    /* the resonator turned up: its strings shake */
+    for (int i = 0; i < 20; ++i) tu_knob(&ui, TU_K1, 1);
+    run_ms(2000);
+    CHECK(app.reso_amount == 40, "AMOUNT 40 (%d)", app.reso_amount);
+    {
+        int32_t mx = 0;
+        for (int k = 0; k < TR_STRINGS; ++k) mx = abs(app.reso.lp[k]) > mx ? abs(app.reso.lp[k]) : mx;
+        CHECK(mx > (256 << 8), "the strings ring (%d)", mx >> 8);
+    }
+    all_palettes("reso");
+    ta_reso_set(&app, 0, app.reso_decay, app.reso_bright, app.reso_mode);
     /* SEQ frozen (after the piece chosen above has come in: a new piece starts live) */
     for (int i = 0; i < 60 && app.pending >= 0; ++i)
         run_ms(1000);

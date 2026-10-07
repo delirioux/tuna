@@ -7,7 +7,7 @@
 set -eu
 OUT=${1:-build/tuna_ui}
 mkdir -p build/host "$OUT/ppm"
-SRC="firmware/src/tuna_app.c firmware/src/tuna_preset.c firmware/src/tuna_gen.c firmware/src/tuna_style.c
+SRC="firmware/src/tuna_app.c firmware/src/tuna_midi.c firmware/src/tuna_reso.c firmware/src/tuna_preset.c firmware/src/tuna_gen.c firmware/src/tuna_style.c
      firmware/src/tuna_marbles.c firmware/src/tuna_marbles_tables.c firmware/src/tuna_theory.c"
 [ -f build/gen/ui_fonts.h ] || python3 -c "import sys; sys.argv=['x']; sys.path.insert(0,'tools'); import build; build.generate()"
 cc -O2 -Wall -Wno-unused-function -Ibuild/gen -Ifirmware/src -o build/host/tuna_ui_test tests/tuna_ui_test.c $SRC -lm

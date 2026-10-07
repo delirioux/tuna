@@ -665,8 +665,8 @@ static void plan_period(tg_gen *g)
                     ok = false;                     /* only in whole-tone periods */
                 if (c->func == TF_SEC && want[i] < 10 && (i + 1 >= n || want[i + 1] >= 10))
                     ok = false;                     /* its target would land on a fixed slot */
-                if (c->func == TF_D && next_want == TF_S + 10)
-                    ok = false;                     /* no dominant right before a pre-dominant */
+                if (c->func == TF_D && next_want == TF_S + 10 && want[i] < 10)
+                    ok = false;                     /* no free dominant right before a pre-dominant */
                 allowed[k] = ok;
             }
             g->plan[i] = (int8_t)pick_chord(g, allowed, voc_semis(g, prev));

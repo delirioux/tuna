@@ -297,6 +297,7 @@ typedef struct {
 
     /* evolution: an arc of energy over a cycle of periods, and a modulation away and home */
     bool evolve, evolve_modulate;
+    int mod_kind;                 /* TG_MOD_*: where the evolution modulates to */
     int evolve_periods;           /* periods per cycle */
     float evolve_depth;           /* 0..1 */
     float base_density;

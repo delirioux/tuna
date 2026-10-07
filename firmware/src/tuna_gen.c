@@ -246,6 +246,7 @@ void tg_reseed(tg_gen *g, uint32_t seed)
     g->perc_hits = 0;
     tm_rng_init(&g->hum_rng, seed ^ 0x48756d61u);
     g->hq_n = 0;
+    g->hq_order = 0;
     g->clock = 0;
     g->tick_delay = 0;
     /* sequencer: recording from the start; the overlay's steps and FILL are settings and stay */
@@ -1425,7 +1426,11 @@ static void melody_tick(tg_gen *g, beat_pos b, float x2, int velocity, int offse
          * have moves to the nearest that they do */
         if (!in_mask((uint16_t)(tt_scale_mask(scale_now(g)) | g->chord_scale | g->mel_scale), note, g->root))
             note = mask_nearest(ms, g->root, note);
-        note = clampi(note, lo, hi);
+        /* into the range, onto a note of the scale (a gapped scale may not have the range's edge) */
+        if (note > hi)
+            note = in_mask(ms, hi, g->root) ? hi : mask_step(ms, g->root, hi, -1);
+        if (note < lo)
+            note = in_mask(ms, lo, g->root) ? lo : mask_step(ms, g->root, lo, 1);
         if (b.downbeat) {
             /* downbeats on chord tones; other beats may carry passing notes */
             int snapped = mask_nearest(chord, g->root, note);
@@ -2241,6 +2246,7 @@ static void hum_collect(void *ctx, const tg_event *e)
         d = g->hdelay[x.part][x.note];
     }
     g->hq[g->hq_n].due = g->clock + x.offset + d;
+    g->hq[g->hq_n].order = g->hq_order++;
     g->hq[g->hq_n].e = x;
     g->hq_n++;
 }
@@ -2251,7 +2257,8 @@ static void hum_deliver(tg_gen *g, long end)
     while (1) {
         int best = -1;
         for (int i = 0; i < g->hq_n; ++i)
-            if (g->hq[i].due < end && (best < 0 || g->hq[i].due < g->hq[best].due))
+            if (g->hq[i].due < end && (best < 0 || g->hq[i].due < g->hq[best].due ||
+                                       (g->hq[i].due == g->hq[best].due && g->hq[i].order < g->hq[best].order)))
                 best = i;
         if (best < 0)
             return;
@@ -2287,7 +2294,9 @@ void tg_process(tg_gen *g, int size, tg_event_fn fn, void *ctx)
  * enters at the overlay, so locks and conditions treat both alike. */
 static void out_event(tg_gen *g, const tg_event *e)
 {
-    if (g->humanize > 0.0f || g->hq_n || g->tick_delay)
+    /* through the queue whenever anything may be late (one path for all, so the order never depends on
+     * what else happens to be waiting, drums included) */
+    if (g->humanize > 0.0f || g->swing > 0.0f || g->lilt > 0.0f || g->strum_ms > 0 || g->hq_n || g->tick_delay)
         hum_collect(g, e);
     else
         g->user_fn(g->user_ctx, e);

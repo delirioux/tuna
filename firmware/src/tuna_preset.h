@@ -3,7 +3,7 @@
  * library by era, and the character presets.
  *
  * A record holds the composer (or none), every generator setting (key, tempo, seed, meter, harmony,
- * melody, accompaniment, percussion, evolution, tuning, Marbles), the sequencer overlay (trig
+ * melody, accompaniment, percussion, evolution, tuning, Marbles, the chaos knobs), the sequencer overlay (trig
  * conditions and locks), a frozen pattern if there is one, a name, and the host's sounds per track.
  * Loading it gives back exactly the music that was saved: the same seed and settings play the same
  * notes.

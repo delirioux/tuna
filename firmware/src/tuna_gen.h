@@ -312,6 +312,16 @@ typedef struct {
     long periods_away;            /* statistics: periods that started in the away key */
     long key_set_tick;            /* the tick a modulation was decided (it applies at the next chord) */
     bool perc_quiet;              /* evolution: the kit waits for the energy to build */
+
+    /* the player's hands (the UI): chaos around the composer's own settings, a root from a key, a chord
+     * held on the keys. Chaos 0.5 is the composer exactly; the macro moves all three together. */
+    float chaos_rhythm;           /* 0..1: on the beat .. syncopated, varied rhythm */
+    float chaos_pitch;            /* 0..1: steps and repeats .. leaps */
+    float chaos_density;          /* 0..1: sparse .. busy (the melody, x0.35 .. x2.8) */
+    float chaos_macro;            /* 0..1: added to the three (0.5: nothing) */
+    int root_req;                 /* a new tonic from a key, applied at the next chord change; -1 none */
+    uint16_t hold_mask;           /* a chord held on the keys: its pitch classes (absolute), 0 none */
+    int8_t hold_root;             /* its lowest key's pitch class (the chord's root) */
 } tg_gen;
 
 void tg_init(tg_gen *g, uint32_t seed, float sample_rate);
@@ -357,6 +367,14 @@ void tg_evolve(tg_gen *g, bool on, int periods, float depth, bool modulate);
 
 /* Percussion: TG_PERC_OFF, TG_PERC_PERIOD or TG_PERC_KIT. A style sets its default. */
 void tg_set_percussion(tg_gen *g, int mode);
+/* The player's hands. Chaos: 0..1 each, 0.5 = the composer's own (tg_init and a style leave 0.5).
+ * A root (pitch class 0..11): stopped, at once; playing, from the next chord change, the music moved
+ * there whole. A chord held on the keys (absolute pitch classes, its root the lowest key): the harmony
+ * until released (mask 0). */
+void tg_set_chaos(tg_gen *g, float rhythm, float pitch, float density, float macro);
+void tg_set_root(tg_gen *g, int pc);
+void tg_hold_chord(tg_gen *g, uint16_t mask, int root_pc);
+
 /* Release every sounding note (stop). */
 void tg_all_off(tg_gen *g, tg_event_fn fn, void *ctx);
 

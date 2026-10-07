@@ -28,6 +28,20 @@ preset and let it drift, from still and ambient to driving and rhythmic.
   and modulates.
 - **16 slots** that save the whole state and play back exactly the music that was saved.
 
+## Controls
+
+| Control | Does |
+| --- | --- |
+| PLAY | start / stop; always from the top (the same seed plays the same music) |
+| SELECT / MASTER | tempo / volume |
+| PRESETS / ALGORITHM | the library: piece by piece, or a whole era at a time; playing, the new piece comes in at the end of the period |
+| KNOB 1–4 | the page's four cards; on HOME the chaos knobs: RHYTHM, PITCH, DENSITY and MACRO (0 is the composer exactly) |
+| keys | tap one: the root (from the next chord); hold several: that chord, while held; on SAVE / LOAD the 16 white keys are the slots |
+| OCT− / OCT+ | the seed: another piece in the same manner; on SAVE, LOAD and SEQ: back / do it |
+| REC | memory: the phrase locked (deja vu) / the composer's own |
+| HOME | the falling notes; held: the menu (colour, style) |
+| FX · SCL · EDIT · ARP · SEQ · GLO · SAVE | library · key, scale, tuning, memory · time, then the parts · evolution · freeze · mix, then reverb · save, then load |
+
 ## Roadmap
 
 | Phase | | |
@@ -37,8 +51,8 @@ preset and let it drift, from still and ambient to driving and rhythmic.
 | 3 | Coupling to Felucca's engines | done |
 | 4 | Sequencer | done |
 | 5 | Presets, slots, composers by era | done |
-| 6 | Screen and controls | next |
-| 7 | MIDI out per part, resonator | |
+| 6 | Screen and controls | done |
+| 7 | MIDI out per part, resonator | next |
 | 8 | On the FM-1: flash, measure CPU, then fine-tune every composer from their music | |
 
 ## Building and testing
@@ -46,7 +60,8 @@ preset and let it drift, from still and ambient to driving and rhythmic.
 On Linux or macOS with a C compiler:
 
 ```
-sh tests/tuna_tests.sh            # all of Tuna's tests: theory, generator, sequencer, presets, 89 composers
+sh tests/tuna_tests.sh            # all of Tuna's tests: theory, generator, sequencer, presets, screen, 89 composers
+sh tests/tuna_ui_test.sh          # the screen alone: every page as PNG, two GIFs of HOME playing (build/tuna_ui)
 sh tests/tuna_felucca.sh out 60   # render every composer through Felucca's engines to WAV
 ```
 

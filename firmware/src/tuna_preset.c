@@ -238,6 +238,11 @@ static void settings(tp_io *io, tg_gen *g, tp_head *h)
         IO_U8(io, grp[k]->ratio.q);
     }
     IO_U8(io, g->clock_source);
+    /* the chaos knobs */
+    io_f32(io, &g->chaos_rhythm);
+    io_f32(io, &g->chaos_pitch);
+    io_f32(io, &g->chaos_density);
+    io_f32(io, &g->chaos_macro);
     (void)h;
 }
 

@@ -13,6 +13,13 @@ static void zero(void *p, unsigned n)
 
 /* ---- pitch-class helpers --------------------------------------------------------------------------- */
 static int pmod12(int n) { return ((n % 12) + 12) % 12; }
+static float clamp01(float v) { return v < 0.0f ? 0.0f : v > 1.0f ? 1.0f : v; }
+
+/* one chaos amount with the macro added: -1 .. 1, 0 = the composer */
+static float chaos_of(const tg_gen *g, float c)
+{
+    return clamp01(c + g->chaos_macro - 0.5f) * 2.0f - 1.0f;
+}
 
 static bool in_mask(uint16_t mask, int note, int root) { return (mask >> pmod12(note - root)) & 1; }
 
@@ -124,6 +131,10 @@ static void defaults(tg_gen *g)
     g->min_gap_s = 0.03f;
     g->harmonize = true;
     g->melody_density = 0.5f;
+    g->chaos_rhythm = g->chaos_pitch = g->chaos_density = g->chaos_macro = 0.5f;
+    g->root_req = -1;
+    g->hold_mask = 0;
+    g->hold_root = -1;
     g->melody_range = 19;
     g->phrase_bars = 4;
     g->pad_tones = 3;
@@ -430,8 +441,29 @@ static int voc_semis_in(int scale, const tg_chord_def *d)
 }
 static int voc_semis(const tg_gen *g, const tg_chord_def *d) { return voc_semis_in(scale_now(g), d); }
 
+/* a chord held on the keys: its root the lowest key, its tones the others above it (four at most) */
+static bool held_chord(const tg_gen *g, int tones, tt_chord *c)
+{
+    if (!g->hold_mask || g->hold_root < 0)
+        return false;
+    c->root = (int8_t)pmod12(g->hold_root - g->root);
+    c->n = 0;
+    for (int i = 0; i < 12 && c->n < TT_CHORD_MAX; ++i)
+        if ((g->hold_mask >> ((g->hold_root + i) % 12)) & 1u)
+            c->tone[c->n++] = (int8_t)i;
+    if (c->n == 1) {                                 /* (one pitch class: its octave doubled as a fifth) */
+        c->tone[1] = 7;
+        c->n = 2;
+    }
+    if (tones > 0 && tones < c->n)
+        c->n = (uint8_t)tones;
+    return true;
+}
+
 void tg_chord_at(const tg_gen *g, int step, int tones, tt_chord *c)
 {
+    if (held_chord(g, tones, c))
+        return;
     /* a modulation decided at the period's start applies from its second chord on: later steps are
      * already in the new key (relative to the old tonic until it applies) */
     bool future = g->key_pending && step > g->chord_step;
@@ -1401,15 +1433,28 @@ static void melody_tick(tg_gen *g, beat_pos b, float x2, int velocity, int offse
         } else {
             /* density: downbeats always play, other beats mostly, off-beats as the density says;
              * syncopation moves weight from beats to off-beats; a hemiola plays its twos */
-            g->mel_rhythm.deja_vu = g->x.deja_vu;
+            /* the chaos knobs, around the composer's own values (0: exactly those) */
+            float cr = chaos_of(g, g->chaos_rhythm), cd = chaos_of(g, g->chaos_density);
+            float dens = g->melody_density, sync = g->syncopation, dv = g->x.deja_vu;
+            if (cd != 0.0f) {
+                dens *= exp2f(1.5f * cd);                    /* x0.35 .. x2.8 */
+                dens = dens < 0.02f ? 0.02f : dens > 1.0f ? 1.0f : dens;
+            }
+            if (cr != 0.0f) {
+                sync = sync + 0.6f * cr;                     /* on the beat .. off it */
+                sync = sync < 0.0f ? 0.0f : sync > 0.9f ? 0.9f : sync;
+                if (cr > 0.0f)
+                    dv *= 1.0f - cr;                         /* and the rhythm repeats less */
+            }
+            g->mel_rhythm.deja_vu = dv;
             tm_seq_set_length(&g->mel_rhythm, g->x.length);
             float r = tm_seq_next_value(&g->mel_rhythm, false, 0.0f);
-            float on = (0.25f + 0.75f * g->melody_density) * (1.0f - 0.6f * g->syncopation);
-            float off = g->melody_density * (1.0f + g->syncopation);
+            float on = (0.25f + 0.75f * dens) * (1.0f - 0.6f * sync);
+            float off = dens * (1.0f + sync);
             int strong;
             float p_play = b.downbeat ? 1.0f : b.on_beat ? on : off;
             if (hemiola_zone(g, b, &strong))
-                p_play = strong ? 1.0f : 0.15f * g->melody_density;
+                p_play = strong ? 1.0f : 0.15f * dens;
             if (r >= p_play) {
                 if (g->motif_recording && t < TG_MOTIF_MAX) g->motif_play[t] = false;
                 return;
@@ -1418,8 +1463,24 @@ static void melody_tick(tg_gen *g, beat_pos b, float x2, int velocity, int offse
             /* interval from X2: mostly steps, sometimes a leap; a style may lean downward or upward */
             int dir = x + g->direction * 0.6f < 0.0f ? -1 : 1;
             const float *pr = g->mel_profile;
-            k = m < pr[0] ? 0 : m < pr[1] ? 1 : m < pr[2] ? 2 : m < pr[3] ? 3 : g->max_leap;
-            bool oct = !homing && g->octave > 0.0f && m >= pr[0] && hrand(g) < g->octave;
+            float cp = chaos_of(g, g->chaos_pitch), prc[4];
+            int max_leap = g->max_leap;
+            float octave = g->octave;
+            if (cp != 0.0f) {
+                /* PITCH chaos: the thresholds between repeat, step, third, fourth and leap move: up, more
+                 * steps and repeats; down, more leaps, wider (and octaves) */
+                for (int i = 0; i < 4; ++i)
+                    prc[i] = cp > 0.0f ? pr[i] * (1.0f - 0.6f * cp) : pr[i] + (1.0f - pr[i]) * (-0.7f * cp);
+                pr = prc;
+                if (cp > 0.0f) {
+                    max_leap += (int)lrintf(3.0f * cp);
+                    octave = octave + 0.15f * cp;
+                } else {
+                    octave *= 1.0f + cp;
+                }
+            }
+            k = m < pr[0] ? 0 : m < pr[1] ? 1 : m < pr[2] ? 2 : m < pr[3] ? 3 : max_leap;
+            bool oct = !homing && octave > 0.0f && m >= pr[0] && hrand(g) < octave;
             if (homing) {
                 /* the last bar steers toward the tonic, by steps */
                 dir = home > g->mel_note ? 1 : home < g->mel_note ? -1 : (x < 0.0f ? -1 : 1);
@@ -1490,8 +1551,14 @@ static void melody_tick(tg_gen *g, beat_pos b, float x2, int velocity, int offse
                 }
             }
         }
-        if (g->mel_min_ticks > 1 && b.q + g->mel_min_ticks > g->mel_hold_until)
-            g->mel_hold_until = b.q + g->mel_min_ticks;     /* long notes */
+        int min_ticks = g->mel_min_ticks;
+        float crh = chaos_of(g, g->chaos_rhythm);
+        if (crh < 0.0f)
+            min_ticks += (int)lrintf(-crh * (float)g->division);   /* RHYTHM down: longer, steadier notes */
+        else if (crh > 0.0f && min_ticks > 1)
+            min_ticks = 1 + (int)lrintf((float)(min_ticks - 1) * (1.0f - crh));   /* up: the short ones too */
+        if (min_ticks > 1 && b.q + min_ticks > g->mel_hold_until)
+            g->mel_hold_until = b.q + min_ticks;            /* long notes */
         if (g->staccato > 0.0f && g->orn_n == 0 && g->mel_pending < 0) {
             int len = (int)lrintf((float)g->division * (1.0f - g->staccato));
             g->mel_off_at = b.q + (len < 1 ? 1 : len);
@@ -2316,6 +2383,57 @@ static void seq_tick(tg_gen *g, int offset);
 static void key_apply(tg_gen *g);
 static void form_step(tg_gen *g, int offset);
 
+/* ---- the player's hands ----------------------------------------------------------------------------- */
+
+void tg_set_chaos(tg_gen *g, float rhythm, float pitch, float density, float macro)
+{
+    g->chaos_rhythm = clamp01(rhythm);
+    g->chaos_pitch = clamp01(pitch);
+    g->chaos_density = clamp01(density);
+    g->chaos_macro = clamp01(macro);
+}
+
+/* the whole music moves to another tonic: the key, home and the evolution's home with it */
+static void move_root(tg_gen *g, int pc)
+{
+    int shift = pmod12(pc - g->root);
+    g->root = pmod12(pc);
+    g->home_root = pmod12(g->home_root + shift);
+    g->base_root = pmod12(g->base_root + shift);
+    g->next_root = pmod12(g->next_root + shift);
+    g->loaded_root = -1;
+}
+
+void tg_set_root(tg_gen *g, int pc)
+{
+    pc = pmod12(pc);
+    if (g->ticks == 0) {
+        move_root(g, pc);
+        g->root_req = -1;
+    } else {
+        g->root_req = pc;
+    }
+}
+
+static void root_apply(tg_gen *g)
+{
+    if (g->root_req < 0)
+        return;
+    move_root(g, g->root_req);
+    g->root_req = -1;
+}
+
+void tg_hold_chord(tg_gen *g, uint16_t mask, int root_pc)
+{
+    mask &= 0xFFFu;
+    if (mask == g->hold_mask && (!mask || pmod12(root_pc) == g->hold_root))
+        return;
+    g->hold_mask = mask;
+    g->hold_root = (int8_t)(mask ? pmod12(root_pc) : -1);
+    g->loaded_step = -1;                             /* the harmony now, voice-led at the next tick */
+    g->chord_fresh = true;
+}
+
 void tg_process(tg_gen *g, int size, tg_event_fn fn, void *ctx)
 {
     if (size > TG_MAX_BLOCK)
@@ -2963,6 +3081,7 @@ static void process_block(tg_gen *g, int size, tg_event_fn fn, void *ctx)
             if (g->chord_ticks > 0 && g->ticks > 1 && (g->ticks - 1) % g->chord_ticks == 0) {
                 g->chord_step++;
                 g->chord_fresh = true;
+                root_apply(g);
                 key_apply(g);
                 if (g->style && g->plan_len > 0 && g->chord_step % g->plan_len == 0)
                     plan_period(g);                  /* a new period: plan its harmony */

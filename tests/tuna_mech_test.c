@@ -995,6 +995,147 @@ static void test_orchestration(void)
         CHECK(strlen(tg_family_name(f)) <= 8, "family name %s too long", tg_family_name(f));
 }
 
+
+/* ---- the player's hands: chaos knobs, a root from a key, a chord held ------------------------------------ */
+typedef struct { long notes, on_beat, leaps_sum, intervals, off_key; uint64_t h; } hand_stat;
+static hand_stat hs;
+static int hs_prev = -1;
+static void hands_cb(void *ctx, const tg_event *e)
+{
+    (void)ctx;
+    if (e->type != TG_EV_NOTE)
+        return;
+    uint8_t b[6] = {(uint8_t)g.ticks, (uint8_t)(g.ticks >> 8), e->part, e->note, e->velocity, e->on};
+    for (int i = 0; i < 6; ++i)
+        hs.h = (hs.h ^ b[i]) * 1099511628211ull;
+    if (!e->on || e->part != TG_PART_MELODY)
+        return;
+    hs.notes++;
+    tg_meter_pos m;
+    tg_meter_at(&g, g.ticks - 1, &m);
+    hs.on_beat += m.sub == 0;
+    if (hs_prev >= 0) {
+        hs.leaps_sum += abs(e->note - hs_prev);
+        hs.intervals++;
+    }
+    hs_prev = e->note;
+    uint16_t allowed = tt_scale_mask(g.period_scale >= 0 ? g.period_scale : g.scale) | tt_scale_mask(g.scale) |
+                       g.chord_scale | g.mel_scale;
+    for (int k = 0; k < g.chord.n; ++k)
+        allowed |= (uint16_t)(1u << ((g.chord.root + g.chord.tone[k]) % 12));
+    hs.off_key += !((allowed >> pc_of(e->note, g.root)) & 1) && g.mel_pending < 0;
+}
+
+static hand_stat hands_run(int style, uint32_t seed, float r, float p, float d, float macro, float secs)
+{
+    tg_init(&g, seed, SR);
+    tg_apply_style(&g, style);
+    tg_set_chaos(&g, r, p, d, macro);
+    tg_reseed(&g, seed);
+    memset(&hs, 0, sizeof hs);
+    hs.h = 1469598103934665603ull;
+    hs_prev = -1;
+    long n = (long)(secs * SR) / BLOCK;
+    for (long i = 0; i < n; ++i)
+        tg_process(&g, BLOCK, hands_cb, NULL);
+    return hs;
+}
+
+static void test_hands(void)
+{
+    static const int styles[] = {TG_STYLE_MOZART, TG_STYLE_DEBUSSY, TG_STYLE_BACH, TG_STYLE_JOHN_WILLIAMS};
+    for (unsigned si = 0; si < sizeof styles / sizeof styles[0]; ++si) {
+        int st = styles[si];
+        const char *nm = tg_style_get(st)->name;
+        hand_stat base = hands_run(st, 7, 0.5f, 0.5f, 0.5f, 0.5f, 120.0f);
+        tg_init(&g, 7, SR);
+        tg_apply_style(&g, st);
+        tg_reseed(&g, 7);
+        memset(&hs, 0, sizeof hs);
+        hs.h = 1469598103934665603ull;
+        hs_prev = -1;
+        for (long i = 0; i < (long)(120.0f * SR) / BLOCK; ++i)
+            tg_process(&g, BLOCK, hands_cb, NULL);
+        CHECK(hs.h == base.h, "%s: chaos 0.5 is not the composer exactly", nm);
+        /* density */
+        hand_stat d0 = hands_run(st, 7, 0.5f, 0.5f, 0.0f, 0.5f, 120.0f);
+        hand_stat d1 = hands_run(st, 7, 0.5f, 0.5f, 1.0f, 0.5f, 120.0f);
+        CHECK(d0.notes < base.notes && base.notes < d1.notes, "%s: density %ld < %ld < %ld", nm, d0.notes, base.notes,
+              d1.notes);
+        /* pitch: the mean interval grows */
+        hand_stat p0 = hands_run(st, 7, 0.5f, 0.0f, 0.5f, 0.5f, 120.0f);
+        hand_stat p1 = hands_run(st, 7, 0.5f, 1.0f, 0.5f, 0.5f, 120.0f);
+        float m0 = (float)p0.leaps_sum / (float)(p0.intervals ? p0.intervals : 1);
+        float mb = (float)base.leaps_sum / (float)(base.intervals ? base.intervals : 1);
+        float m1 = (float)p1.leaps_sum / (float)(p1.intervals ? p1.intervals : 1);
+        CHECK(m0 < mb && mb < m1, "%s: pitch: mean interval %.2f < %.2f < %.2f", nm, m0, mb, m1);
+        /* rhythm: the share on the beat falls */
+        hand_stat r0 = hands_run(st, 7, 0.0f, 0.5f, 0.5f, 0.5f, 120.0f);
+        hand_stat r1 = hands_run(st, 7, 1.0f, 0.5f, 0.5f, 0.5f, 120.0f);
+        CHECK(r0.notes < base.notes, "%s: rhythm down: longer notes (%ld, the composer %ld)", nm, r0.notes, base.notes);
+        CHECK(r1.h != base.h && r1.notes > r0.notes, "%s: rhythm up: another rhythm (%ld notes)", nm, r1.notes);
+        /* the macro moves all three alike */
+        hand_stat all = hands_run(st, 7, 1.0f, 1.0f, 1.0f, 0.5f, 60.0f);
+        hand_stat mac = hands_run(st, 7, 0.5f, 0.5f, 0.5f, 1.0f, 60.0f);
+        CHECK(all.h == mac.h, "%s: the macro is not the three knobs together", nm);
+        /* in key at every extreme */
+        long off = d0.off_key + d1.off_key + p0.off_key + p1.off_key + r0.off_key + r1.off_key + all.off_key;
+        CHECK(off == 0, "%s: %ld melody notes off key at the extremes", nm, off);
+        hand_stat lo = hands_run(st, 3, 0.0f, 0.0f, 0.0f, 0.0f, 60.0f);
+        CHECK(lo.off_key == 0 && lo.notes > 0, "%s: all chaos off: %ld notes, %ld off key", nm, lo.notes, lo.off_key);
+    }
+
+    /* a root from a key: stopped, at once; playing, at the next chord change, all of it moved */
+    tg_init(&g, 11, SR);
+    tg_apply_style(&g, TG_STYLE_MOZART);
+    tg_reseed(&g, 11);
+    int r0 = g.root;
+    tg_set_root(&g, r0 + 2);
+    CHECK(g.root == (r0 + 2) % 12 && g.home_root == (r0 + 2) % 12, "root when stopped: %d", g.root);
+    nlg = 0;
+    run_seconds(10.0f);
+    int before = g.root;
+    tg_set_root(&g, before + 5);
+    CHECK(g.root == before, "root moved before the chord change");
+    long asked = g.ticks;
+    while (g.root == before && g.ticks < asked + 200)
+        tg_process(&g, BLOCK, cb, NULL);
+    CHECK(g.root == (before + 5) % 12 && (g.ticks - 1) % g.chord_ticks == 0,
+          "root applied at tick %ld (chord every %d)", g.ticks - 1, g.chord_ticks);
+    CHECK(g.home_root == (before + 5) % 12 && g.root_req == -1, "home moved with it");
+    nlg = 0;
+    run_seconds(30.0f);
+    long offk = 0, mel = 0;
+    for (long i = 0; i < nlg; ++i)
+        if (lg[i].e.type == TG_EV_NOTE && lg[i].e.on && lg[i].e.part == TG_PART_BASS) {
+            mel++;
+            offk += !((tt_scale_mask(g.scale) >> pc_of(lg[i].e.note, g.root)) & 1);
+        }
+    CHECK(mel > 0 && offk * 10 <= mel, "after the root change: %ld of %ld bass notes outside the new key", offk, mel);
+
+    /* a chord held on the keys: the pad plays it, until released */
+    tg_init(&g, 5, SR);
+    tg_apply_style(&g, TG_STYLE_SATIE);
+    tg_reseed(&g, 5);
+    run_seconds(8.0f);
+    uint16_t held = (uint16_t)(1u << 1 | 1u << 5 | 1u << 8);           /* C# F G#: D-flat major */
+    tg_hold_chord(&g, held, 1);
+    tg_process(&g, BLOCK, cb, NULL);
+    nlg = 0;
+    run_seconds(12.0f);
+    long pad = 0, padoff = 0;
+    for (long i = 0; i < nlg; ++i)
+        if (lg[i].e.type == TG_EV_NOTE && lg[i].e.on && lg[i].e.part == TG_PART_PAD) {
+            pad++;
+            padoff += !((held >> (lg[i].e.note % 12)) & 1);
+        }
+    CHECK(pad > 0 && padoff == 0, "held chord: %ld pad notes, %ld not in it", pad, padoff);
+    CHECK(g.chord.root == pc_of(1, g.root), "held chord root %d", g.chord.root);
+    tg_hold_chord(&g, 0, 0);
+    run_seconds(20.0f);
+    CHECK(g.hold_root == -1, "released");
+}
+
 int main(void)
 {
     test_meters();
@@ -1005,6 +1146,7 @@ int main(void)
     test_bass_pad_modes();
     test_form();
     test_orchestration();
+    test_hands();
     printf("tuna_mech: %d checks, %d failed\n", checks, fails);
     return fails ? 1 : 0;
 }

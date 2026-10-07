@@ -432,6 +432,23 @@ async function switchOn() {
   go.textContent = "Starting…";
   try {
     const ac = new AudioContext({ sampleRate: 44100, latencyHint: "interactive" });
+    // iOS: sound starts only from the tap itself (not after the awaits below), and Web Audio stays silent
+    // with the ring/silent switch on unless the page asks for media playback
+    try { if (navigator.audioSession) navigator.audioSession.type = "playback"; } catch { /* older Safari */ }
+    ac.resume().catch(() => {});
+    if (!navigator.audioSession && /iP(hone|ad|od)/.test(navigator.userAgent)) {
+      const n = 800, w = new DataView(new ArrayBuffer(44 + n));   // 0.1 s of 8-bit silence at 8 kHz
+      [..."RIFF"].forEach((c, i) => w.setUint8(i, c.charCodeAt(0)));
+      w.setUint32(4, 36 + n, true);
+      [..."WAVEfmt "].forEach((c, i) => w.setUint8(8 + i, c.charCodeAt(0)));
+      [16, 0x10001, 8000, 8000, 0x80001].forEach((v, i) => w.setUint32(16 + 4 * i, v, true));
+      [..."data"].forEach((c, i) => w.setUint8(36 + i, c.charCodeAt(0)));
+      w.setUint32(40, n, true);
+      for (let i = 0; i < n; i++) w.setUint8(44 + i, 128);
+      const a = new Audio("data:audio/wav;base64," + btoa(String.fromCharCode(...new Uint8Array(w.buffer))));
+      a.loop = true;
+      a.play().catch(() => {});                                   // a silent loop puts the page in playback mode
+    }
     const [wasm] = await Promise.all([
       fetch("felucca.wasm").then((r) => { if (!r.ok) throw new Error(`felucca.wasm: ${r.status}`); return r.arrayBuffer(); }),
       ac.audioWorklet.addModule("worklet.js")]);

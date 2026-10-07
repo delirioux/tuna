@@ -52,7 +52,15 @@ typedef struct {
     uint8_t reso_amount, reso_decay, reso_bright, reso_mode;   /* 0..100, TR_TUNE_* */
     uint32_t reso_sig;                    /* the harmony it is tuned to */
     tp_store store;
-    long blocks;                          /* blocks rendered while playing */
+    long blocks;
+    /* what the player set carries over to the next piece; unset (-1, 0, false): each piece's own */
+    float keep_bpm;                       /* the tempo turned on SELECT */
+    int8_t keep_root;                     /* the key's tonic tapped or turned */
+    int8_t keep_perc;                     /* TG_PERC_* */
+    bool keep_evolve;                     /* evolution touched: on, length, depth, modulation */
+    bool kv_on, kv_mod;
+    uint8_t kv_periods;
+    float kv_depth;                          /* blocks rendered while playing */
 } tuna_app;
 
 void ta_init(tuna_app *a, float sample_rate, uint32_t seed);
@@ -73,6 +81,11 @@ void ta_play(tuna_app *a, bool on);
 void ta_seed_step(tuna_app *a, int delta);
 void ta_set_deja(tuna_app *a, int mode);
 void ta_set_chaos(tuna_app *a, float rhythm, float pitch, float density, float macro);
+/* the player's own settings: applied now and kept for the next pieces */
+void ta_set_tempo(tuna_app *a, float bpm);
+void ta_set_root(tuna_app *a, int pc);
+void ta_set_percussion(tuna_app *a, int mode);
+void ta_set_evolve(tuna_app *a, bool on, int periods, float depth, bool modulate);
 /* form settings (ta_edit): ta_edit_get gives what will play (asked for, or playing now) */
 void ta_edit_set(tuna_app *a, const ta_edit *e);
 void ta_edit_get(const tuna_app *a, ta_edit *e);

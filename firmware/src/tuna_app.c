@@ -106,7 +106,21 @@ static float deja_value(const tuna_app *a)
     return a->g.style ? a->g.style->motif : 0.0f;
 }
 
-/* a fresh generator for the item; the player's chaos knobs and memory stay as they were */
+/* the player's own settings over the piece's: tempo, key, percussion, evolution */
+static void keep_apply(tuna_app *a)
+{
+    tg_gen *g = &a->g;
+    if (a->keep_bpm > 0.0f)
+        g->bpm = a->keep_bpm;
+    if (a->keep_root >= 0)
+        tg_set_root(g, a->keep_root);           /* (before the first tick: at once) */
+    if (a->keep_perc >= 0)
+        tg_set_percussion(g, a->keep_perc);
+    if (a->keep_evolve)
+        tg_evolve(g, a->kv_on, a->kv_periods, a->kv_depth, a->kv_mod);
+}
+
+/* a fresh generator for the item; the player's chaos knobs, memory and own settings stay as they were */
 static void load_item(tuna_app *a, int item)
 {
     tg_gen *g = &a->g;
@@ -121,6 +135,7 @@ static void load_item(tuna_app *a, int item)
     tg_set_chaos(g, c[0], c[1], c[2], c[3]);
     g->x.deja_vu = deja_value(a);
     tg_reseed(g, a->seed);
+    keep_apply(a);
     a->item = item;
     a->req_on = false;
     a->req.meter = a->req.mel = a->req.bass = a->req.pad = a->req.harm = a->req.scale = -1;
@@ -134,6 +149,7 @@ void ta_init(tuna_app *a, float sample_rate, uint32_t seed)
     a->pending = -1;
     a->req.meter = a->req.mel = a->req.bass = a->req.pad = a->req.harm = a->req.scale = -1;
     a->deja = TA_DV_STYLE;
+    a->keep_root = a->keep_perc = -1;
     for (int t = 0; t < TP_TRACKS; ++t)
         a->level[t] = 80;
     a->reverb = 30;
@@ -168,6 +184,34 @@ void ta_select(tuna_app *a, int item)
     }
     a->pending = -1;
     load_item(a, item);
+}
+
+void ta_set_tempo(tuna_app *a, float bpm)
+{
+    a->g.bpm = a->keep_bpm = bpm;
+}
+
+void ta_set_root(tuna_app *a, int pc)
+{
+    pc = ((pc % 12) + 12) % 12;
+    a->keep_root = (int8_t)pc;
+    tg_set_root(&a->g, pc);
+}
+
+void ta_set_percussion(tuna_app *a, int mode)
+{
+    a->keep_perc = (int8_t)mode;
+    tg_set_percussion(&a->g, mode);
+}
+
+void ta_set_evolve(tuna_app *a, bool on, int periods, float depth, bool modulate)
+{
+    a->keep_evolve = true;
+    a->kv_on = on;
+    a->kv_periods = (uint8_t)periods;
+    a->kv_depth = depth;
+    a->kv_mod = modulate;
+    tg_evolve(&a->g, on, periods, depth, modulate);
 }
 
 void ta_play(tuna_app *a, bool on)

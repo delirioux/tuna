@@ -64,6 +64,9 @@ touched only where Tuna hooks in (`felucca.c`, `main.c`, `audio.c`, `tools/build
   audio. Tuna says `STOP TO SAVE`.
 - **Deterministic.** The same seed plays the same music; a slot loads exactly the music that was saved. The
   chaos knobs at 0 are the composer byte for byte. The tests depend on this.
+- **The player's settings carry over.** A new composer brings its own key, tempo, scale, meter and sounds,
+  except what the player set: the tempo (SELECT), the root (a key tapped, or KEY's knob), percussion, and
+  evolution stay for the next pieces. Chaos, memory, mix, reverb, resonator and MIDI always stay.
 - **The resonator in fixed point** at half rate: about 0.12× of Felucca's reference mix.
 
 ## Building and testing
@@ -83,7 +86,7 @@ node web/emu/tuna_emu_test.mjs build/tuna_emu/tuna.wasm
 WASI sysroot comes with the npm package `@yowasp/clang` (`gen/llvm-resources.tar`).
 
 Last full run, 7 Oct 2026: theory 230, mechanisms 1499, sequencer 1096, presets 1127, resonator 18, MIDI 102,
-maths 6, screen 134 checks, the browser test, and every composer over 10 seeds of 4 minutes: all pass.
+maths 6, screen 141 checks, the browser test, and every composer over 10 seeds of 4 minutes: all pass.
 
 ## Open risks
 

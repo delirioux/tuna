@@ -296,6 +296,43 @@ static void test_screens(void)
 }
 
 /* ---- the controls -------------------------------------------------------------------------------------- */
+/* the player's tempo, key, percussion and evolution carry over to the next piece; untouched, each piece's own */
+static void test_keep(void)
+{
+    ta_play(&app, false);
+    app.keep_bpm = 0.0f;                          /* (the tests before turned knobs) */
+    app.keep_root = app.keep_perc = -1;
+    app.keep_evolve = false;
+    ta_select(&app, ta_lib_first(2));
+    float own = app.g.bpm;
+    int own_root = app.g.root;
+    ta_select(&app, ta_lib_first(2) + 1);
+    ta_select(&app, ta_lib_first(2));
+    CHECK(app.g.bpm == own && app.g.root == own_root, "nothing set: each piece its own");
+    tu_knob(&ui, TU_K_SELECT, 7);
+    float bpm = app.g.bpm;
+    ta_set_root(&app, 9);
+    ta_set_percussion(&app, TG_PERC_KIT);
+    ta_set_evolve(&app, true, 6, 0.8f, true);
+    ta_select(&app, ta_lib_first(2));
+    CHECK(app.g.bpm == bpm && bpm != own, "tempo kept (%.0f, the piece's own %.0f)", app.g.bpm, own);
+    CHECK(app.g.root == 9, "root kept (%d)", app.g.root);
+    CHECK(app.g.perc_mode == TG_PERC_KIT, "percussion kept (%d)", app.g.perc_mode);
+    CHECK(app.g.evolve && app.g.evolve_periods == 6 && app.g.evolve_modulate && app.g.evolve_depth > 0.79f,
+          "evolution kept");
+    ta_select(&app, ta_lib_first(5));
+    CHECK(app.g.bpm == bpm && app.g.root == 9 && app.g.perc_mode == TG_PERC_KIT && app.g.evolve, "and in another era");
+    ta_play(&app, true);
+    run_ms(500);
+    CHECK(app.g.root == 9, "playing in the kept key (%d)", app.g.root);
+    ta_play(&app, false);
+    /* back to the pieces' own for the tests after */
+    app.keep_bpm = 0.0f;
+    app.keep_root = app.keep_perc = -1;
+    app.keep_evolve = false;
+    ta_select(&app, 0);
+}
+
 static void test_controls(void)
 {
     ta_play(&app, false);
@@ -476,6 +513,7 @@ int main(int argc, char **argv)
     tu_init(&ui, &app);
     test_screens();
     test_controls();
+    test_keep();
     test_every_composer();
     for (int i = 0; i < ta_lib_count(); ++i) {
         if (ta_lib_style(i) == TG_STYLE_DEBUSSY) anim(i, "debussy");

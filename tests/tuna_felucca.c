@@ -180,7 +180,7 @@ static void part_settings(uint32_t k)
     const piece_t *p = cur_piece;
     if (k != 1u)
         trk[k].p[P_VOICE] = V_POLY;               /* the melody keeps its preset's mode */
-    trk[k].p[P_LEVEL] = p->level[k];
+    trk[k].p[P_LEVEL] = p->level[k] ? p->level[k] : 100;
     if (trk[k].p[P_REV] < p->rev)
         trk[k].p[P_REV] = p->rev;
     if (k == 2u && (gen.pad_mode == TG_PAD_ALBERTI || gen.pad_mode == TG_PAD_BROKEN || gen.pad_mode == TG_PAD_ARPEGGIO ||
@@ -312,7 +312,7 @@ static void setup(const piece_t *p)
         for (uint32_t k = 0; k < 3u; ++k)
             apply_family(k, gen.style->orch[0][k], true);
     host_drums(&trk[3]);
-    trk[3].p[P_LEVEL] = p->level[3];
+    trk[3].p[P_LEVEL] = p->level[3] ? p->level[3] : 96;
     tune_timpani(&trk[3], gen.root);
     for (uint32_t t = 0; t < 4u; ++t)
         snapshot_base(t);
@@ -507,8 +507,28 @@ int main(int argc, char **argv)
     printf("%-13s %6s %5s %6s %6s %7s %7s %8s %6s\n", "piece", "events", "peak", "voices", "steals", "mix/ref",
            "worst", "tuna ns", "clips");
     int fails = 0;
-    for (size_t i = 0; i < sizeof pieces / sizeof pieces[0]; ++i) {
-        const piece_t *p = &pieces[i];
+    /* STYLES=a-b: each composer in the range as a piece of its own (its instruments, seed 1) */
+    static piece_t gen_pieces[TG_STYLE_COUNT];
+    static char gen_names[TG_STYLE_COUNT][24];
+    const piece_t *list = pieces;
+    size_t nlist = sizeof pieces / sizeof pieces[0];
+    if (getenv("STYLES")) {
+        int a = 0, b = TG_STYLE_COUNT - 1;
+        if (sscanf(getenv("STYLES"), "%d-%d", &a, &b) == 1) b = a;
+        nlist = 0;
+        for (int i = a; i <= b && i < TG_STYLE_COUNT; ++i) {
+            const char *n = tg_style_get(i)->name;
+            int k = 0;
+            for (; n[k] && k < 23; ++k) gen_names[i][k] = (char)(n[k] >= 'A' && n[k] <= 'Z' ? n[k] + 32 : n[k] == ' ' ? '-' : n[k]);
+            gen_names[i][k] = 0;
+            piece_t q = {.name = gen_names[i], .style = i, .seed = getenv("SEED") ? (uint32_t)atoi(getenv("SEED")) : 1,
+                         .s = {SOFT_PAD, PIANO, STRINGS}, .rev = 36};
+            gen_pieces[nlist++] = q;
+        }
+        list = gen_pieces;
+    }
+    for (size_t i = 0; i < nlist; ++i) {
+        const piece_t *p = &list[i];
         if (only && strcmp(only, p->name))
             continue;
         stats_t st;
@@ -519,6 +539,8 @@ int main(int argc, char **argv)
             printf("   evolution: %ld periods away from home", gen.periods_away);
         if (p->demo == 2)
             printf("   freeze: %u loops, %ld sound-lock events", gen.pat_loop, n_params);
+        if (n_programs)
+            printf("   %ld instrument changes", n_programs);
         printf("\n");
         fails += st.busy_max > NVOICE || st.peak == 0;
     }

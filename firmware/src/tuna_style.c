@@ -330,6 +330,114 @@ static const tg_style styles[TG_STYLE_COUNT] = {
         .w_major = {10, 5, 3, 7, 6, 5, 7, 9, 4, 5, 3, 3, 3, 3, 4, 2, 0, 2, 0, 0, 0, 2},
         .w_minor = {10, 6, 5, 7, 3, 5, 7, 9, 5, 5, 4, 3, 4, 4, 2, 2, 0, 0, 3, 0, 0, 0},
     },
+
+    /* ---- 1: medieval and renaissance ------------------------------------------------------------------
+     * modal vocabulary: i vi iii iv ii v vii V II(cad) I 5 isus4 IV bVII bVI bIII isus2 Vsus4 II I+ bVII+ V5 IV5 iv */
+    [TG_STYLE_HILDEGARD] = {
+        /* a single soaring line over a drone; no meter, Pythagorean fifths */
+        .name = "HILDEGARD", .root = 2, .scale = TS_DORIAN,                          /* D Dorian */
+        .bpm = 66, .division = 2, .beats_per_bar = 4, .chord_beats = 4, .period_bars = 4,
+        .melody_density = 0.55f, .melody_base = 57, .melody_range = 22,
+        .profile = {0.08f, 0.62f, 0.80f, 0.90f}, .max_leap = 4,                        /* a fifth up, steps down */
+        .arrival_bars = 1,
+        .bass_mode = TG_BASS_DRONE, .pad_mode = TG_PAD_BLOCK, .pad_base = 50, .pad_tones = 3,
+        .fifth_bias = 1.0f, .repeat = 0.3f,
+        .motif = 0.3f, .motif_beats = 4, .motif_use = 0.4f, .var_invert = 0.2f, .var_alter = 0.4f,
+        .swell = 0.3f, .rubato = 0.2f,
+        .perc_mode = TG_PERC_OFF,
+        .vocab = TG_VOC_MODAL, .harmony = TG_HARM_DRONE, .cycle = {10}, .cycle_len = 1,
+        .mel_mode = TG_MEL_CHANT, .tuning = TT_TUNE_PYTHAGOREAN,
+        .orch = {{TI_DRONE, TI_VOICE, TI_DRONE}}, .orch_n = 1,
+    },
+    [TG_STYLE_TALLIS] = {
+        /* Tudor polyphony: Dorian, false relations between the modal and the raised third, Amen endings */
+        .name = "TALLIS", .root = 7, .scale = TS_DORIAN,                             /* G Dorian */
+        .bpm = 58, .division = 2, .beats_per_bar = 4, .chord_beats = 2, .period_bars = 4,
+        .melody_density = 0.35f, .melody_base = 62, .melody_range = 14,
+        .profile = {0.05f, 0.76f, 0.92f, 0.98f}, .max_leap = 4,
+        .suspension = 0.5f, .arrival_bars = 2,
+        .bass_mode = TG_BASS_ROOT, .pad_mode = TG_PAD_COUNTER, .pad_base = 50, .pad_tones = 3,
+        .fifth_bias = 1.5f, .repeat = 0.3f, .plagal = true,
+        .motif = 0.5f, .motif_beats = 4, .motif_use = 0.6f, .var_invert = 0.2f, .var_alter = 0.3f,
+        .swell = 0.4f, .rubato = 0.15f,
+        .perc_mode = TG_PERC_OFF,
+        .w_minor = {10, 0, 6, 7, 3, 5, 6, 8, 0, 4, 0, 2, 0, 3, 3, 3, 0, 3, 0, 0, 0, 0, 0, 0},
+        .w_major = {10, 6, 3, 7, 5, 6, 0, 0, 0, 0, 0, 2, 0, 3, 0, 0, 0, 3, 0, 0, 0, 0, 0, 0},
+        .vocab = TG_VOC_MODAL, .tuning = TT_TUNE_MEANTONE,
+        .orch = {{TI_CHOIR, TI_CHOIR, TI_CHOIR}}, .orch_n = 1,
+    },
+    [TG_STYLE_PALESTRINA] = {
+        /* the model of smooth counterpoint: steps, leaps recovered, prepared suspensions, Ionian clarity */
+        .name = "PALESTRINA", .root = 5, .scale = TS_IONIAN,                         /* F */
+        .bpm = 64, .division = 2, .beats_per_bar = 4, .chord_beats = 2, .period_bars = 4,
+        .melody_density = 0.4f, .melody_base = 60, .melody_range = 12,
+        .profile = {0.03f, 0.84f, 0.95f, 0.99f}, .max_leap = 4,
+        .suspension = 0.55f, .arrival_bars = 2,
+        .bass_mode = TG_BASS_ROOT, .pad_mode = TG_PAD_COUNTER, .pad_base = 50, .pad_tones = 3,
+        .fifth_bias = 2.0f, .repeat = 0.35f,
+        .motif = 0.5f, .motif_beats = 4, .motif_use = 0.7f, .var_invert = 0.1f, .var_alter = 0.2f,
+        .swell = 0.3f, .rubato = 0.1f,
+        .perc_mode = TG_PERC_OFF,
+        .w_major = {10, 6, 3, 7, 6, 8, 0, 0, 0, 0, 0, 2, 0, 2, 0, 0, 0, 4, 2, 0, 0, 0, 0, 0},
+        .w_minor = {10, 5, 5, 6, 0, 4, 5, 8, 0, 3, 0, 2, 0, 0, 0, 0, 0, 3, 0, 0, 0, 0, 0, 0},
+        .vocab = TG_VOC_MODAL, .tuning = TT_TUNE_MEANTONE,
+        .orch = {{TI_CHOIR, TI_CHOIR, TI_CHOIR}}, .orch_n = 1,
+    },
+    [TG_STYLE_ALLEGRI] = {
+        /* Miserere: a harmonised verse with a high ornamented soprano, then a chanted verse on one chord */
+        .name = "ALLEGRI", .root = 7, .scale = TS_AEOLIAN,                           /* G minor */
+        .bpm = 54, .division = 3, .beats_per_bar = 4, .chord_beats = 4, .period_bars = 4,
+        .melody_density = 0.3f, .melody_base = 67, .melody_range = 17,                 /* up to the high C */
+        .profile = {0.06f, 0.70f, 0.88f, 0.96f}, .max_leap = 5,
+        .suspension = 0.3f, .arrival_bars = 1,
+        .bass_mode = TG_BASS_ROOT, .pad_mode = TG_PAD_BLOCK, .pad_base = 55, .pad_tones = 3,
+        .fifth_bias = 1.0f, .repeat = 0.5f,
+        .motif = 0.6f, .motif_beats = 4, .motif_use = 0.6f, .var_invert = 0.0f, .var_alter = 0.3f,
+        .swell = 0.3f, .rubato = 0.3f,
+        .perc_mode = TG_PERC_OFF,
+        .vocab = TG_VOC_MODAL, .harmony = TG_HARM_CYCLE, .cycle = {0, 3, 15, 7}, .cycle_len = 4,
+        .turn = 0.35f, .tuning = TT_TUNE_MEANTONE,
+        .alt = {.density = 1.4f, .mel_mode = TG_MEL_CHANT + 1, .harmony = TG_HARM_DRONE + 1, .bass_mode = TG_BASS_DRONE + 1},
+        .alt_every = 1,
+        .orch = {{TI_CHOIR, TI_VOICE, TI_CHOIR}, {TI_CHOIR, TI_CHOIR, TI_CHOIR}}, .orch_n = 2, .orch_mode = TG_ORCH_CONTRAST,
+    },
+    [TG_STYLE_MONTEVERDI] = {
+        /* seconda prattica: an expressive voice over basso continuo, repeated-note concitato in the ritornelli */
+        .name = "MONTEVERDI", .root = 2, .scale = TS_AEOLIAN,                        /* D minor */
+        .bpm = 72, .division = 4, .beats_per_bar = 4, .chord_beats = 4, .period_bars = 4,
+        .melody_density = 0.35f, .melody_base = 62, .melody_range = 15,
+        .profile = {0.25f, 0.70f, 0.88f, 0.96f}, .max_leap = 5,                        /* repeated notes, leaps of grief */
+        .appoggiatura = 0.3f, .suspension = 0.3f, .arrival_bars = 1,
+        .bass_mode = TG_BASS_ROOT, .pad_mode = TG_PAD_BLOCK, .pad_base = 52, .pad_tones = 3,
+        .fifth_bias = 1.5f, .repeat = 0.3f,
+        .motif = 0.4f, .motif_beats = 4, .motif_use = 0.5f, .var_invert = 0.1f, .var_alter = 0.4f,
+        .swell = 0.4f, .rubato = 0.3f,
+        .perc_mode = TG_PERC_OFF,
+        .w_minor = {10, 5, 6, 6, 0, 3, 6, 9, 0, 3, 0, 2, 2, 0, 0, 0, 0, 4, 2, 0, 0, 0, 0, 0},
+        .w_major = {10, 6, 3, 7, 5, 8, 0, 0, 0, 0, 0, 2, 0, 3, 0, 0, 0, 4, 3, 0, 0, 0, 0, 0},
+        .vocab = TG_VOC_MODAL, .tuning = TT_TUNE_MEANTONE,
+        .alt = {.bpm = 1.25f, .density = 1.8f, .pad_mode = TG_PAD_REPEAT + 1}, .alt_every = 2,
+        .orch = {{TI_CELLO, TI_VOICE, TI_HARPSICHORD}, {TI_CELLO, TI_TRUMPET, TI_STRINGS}}, .orch_n = 2,
+        .orch_mode = TG_ORCH_CONTRAST,
+    },
+    [TG_STYLE_SWEELINCK] = {
+        /* the Amsterdam organist: running figuration over modal counterpoint, echoes, a Picardy close */
+        .name = "SWEELINCK", .root = 9, .scale = TS_AEOLIAN,                         /* A Aeolian */
+        .bpm = 76, .division = 4, .beats_per_bar = 4, .chord_beats = 2, .period_bars = 4,
+        .melody_density = 0.75f, .melody_base = 64, .melody_range = 17,
+        .profile = {0.02f, 0.85f, 0.95f, 0.99f}, .max_leap = 4,
+        .suspension = 0.25f, .arrival_bars = 1,
+        .bass_mode = TG_BASS_ROOT, .pad_mode = TG_PAD_COUNTER, .pad_base = 50, .pad_tones = 3,
+        .fifth_bias = 2.0f, .repeat = 0.3f,
+        .motif = 0.45f, .motif_beats = 2, .motif_use = 0.8f, .var_invert = 0.3f, .var_alter = 0.2f,
+        .swell = 0.2f, .rubato = 0.05f,
+        .perc_mode = TG_PERC_OFF,
+        .w_minor = {10, 6, 6, 6, 0, 4, 6, 8, 0, 4, 0, 2, 2, 0, 0, 0, 0, 3, 0, 0, 0, 0, 0, 0},
+        .w_major = {10, 6, 3, 7, 5, 8, 0, 0, 0, 0, 0, 2, 0, 2, 0, 0, 0, 3, 2, 0, 0, 0, 0, 0},
+        .vocab = TG_VOC_MODAL, .echo = 0.35f, .tuning = TT_TUNE_MEANTONE,
+        .orch = {{TI_ORGAN, TI_ORGAN, TI_ORGAN}, {TI_HARPSICHORD, TI_HARPSICHORD, TI_HARPSICHORD}}, .orch_n = 2,
+        .orch_mode = TG_ORCH_RANDOM,
+    },
 };
 
 static const char *const family_names[TI_COUNT] = {

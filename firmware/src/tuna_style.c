@@ -251,6 +251,8 @@ static const tg_style styles[TG_STYLE_COUNT] = {
         .perc_mode = TG_PERC_OFF, .perc = {6, 0, 0, 0, 2, 0}, /* timpani; the Fourth has a triangle */
         .w_major = {10, 6, 3, 8, 6, 5, 6, 7, 2, 4, 3, 2, 2, 6, 4, 2, 0, 2, 0, 0, 0, 0},
         .w_minor = {10, 6, 4, 8, 3, 6, 6, 8, 3, 4, 2, 3, 2, 3, 4, 2, 0, 0, 2, 0, 0, 3},
+        .orch = {{TI_CELLO, TI_VIOLIN, TI_STRINGS}, {TI_CELLO, TI_CLARINET, TI_STRINGS}, {TI_CELLO, TI_HORN, TI_STRINGS},
+                 {TI_PIANO, TI_PIANO, TI_PIANO}}, .orch_n = 4, .orch_mode = TG_ORCH_RANDOM,
     },
     [TG_STYLE_MAHLER] = {
         .name = "MAHLER", .root = 2, .scale = TS_IONIAN,                             /* D major */
@@ -324,6 +326,9 @@ static const tg_style styles[TG_STYLE_COUNT] = {
         .perc_mode = TG_PERC_PERIOD, .perc = {6, 0, 0, 3, 6, 4}, /* triangle and tambourine, as in the Slavonic Dances */
         .w_major = {10, 7, 3, 7, 5, 3, 6, 7, 1, 3, 3, 2, 2, 5, 3, 0, 0, 3, 0, 0, 0, 0},
         .w_minor = {10, 6, 5, 6, 2, 4, 6, 7, 2, 3, 2, 2, 3, 1, 3, 2, 2, 2, 2, 0, 0, 4},
+        .orch = {{TI_CONTRABASS, TI_OBOE, TI_STRINGS}, {TI_CONTRABASS, TI_VIOLIN, TI_STRINGS},
+                 {TI_CONTRABASS, TI_HORN, TI_STRINGS}, {TI_CELLO, TI_FLUTE, TI_STRINGS}}, .orch_n = 4,
+        .orch_mode = TG_ORCH_RANDOM,
     },
     [TG_STYLE_SAINT_SAENS] = {
         .name = "SAINT-SAENS", .root = 7, .scale = TS_AEOLIAN,                       /* G minor */
@@ -338,6 +343,8 @@ static const tg_style styles[TG_STYLE_COUNT] = {
         .perc_mode = TG_PERC_PERIOD, .perc = {7, 0, 3, 4, 3, 0}, /* timpani, cymbals, bass drum */
         .w_major = {10, 5, 3, 7, 6, 5, 7, 9, 4, 5, 3, 3, 3, 3, 4, 2, 0, 2, 0, 0, 0, 2},
         .w_minor = {10, 6, 5, 7, 3, 5, 7, 9, 5, 5, 4, 3, 4, 4, 2, 2, 0, 0, 3, 0, 0, 0},
+        .orch = {{TI_PIANO, TI_VIOLIN, TI_PIANO}, {TI_ORGAN, TI_ORGAN, TI_ORGAN}, {TI_CONTRABASS, TI_CELLO, TI_HARP},
+                 {TI_CONTRABASS, TI_FLUTE, TI_STRINGS}}, .orch_n = 4, .orch_mode = TG_ORCH_RANDOM,
     },
 
     /* ---- 1: medieval and renaissance ------------------------------------------------------------------
@@ -801,6 +808,267 @@ static const tg_style styles[TG_STYLE_COUNT] = {
         .w_minor = {10, 6, 4, 7, 3, 6, 6, 8, 6, 5, 3, 3, 3, 3, 3, 2, 3, 3, 2, 0, 0, 2, 2, 2},
         .vocab = TG_VOC_ROMANTIC, .color_scale = TS_HUNG_MINOR, .color = 0.25f, .turn = 0.2f,
         .orch = {{TI_PIANO, TI_PIANO, TI_PIANO}}, .orch_n = 1,
+    },
+
+    /* ---- 5: romantic -------------------------------------------------------------------------------------- */
+    [TG_STYLE_VERDI] = {
+        /* the opera house: oom-pah-pah, a big singable tune, brass, emphatic cadences, the banda */
+        .name = "VERDI", .root = 3, .scale = TS_IONIAN,                              /* E-flat major, 3/4 */
+        .bpm = 132, .division = 2, .beats_per_bar = 3, .chord_beats = 3, .period_bars = 8,
+        .melody_density = 0.5f, .melody_base = 62, .melody_range = 15,
+        .profile = {0.12f, 0.60f, 0.82f, 0.94f}, .max_leap = 5,
+        .appoggiatura = 0.15f, .arrival_bars = 1,
+        .bass_mode = TG_BASS_BAR, .pad_mode = TG_PAD_OOMPAH, .pad_base = 55, .pad_tones = 3,
+        .fifth_bias = 1.2f, .repeat = 0.5f,
+        .motif = 0.6f, .motif_beats = 3, .motif_use = 0.7f, .var_invert = 0.05f, .var_alter = 0.3f,
+        .sforzando = 0.05f, .swell = 0.5f, .rubato = 0.15f,
+        .perc_mode = TG_PERC_PERIOD, .perc = {5, 3, 5, 5, 2, 0},
+        .w_major = {10, 4, 2, 7, 4, 3, 9, 9, 2, 5, 2, 2, 1, 2, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0},
+        .w_minor = {10, 5, 4, 7, 2, 4, 9, 9, 3, 4, 2, 2, 2, 2, 2, 0, 0, 0, 1, 0, 0, 0, 1, 0},
+        .orch = {{TI_CONTRABASS, TI_VOICE, TI_PIZZ}, {TI_TUBA, TI_TRUMPET, TI_BRASS}, {TI_CELLO, TI_CLARINET, TI_PIZZ}},
+        .orch_n = 3, .orch_mode = TG_ORCH_RANDOM,
+    },
+    [TG_STYLE_WAGNER] = {
+        /* endless melody: the half-diminished chord, deceptive endings, leitmotifs, swells that never land */
+        .name = "WAGNER", .root = 9, .scale = TS_AEOLIAN,                            /* A minor (Tristan) */
+        .bpm = 52, .division = 2, .beats_per_bar = 4, .chord_beats = 4, .period_bars = 8,
+        .melody_density = 0.35f, .melody_base = 60, .melody_range = 22,
+        .profile = {0.04f, 0.55f, 0.78f, 0.90f}, .max_leap = 6,
+        .appoggiatura = 0.5f, .chromatic = true, .suspension = 0.3f, .arrival_bars = 3,
+        .bass_mode = TG_BASS_ROOT, .pad_mode = TG_PAD_TREMOLO, .pad_base = 50, .pad_tones = 4,
+        .fifth_bias = 1.0f, .repeat = 0.15f,
+        .motif = 0.75f, .motif_beats = 4, .motif_use = 0.8f, .var_invert = 0.1f, .var_alter = 0.3f,
+        .swell = 1.0f, .rubato = 0.35f,
+        .perc_mode = TG_PERC_PERIOD, .perc = {7, 0, 0, 3, 0, 0},
+        .w_major = {6, 6, 3, 5, 3, 4, 4, 6, 6, 5, 5, 4, 4, 5, 6, 5, 4, 4, 6, 0, 0, 8, 3, 4},
+        .w_minor = {6, 6, 4, 6, 2, 8, 4, 6, 6, 5, 3, 4, 3, 4, 3, 6, 3, 4, 3, 0, 0, 3, 4, 4},
+        .vocab = TG_VOC_ROMANTIC, .open = 0.75f, .modulate = 0.25f,
+        .orch = {{TI_TUBA, TI_HORN, TI_STRINGS}, {TI_CONTRABASS, TI_CELLO, TI_STRINGS}, {TI_TUBA, TI_BRASS, TI_STRINGS},
+                 {TI_CONTRABASS, TI_OBOE, TI_STRINGS}}, .orch_n = 4, .orch_mode = TG_ORCH_RANDOM,
+    },
+    [TG_STYLE_GOUNOD] = {
+        /* Ave Maria over Bach's prelude: a long plain melody above the broken-chord figure, organ, Amen */
+        .name = "GOUNOD", .root = 0, .scale = TS_IONIAN,                             /* C major */
+        .bpm = 66, .division = 4, .beats_per_bar = 4, .chord_beats = 4, .period_bars = 4,
+        .melody_density = 0.25f, .melody_base = 64, .melody_range = 15,
+        .profile = {0.05f, 0.78f, 0.92f, 0.98f}, .max_leap = 5,
+        .appoggiatura = 0.1f, .arrival_bars = 2,
+        .bass_mode = TG_BASS_ROOT, .pad_mode = TG_PAD_FIGURE, .pad_base = 52, .pad_tones = 3,
+        .fifth_bias = 2.0f, .repeat = 0.3f, .plagal = true,
+        .motif = 0.4f, .motif_beats = 4, .motif_use = 0.5f, .var_invert = 0.05f, .var_alter = 0.3f,
+        .swell = 0.4f, .rubato = 0.2f,
+        .perc_mode = TG_PERC_OFF,
+        .w_major = {10, 6, 3, 7, 6, 5, 6, 8, 3, 6, 4, 4, 4, 2, 1, 1, 0, 1, 0, 0, 0, 2, 2, 0},
+        .w_minor = {10, 6, 4, 7, 3, 5, 6, 8, 4, 4, 3, 3, 3, 2, 2, 1, 0, 0, 2, 0, 0, 0, 2, 0},
+        .pad_figure = {0, 1, 2, 3, 4, 2, 3, 4}, .figure_len = 8, .mel_min_ticks = 4,
+        .orch = {{TI_ORGAN, TI_VIOLIN, TI_PIANO}, {TI_ORGAN, TI_VOICE, TI_HARP}}, .orch_n = 2, .orch_mode = TG_ORCH_RANDOM,
+    },
+    [TG_STYLE_JOHANN_STRAUSS] = {
+        /* the Viennese waltz: bass on one, chords on two and three, the second beat early, a leaping tune */
+        .name = "JOHANN STRAUSS", .root = 2, .scale = TS_IONIAN,                     /* D major, 3/4 */
+        .bpm = 168, .division = 2, .beats_per_bar = 3, .chord_beats = 3, .period_bars = 8,
+        .melody_density = 0.45f, .melody_base = 62, .melody_range = 19,
+        .profile = {0.10f, 0.50f, 0.75f, 0.90f}, .max_leap = 5,
+        .appoggiatura = 0.15f, .chromatic = true, .arrival_bars = 1,
+        .bass_mode = TG_BASS_BAR, .pad_mode = TG_PAD_OOMPAH, .pad_base = 57, .pad_tones = 3,
+        .fifth_bias = 1.0f, .repeat = 0.6f,
+        .motif = 0.7f, .motif_beats = 3, .motif_use = 0.8f, .var_invert = 0.05f, .var_alter = 0.25f,
+        .swell = 0.3f, .lilt = 0.8f,
+        .perc_mode = TG_PERC_PERIOD, .perc = {3, 2, 3, 3, 4, 0},
+        .w_major = {10, 3, 1, 6, 4, 4, 9, 9, 2, 5, 2, 2, 2, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0},
+        .w_minor = {10, 4, 3, 6, 2, 4, 9, 9, 3, 4, 2, 2, 2, 1, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0},
+        .octave = 0.05f,
+        .orch = {{TI_CONTRABASS, TI_VIOLIN, TI_HORN}, {TI_CELLO, TI_FLUTE, TI_PIZZ}, {TI_CONTRABASS, TI_STRINGS, TI_BRASS}},
+        .orch_n = 3, .orch_mode = TG_ORCH_RANDOM,
+    },
+    [TG_STYLE_BRUCKNER] = {
+        /* cathedrals of sound: tremolo from nothing, brass chorales between, pauses, pedal points, octave themes */
+        .name = "BRUCKNER", .root = 2, .scale = TS_AEOLIAN,                          /* D minor */
+        .bpm = 56, .division = 3, .beats_per_bar = 4, .chord_beats = 4, .period_bars = 8,
+        .melody_density = 0.3f, .melody_base = 57, .melody_range = 19,
+        .profile = {0.05f, 0.50f, 0.75f, 0.90f}, .max_leap = 6,
+        .arrival_bars = 3,
+        .bass_mode = TG_BASS_PEDAL, .pad_mode = TG_PAD_TREMOLO, .pad_base = 50, .pad_tones = 3,
+        .fifth_bias = 1.8f, .repeat = 0.3f, .plagal = true,
+        .motif = 0.6f, .motif_beats = 4, .motif_use = 0.7f, .var_invert = 0.2f, .var_alter = 0.3f,
+        .swell = 1.0f, .rubato = 0.1f,
+        .perc_mode = TG_PERC_PERIOD, .perc = {8, 0, 0, 4, 0, 0},
+        .w_major = {10, 5, 3, 8, 5, 4, 7, 8, 3, 5, 3, 3, 3, 3, 4, 4, 3, 3, 2, 0, 0, 2, 2, 1},
+        .w_minor = {10, 6, 4, 8, 3, 5, 7, 8, 4, 4, 3, 3, 3, 4, 3, 3, 2, 2, 2, 0, 0, 1, 2, 2},
+        .vocab = TG_VOC_ROMANTIC, .modulate = 0.2f, .gp = 0.35f, .octave = 0.15f,
+        .alt = {.pad_mode = TG_PAD_BLOCK + 1, .bass_mode = TG_BASS_ROOT + 1}, .alt_every = 2,
+        .orch = {{TI_CONTRABASS, TI_HORN, TI_STRINGS}, {TI_TUBA, TI_BRASS, TI_BRASS}}, .orch_n = 2,
+        .orch_mode = TG_ORCH_CONTRAST,
+    },
+    [TG_STYLE_BIZET] = {
+        /* the Habanera: the dotted bass, a melody sliding down by semitones, minor turning major, castanets */
+        .name = "BIZET", .root = 2, .scale = TS_AEOLIAN,                             /* D minor, 2/4 */
+        .bpm = 72, .division = 4, .beats_per_bar = 2, .chord_beats = 2, .period_bars = 8,
+        .melody_density = 0.45f, .melody_base = 62, .melody_range = 15,
+        .profile = {0.05f, 0.80f, 0.92f, 0.97f}, .max_leap = 4,
+        .arrival_bars = 1,
+        .bass_mode = TG_BASS_OSTINATO, .pad_mode = TG_PAD_BLOCK, .pad_base = 55, .pad_tones = 3,
+        .fifth_bias = 1.0f, .repeat = 0.6f,
+        .motif = 0.7f, .motif_beats = 2, .motif_use = 0.8f, .var_invert = 0.05f, .var_alter = 0.25f,
+        .swell = 0.3f, .rubato = 0.15f,
+        .perc_mode = TG_PERC_PATTERN,
+        .w_major = {10, 4, 2, 7, 4, 3, 8, 9, 2, 4, 2, 2, 1, 2, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0},
+        .w_minor = {10, 6, 4, 7, 3, 4, 8, 9, 3, 4, 2, 2, 3, 3, 2, 0, 0, 0, 1, 0, 0, 0, 2, 0},
+        .mixture = 0.4f, .direction = -0.5f, .mel_add = (1u << 11) | (1u << 9),        /* C# and B: the chromatic slide */
+        .bass_rhythm = (1u << 0) | (1u << 3) | (1u << 4) | (1u << 6), .bass_notes = {0, 0, 2, 0}, .bass_len = 4,
+        .orch = {{TI_PIZZ, TI_VOICE, TI_STRINGS}, {TI_PIZZ, TI_OBOE, TI_STRINGS}, {TI_CELLO, TI_FLUTE, TI_STRINGS}},
+        .orch_n = 3, .orch_mode = TG_ORCH_RANDOM,
+        .drum_pat = {{TG_GM_CASTANETS, 52, 0x59}, {TG_GM_TAMBOURINE, 40, 0x44}},
+    },
+    [TG_STYLE_FRANCK] = {
+        /* chromatic organ harmony: keys melting into keys, sliding voices, a canon between the instruments */
+        .name = "FRANCK", .root = 9, .scale = TS_IONIAN,                             /* A major, 9/8 */
+        .bpm = 52, .division = 3, .beats_per_bar = 3, .chord_beats = 3, .period_bars = 8,
+        .melody_density = 0.5f, .melody_base = 64, .melody_range = 19,
+        .profile = {0.05f, 0.65f, 0.85f, 0.95f}, .max_leap = 5,
+        .appoggiatura = 0.25f, .chromatic = true, .suspension = 0.25f, .arrival_bars = 2,
+        .bass_mode = TG_BASS_ROOT, .pad_mode = TG_PAD_BROKEN, .pad_base = 45, .pad_tones = 3,
+        .fifth_bias = 1.2f, .repeat = 0.2f,
+        .motif = 0.6f, .motif_beats = 3, .motif_use = 0.7f, .var_invert = 0.15f, .var_alter = 0.3f,
+        .swell = 0.7f, .rubato = 0.3f,
+        .perc_mode = TG_PERC_OFF,
+        .w_major = {10, 6, 3, 5, 5, 5, 6, 8, 6, 6, 5, 4, 4, 5, 5, 4, 4, 4, 4, 0, 0, 4, 3, 3},
+        .w_minor = {10, 6, 4, 6, 3, 6, 6, 8, 6, 5, 4, 3, 3, 4, 3, 4, 3, 4, 3, 0, 0, 2, 3, 3},
+        .vocab = TG_VOC_ROMANTIC, .open = 0.35f, .modulate = 0.45f, .sideslip = 0.1f,
+        .canon_ticks = 9, .canon_steps = -7,
+        .alt = {.pad_mode = TG_PAD_CANON + 1}, .alt_every = 2,
+        .orch = {{TI_PIANO, TI_VIOLIN, TI_PIANO}, {TI_ORGAN, TI_VIOLIN, TI_ORGAN}, {TI_ORGAN, TI_ORGAN, TI_ORGAN}},
+        .orch_n = 3, .orch_mode = TG_ORCH_RANDOM,
+    },
+    [TG_STYLE_BRUCH] = {
+        /* a rhapsodic singing violin (or cello) over warm sustained strings and horn */
+        .name = "BRUCH", .root = 7, .scale = TS_AEOLIAN,                             /* G minor */
+        .bpm = 60, .division = 4, .beats_per_bar = 4, .chord_beats = 2, .period_bars = 4,
+        .melody_density = 0.35f, .melody_base = 62, .melody_range = 24,
+        .profile = {0.05f, 0.60f, 0.82f, 0.93f}, .max_leap = 6,
+        .appoggiatura = 0.2f, .suspension = 0.2f, .arrival_bars = 2,
+        .bass_mode = TG_BASS_ROOT, .pad_mode = TG_PAD_BLOCK, .pad_base = 53, .pad_tones = 3,
+        .fifth_bias = 1.5f, .repeat = 0.35f,
+        .motif = 0.5f, .motif_beats = 4, .motif_use = 0.6f, .var_invert = 0.1f, .var_alter = 0.35f,
+        .swell = 0.6f, .rubato = 0.45f,
+        .perc_mode = TG_PERC_OFF, .perc = {4, 0, 0, 0, 0, 0},
+        .w_major = {10, 6, 3, 7, 5, 5, 7, 8, 3, 5, 4, 3, 3, 3, 3, 2, 1, 2, 0, 0, 0, 2, 2, 0},
+        .w_minor = {10, 7, 5, 7, 3, 5, 7, 8, 4, 5, 3, 3, 3, 3, 3, 2, 0, 0, 2, 0, 0, 0, 2, 0},
+        .mixture = 0.3f, .octave = 0.1f, .turn = 0.2f,
+        .orch = {{TI_CONTRABASS, TI_VIOLIN, TI_STRINGS}, {TI_CONTRABASS, TI_CELLO, TI_STRINGS},
+                 {TI_CONTRABASS, TI_VIOLIN, TI_HORN}}, .orch_n = 3, .orch_mode = TG_ORCH_RANDOM,
+    },
+    [TG_STYLE_MUSSORGSKY] = {
+        /* Promenade: 5/4 then 6/4, a pentatonic folk tune, planing chords, the Great Gate's bells between */
+        .name = "MUSSORGSKY", .root = 10, .scale = TS_IONIAN,                        /* B-flat */
+        .bpm = 92, .division = 2, .beats_per_bar = 5, .chord_beats = 1, .period_bars = 4,
+        .meter = {6, 4, 6, 6}, .meter_bars = 1u << 2,                                   /* 5/4 (3+2), 6/4 (3+3) */
+        .melody_density = 0.45f, .melody_base = 58, .melody_range = 15,
+        .profile = {0.15f, 0.75f, 0.90f, 0.97f}, .max_leap = 4,
+        .melody_mask = 0x295, .arrival_bars = 1,
+        .bass_mode = TG_BASS_BAR, .pad_mode = TG_PAD_PARALLEL, .pad_base = 50, .pad_tones = 3,
+        .fifth_bias = 1.0f, .repeat = 0.4f,
+        .motif = 0.7f, .motif_beats = 5, .motif_use = 0.8f, .var_invert = 0.1f, .var_alter = 0.3f,
+        .swell = 0.5f,
+        .perc_mode = TG_PERC_OFF, .perc = {6, 0, 3, 5, 0, 0},
+        .w_major = {10, 6, 4, 7, 6, 6, 0, 6, 0, 0, 2, 0, 0, 5, 3, 0, 2, 2, 3, 0, 0, 0, 0, 0},
+        .w_minor = {10, 6, 5, 7, 4, 5, 3, 6, 0, 3, 2, 0, 3, 3, 3, 3, 2, 2, 0, 0, 0, 0, 0, 0},
+        .vocab = TG_VOC_MODAL,
+        .alt = {.bpm = 0.8f, .pad_mode = TG_PAD_BLOCK + 1, .bass_mode = TG_BASS_TOLL + 1}, .alt_every = 2,
+        .orch = {{TI_CONTRABASS, TI_TRUMPET, TI_BRASS}, {TI_TUBA, TI_BRASS, TI_BELLS}}, .orch_n = 2,
+        .orch_mode = TG_ORCH_CONTRAST,
+    },
+    [TG_STYLE_TCHAIKOVSKY] = {
+        /* sequences rising to a climax, falling scale lines, harp and celesta colour, big swells */
+        .name = "TCHAIKOVSKY", .root = 11, .scale = TS_AEOLIAN,                      /* B minor */
+        .bpm = 72, .division = 4, .beats_per_bar = 4, .chord_beats = 2, .period_bars = 4,
+        .melody_density = 0.4f, .melody_base = 62, .melody_range = 19,
+        .profile = {0.04f, 0.80f, 0.92f, 0.97f}, .max_leap = 5,
+        .appoggiatura = 0.25f, .chromatic = true, .suspension = 0.3f, .arrival_bars = 2,
+        .bass_mode = TG_BASS_ROOT, .pad_mode = TG_PAD_BLOCK, .pad_base = 52, .pad_tones = 3,
+        .fifth_bias = 1.8f, .repeat = 0.3f,
+        .motif = 0.65f, .motif_beats = 4, .motif_use = 0.9f, .var_invert = 0.05f, .var_alter = 0.25f,
+        .sforzando = 0.03f, .swell = 0.9f, .rubato = 0.35f,
+        .perc_mode = TG_PERC_PERIOD, .perc = {7, 0, 2, 6, 2, 0},
+        .w_major = {10, 6, 3, 7, 5, 5, 7, 8, 4, 6, 4, 3, 3, 3, 3, 2, 2, 2, 2, 0, 0, 2, 1, 1},
+        .w_minor = {10, 7, 4, 7, 3, 6, 7, 8, 5, 5, 3, 3, 3, 3, 3, 2, 2, 2, 2, 0, 0, 0, 2, 1},
+        .vocab = TG_VOC_ROMANTIC, .direction = -0.4f,
+        .alt = {.pad_mode = TG_PAD_ARPEGGIO + 1}, .alt_every = 2,
+        .orch = {{TI_CONTRABASS, TI_VIOLIN, TI_STRINGS}, {TI_CONTRABASS, TI_BASSOON, TI_STRINGS},
+                 {TI_CONTRABASS, TI_FLUTE, TI_CELESTA}, {TI_TUBA, TI_BRASS, TI_STRINGS}}, .orch_n = 4,
+        .orch_mode = TG_ORCH_RANDOM,
+    },
+    [TG_STYLE_SMETANA] = {
+        /* Vltava: the river's flowing figure in the flutes, a broad folk tune with its raised seventh */
+        .name = "SMETANA", .root = 4, .scale = TS_HARM_MINOR,                        /* E minor, 6/8 */
+        .bpm = 66, .division = 3, .beats_per_bar = 2, .chord_beats = 2, .period_bars = 8,
+        .melody_density = 0.4f, .melody_base = 64, .melody_range = 15,
+        .profile = {0.05f, 0.70f, 0.90f, 0.97f}, .max_leap = 5,
+        .arrival_bars = 2,
+        .bass_mode = TG_BASS_ROOT, .pad_mode = TG_PAD_FIGURE, .pad_base = 59, .pad_tones = 3,
+        .fifth_bias = 1.5f, .repeat = 0.5f,
+        .motif = 0.6f, .motif_beats = 4, .motif_use = 0.7f, .var_invert = 0.05f, .var_alter = 0.3f,
+        .swell = 0.5f, .rubato = 0.15f,
+        .perc_mode = TG_PERC_PERIOD, .perc = {4, 0, 0, 2, 3, 0},
+        .w_major = {10, 5, 3, 7, 5, 4, 7, 8, 2, 4, 3, 2, 2, 1, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0},
+        .w_minor = {10, 6, 4, 7, 2, 4, 7, 8, 3, 3, 3, 3, 2, 1, 2, 0, 0, 0, 1, 0, 0, 0, 1, 0},
+        .pad_figure = {0, 1, 2, 3, 2, 1}, .figure_len = 6,
+        .orch = {{TI_CONTRABASS, TI_VIOLIN, TI_FLUTE}, {TI_CELLO, TI_STRINGS, TI_FLUTE}}, .orch_n = 2,
+        .orch_mode = TG_ORCH_RANDOM,
+    },
+    [TG_STYLE_GRIEG] = {
+        /* Morning: a pentatonic pastoral tune passed between flute and oboe, a drone fifth, Lydian light */
+        .name = "GRIEG", .root = 4, .scale = TS_IONIAN,                              /* E major, 6/8 */
+        .bpm = 58, .division = 3, .beats_per_bar = 2, .chord_beats = 2, .period_bars = 8,
+        .melody_density = 0.4f, .melody_base = 64, .melody_range = 15,
+        .profile = {0.06f, 0.70f, 0.90f, 0.97f}, .max_leap = 4,
+        .melody_mask = 0x295, .arrival_bars = 2,
+        .bass_mode = TG_BASS_PEDAL, .pad_mode = TG_PAD_BLOCK, .pad_base = 56, .pad_tones = 3,
+        .fifth_bias = 1.0f, .repeat = 0.5f,
+        .motif = 0.75f, .motif_beats = 4, .motif_use = 0.8f, .var_invert = 0.05f, .var_alter = 0.25f,
+        .swell = 0.6f, .rubato = 0.15f,
+        .perc_mode = TG_PERC_OFF,
+        .w_major = {10, 5, 4, 6, 4, 4, 6, 6, 2, 4, 4, 3, 3, 3, 2, 2, 1, 2, 2, 0, 0, 2, 1, 0},
+        .w_minor = {10, 6, 5, 6, 2, 4, 6, 6, 2, 3, 3, 3, 3, 2, 2, 2, 1, 2, 2, 0, 0, 2, 1, 0},
+        .color_scale = TS_LYDIAN, .color = 0.25f, .mixture = 0.15f,
+        .orch = {{TI_CELLO, TI_FLUTE, TI_STRINGS}, {TI_CELLO, TI_OBOE, TI_STRINGS}}, .orch_n = 2,
+        .orch_mode = TG_ORCH_CYCLE,
+    },
+    [TG_STYLE_MASSENET] = {
+        /* Meditation: a slow violin with chromatic appoggiaturas and expressive leaps over harp arpeggios */
+        .name = "MASSENET", .root = 2, .scale = TS_IONIAN,                           /* D major */
+        .bpm = 54, .division = 4, .beats_per_bar = 4, .chord_beats = 2, .period_bars = 4,
+        .melody_density = 0.3f, .melody_base = 66, .melody_range = 19,
+        .profile = {0.04f, 0.60f, 0.85f, 0.95f}, .max_leap = 6,
+        .appoggiatura = 0.35f, .chromatic = true, .suspension = 0.2f, .arrival_bars = 2,
+        .bass_mode = TG_BASS_ROOT, .pad_mode = TG_PAD_ARPEGGIO, .pad_base = 50, .pad_tones = 3,
+        .fifth_bias = 1.5f, .repeat = 0.4f,
+        .motif = 0.55f, .motif_beats = 4, .motif_use = 0.6f, .var_invert = 0.05f, .var_alter = 0.35f,
+        .swell = 0.5f, .rubato = 0.45f,
+        .perc_mode = TG_PERC_OFF,
+        .w_major = {8, 6, 5, 4, 6, 4, 5, 6, 7, 3, 4, 3, 1, 2, 1, 3, 4, 0, 0, 0, 0, 5, 3, 1},
+        .w_minor = {10, 4, 6, 3, 6, 4, 7, 2, 2, 4, 3, 1, 3, 2, 2, 2, 2, 0, 2, 0, 0, 2, 1, 1},
+        .vocab = TG_VOC_POP, .turn = 0.15f, .mel_min_ticks = 3,
+        .orch = {{TI_CONTRABASS, TI_VIOLIN, TI_HARP}, {TI_CELLO, TI_VIOLIN, TI_HARP}}, .orch_n = 2,
+        .orch_mode = TG_ORCH_RANDOM,
+    },
+    [TG_STYLE_RIMSKY_KORSAKOV] = {
+        /* Scheherazade: violin arabesques over harp, augmented seconds, octatonic colour, a glittering orchestra */
+        .name = "RIMSKY-KORSAKOV", .root = 4, .scale = TS_HARM_MINOR,                /* E minor */
+        .bpm = 76, .division = 4, .beats_per_bar = 4, .chord_beats = 4, .period_bars = 4,
+        .melody_density = 0.5f, .melody_base = 67, .melody_range = 19,
+        .profile = {0.03f, 0.70f, 0.88f, 0.96f}, .max_leap = 5,
+        .appoggiatura = 0.2f, .chromatic = true, .arrival_bars = 1,
+        .bass_mode = TG_BASS_ROOT, .pad_mode = TG_PAD_ARPEGGIO, .pad_base = 48, .pad_tones = 3,
+        .fifth_bias = 1.5f, .repeat = 0.4f,
+        .motif = 0.6f, .motif_beats = 4, .motif_use = 0.7f, .var_invert = 0.1f, .var_alter = 0.3f,
+        .swell = 0.6f, .rubato = 0.3f,
+        .perc_mode = TG_PERC_PERIOD, .perc = {5, 0, 0, 4, 5, 5},
+        .w_major = {10, 5, 3, 7, 5, 4, 7, 8, 3, 4, 3, 3, 3, 3, 2, 1, 0, 1, 2, 0, 0, 0, 3, 1},
+        .w_minor = {10, 6, 4, 7, 3, 5, 7, 8, 4, 4, 3, 3, 4, 4, 2, 1, 0, 1, 2, 0, 0, 0, 3, 1},
+        .color_scale = TS_OCT_HW, .color = 0.3f, .turn = 0.3f,
+        .orch = {{TI_CONTRABASS, TI_VIOLIN, TI_HARP}, {TI_CELLO, TI_CLARINET, TI_HARP}, {TI_TUBA, TI_BRASS, TI_STRINGS},
+                 {TI_CONTRABASS, TI_FLUTE, TI_STRINGS}}, .orch_n = 4, .orch_mode = TG_ORCH_RANDOM,
     },
 };
 

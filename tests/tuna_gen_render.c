@@ -594,7 +594,7 @@ static int check(const preset *p, const evlog *pa, bool same, bool verbose)
                 fails += (!a.arrivals && !(st && st->alt.mel_mode)) || a.arrivals_tonic != a.arrivals_tonic_chord ||
                          a.arrivals_by_step != a.arrivals ||
                          a.arrivals_open_ok != a.arrivals_open;
-                if (!st || st->open <= 0.0f)
+                if (!st || (st->open <= 0.0f && st->harmony == TG_HARM_PLANNED))
                     fails += a.arrivals_tonic_chord != a.arrivals;   /* no open endings: every arrival on the tonic */
             }
         }

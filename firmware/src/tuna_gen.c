@@ -143,6 +143,8 @@ static void defaults(tg_gen *g)
     g->mel_profile[3] = 0.96f;
     g->max_leap = 4;
     g->melody_mask = 0;
+    g->mel_add = 0;
+    g->period_scale = -1;
     g->syncopation = 0.0f;
     g->chromatic = false;
     g->arrival_bars = 1;
@@ -268,6 +270,19 @@ void tg_reseed(tg_gen *g, uint32_t seed)
         g->scale = g->base_scale;
     }
     g->plan_len = 0;
+    g->period_scale = -1;
+    g->open_end = g->open_prev = false;
+    g->open_chord = g->open_chord_prev = 0;
+    g->cycle_sel = 0;
+    g->style_away = false;
+    g->stat_open = g->stat_colour = g->stat_slips = g->stat_modulations = 0;
+    for (int i = 0; i < TG_PLAN_MAX; ++i)
+        g->plan_slip[i] = 0;
+    if (g->style && g->style_away) {
+        g->root = g->home_root;
+        g->scale = g->home_scale;
+    }
+    g->style_away = false;
     plan_period(g);
 }
 
@@ -356,6 +371,24 @@ void tg_meter_at(const tg_gen *g, long q, tg_meter_pos *m)
 
 /* ---- harmony: the fixed progression, or a style's planned periods ---------------------------------- */
 static bool key_is_minor(const tg_gen *g) { return (tt_scale_mask(g->scale) >> 3) & 1; }
+static bool scale_is_minor(int scale) { return (tt_scale_mask(scale) >> 3) & 1; }
+
+/* the period's scale: the key's, or a colour (another scale, the parallel mode) for this period */
+static int scale_now(const tg_gen *g) { return g->period_scale >= 0 ? g->period_scale : g->scale; }
+
+static const tg_chord_def *voc(const tg_gen *g, bool minor)
+{
+    return tg_vocab_of(g->style ? g->style->vocab : TG_VOC_CLASSIC, minor);
+}
+
+/* a vocabulary chord's root in semitones above the tonic (a modal entry names a scale degree) */
+static int voc_semis_in(int scale, const tg_chord_def *d)
+{
+    if (d->quality != TQ_DIATONIC)
+        return d->semis;
+    return pmod12(tt_degree_note(scale, 60, d->semis) - 60);
+}
+static int voc_semis(const tg_gen *g, const tg_chord_def *d) { return voc_semis_in(scale_now(g), d); }
 
 void tg_chord_at(const tg_gen *g, int step, int tones, tt_chord *c)
 {
@@ -369,15 +402,23 @@ void tg_chord_at(const tg_gen *g, int step, int tones, tt_chord *c)
         return;
     }
     int slot = ((step % g->plan_len) + g->plan_len) % g->plan_len;
-    /* a step in the next period that is not planned yet starts on the tonic */
-    int idx = step / g->plan_len > g->chord_step / g->plan_len ? 0 : g->plan[slot];
+    /* a step in the next period that is not planned yet starts on the tonic (or the open chord) */
+    bool next = step / g->plan_len > g->chord_step / g->plan_len;
+    int idx = next ? (g->open_end ? g->open_chord : 0) : g->plan[slot];
     bool minor = g->plan_minor;
     if (g->key_pending && !future) {
         idx = 0;                                    /* the period's first chord: the old key's tonic */
         minor = g->plan_minor0;
     }
-    const tg_chord_def *d = &tg_vocab(minor)[idx];
-    tt_chord_fixed(c, d->semis + shift, d->quality);
+    const tg_chord_def *d = &voc(g, minor)[idx];
+    if (d->quality == TQ_DIATONIC) {
+        tt_chord_diatonic(c, future ? g->next_scale : scale_now(g), d->semis, tones > 0 ? tones : 3);
+        c->root = (int8_t)pmod12(c->root + shift);
+    } else {
+        tt_chord_fixed(c, d->semis + shift, d->quality);
+    }
+    if (!next && g->plan_slip[slot])
+        c->root = (int8_t)pmod12(c->root + g->plan_slip[slot]);
     if (tones < c->n)
         c->n = (uint8_t)tones;
 }
@@ -388,12 +429,12 @@ static float hrand(tg_gen *g) { return tm_rng_float(&g->hrng); }
  * from prev_semis multiplied by the style's fifth bias */
 static int pick_chord(tg_gen *g, const bool *allowed, int prev_semis)
 {
-    const tg_chord_def *v = tg_vocab(g->plan_minor);
+    const tg_chord_def *v = voc(g, g->plan_minor);
     const uint8_t *w = g->plan_minor ? g->style->w_minor : g->style->w_major;
     float weight[TG_VOCAB], sum = 0.0f;
     for (int i = 0; i < TG_VOCAB; ++i) {
         weight[i] = allowed[i] ? (float)w[i] : 0.0f;
-        if (weight[i] > 0.0f && prev_semis >= 0 && pmod12(v[i].semis - prev_semis) == 5)
+        if (weight[i] > 0.0f && prev_semis >= 0 && pmod12(voc_semis(g, &v[i]) - prev_semis) == 5)
             weight[i] *= g->style->fifth_bias;
         sum += weight[i];
     }
@@ -408,6 +449,53 @@ static int pick_chord(tg_gen *g, const bool *allowed, int prev_semis)
     return 0;
 }
 
+/* the style's own modulation: now and then a period moves to a related key, and later home again
+ * (the move applies from the period's second chord, through the pivot as with evolution) */
+static void style_modulate(tg_gen *g)
+{
+    const tg_style *st = g->style;
+    if (st->modulate <= 0.0f || g->evolve || g->key_pending || g->open_prev)
+        return;
+    if (g->style_away) {
+        if (hrand(g) < 0.5f) {
+            g->next_root = g->home_root;
+            g->next_scale = g->home_scale;
+            g->style_away = false;
+        } else {
+            return;
+        }
+    } else {
+        if (hrand(g) >= st->modulate)
+            return;
+        bool minor = scale_is_minor(g->scale);
+        /* major: the dominant, the subdominant, the relative minor; minor: the relative major, the
+         * minor dominant, the subdominant, the submediant major */
+        static const int8_t maj_to[3] = {7, 5, 9}, min_to[4] = {3, 7, 5, 8};
+        int k = (int)(hrand(g) * (minor ? 4.0f : 3.0f));
+        int to = minor ? min_to[k > 3 ? 3 : k] : maj_to[k > 2 ? 2 : k];
+        bool to_minor = minor ? (to == 7 || to == 5) : to == 9;
+        g->next_root = (g->root + to) % 12;
+        g->next_scale = to_minor ? (minor ? g->scale : TS_AEOLIAN) : (minor ? TS_IONIAN : g->scale);
+        g->style_away = true;
+    }
+    g->key_pending = true;
+    g->key_set_tick = g->ticks;
+    g->stat_modulations++;
+}
+
+/* the chord the next period opens on when this one ends away from the tonic: a tonic-function chord
+ * other than I (a deceptive cadence), or a dominant (the music stops on V) */
+static int pick_open(tg_gen *g)
+{
+    const tg_chord_def *v = voc(g, g->plan_minor);
+    bool allowed[TG_VOCAB];
+    for (int k = 0; k < TG_VOCAB; ++k)
+        allowed[k] = v[k].quality != TQ_AUG && v[k].func != TF_SEC && v[k].func != TF_S &&
+                     voc_semis(g, &v[k]) != 0;
+    int c = pick_chord(g, allowed, -1);
+    return voc_semis(g, &v[c]) != 0 ? c : 0;
+}
+
 static void plan_period(tg_gen *g)
 {
     if (!g->style)
@@ -416,87 +504,160 @@ static void plan_period(tg_gen *g)
     int n = st->period_bars * bar_ticks_of(g) / (g->chord_ticks > 0 ? g->chord_ticks : 1);
     if (n < 2) n = 2;
     if (n > TG_PLAN_MAX) n = TG_PLAN_MAX;
-    bool minor = key_is_minor(g);
+    /* the previous period's ending decides how this one begins */
+    g->open_prev = g->open_end;
+    g->open_chord_prev = g->open_chord;
+    g->open_end = false;
+    style_modulate(g);
+
+    /* fixed harmony: a cycle repeated through the period, or one chord held (a drone) */
+    if (st->harmony == TG_HARM_CYCLE || st->harmony == TG_HARM_DRONE) {
+        if (g->key_pending)
+            g->plan_minor0 = key_is_minor(g);
+        g->plan_len = n;
+        g->plan_minor = scale_is_minor(g->key_pending ? g->next_scale : g->scale);
+        g->period_scale = -1;
+        if (st->cycle_switch > 0 && st->cycle2_len > 0)
+            g->cycle_sel = (int)((g->period_index / st->cycle_switch) % 2);
+        const int8_t *cy = g->cycle_sel ? st->cycle2 : st->cycle;
+        int len = g->cycle_sel ? st->cycle2_len : st->cycle_len;
+        for (int i = 0; i < n; ++i) {
+            g->plan[i] = st->harmony == TG_HARM_DRONE ? (int8_t)(len ? cy[0] : 0) : (int8_t)(len ? cy[i % len] : 0);
+            g->plan_slip[i] = 0;
+        }
+        return;
+    }
+
+    bool minor = scale_is_minor(scale_now(g));
+    bool fresh = st->open > 0.0f && (g->open_prev || g->plan[0] != g->plan_tonic);
     if (g->key_pending) {
-        g->plan_minor0 = minor;                     /* slot 0 stays the old key's tonic (the pivot) */
-        minor = (tt_scale_mask(g->next_scale) >> 3) & 1;
-    } else if (g->plan_len == n && g->plan_minor == minor && hrand(g) < st->repeat) {
-        return;                                     /* the period repeats its harmony: A A */
+        g->plan_minor0 = key_is_minor(g);           /* slot 0 stays the old key's tonic (the pivot) */
+        g->period_scale = -1;
+        minor = scale_is_minor(g->next_scale);
+    } else if (g->plan_len == n && g->plan_minor == minor && !fresh && hrand(g) < st->repeat) {
+        goto ending;                                /* the period repeats its harmony: A A */
+    } else {
+        /* a coloured period: the parallel mode, or another scale */
+        g->period_scale = -1;
+        if (st->mixture > 0.0f && hrand(g) < st->mixture) {
+            g->period_scale = key_is_minor(g) ? TS_IONIAN : TS_AEOLIAN;
+            g->stat_colour++;
+        } else if (st->color > 0.0f && hrand(g) < st->color) {
+            g->period_scale = st->color_scale;
+            g->stat_colour++;
+        }
+        minor = scale_is_minor(scale_now(g));
     }
     g->plan_len = n;
     g->plan_minor = minor;
-    const tg_chord_def *v = tg_vocab(minor);
-
-    /* -1: free; TF_* + 10: a slot fixed to a function */
-    int want[TG_PLAN_MAX];
-    for (int i = 0; i < n; ++i) want[i] = -1;
-    if (n >= 4) {
-        want[n / 2 - 2] = TF_S + 10;
-        want[n / 2 - 1] = TF_D + 10;                /* half cadence */
-        want[n - 2] = TF_S + 10;
-        want[n - 1] = (g->plagal ? TF_S : TF_D) + 10;   /* into the next tonic: V - I, or IV - I */
-    } else {
-        want[n - 1] = TF_D + 10;
-    }
-    /* the tonic: the plain triad or a coloured one (Imaj7, i7, a major tonic in minor) */
     {
-        bool allowed[TG_VOCAB];
-        for (int k = 0; k < TG_VOCAB; ++k)
-            allowed[k] = v[k].semis == 0 && v[k].func == TF_T && v[k].quality != TQ_AUG;
-        g->plan[0] = (int8_t)pick_chord(g, allowed, -1);
-    }
-    /* a whole-tone period: augmented chords drift until the cadence brings the key back */
-    g->plan_wt = n >= 4 && st->whole_tone > 0.0f && hrand(g) < st->whole_tone;
-    if (g->plan_wt) {
-        for (int i = 0; i < n - 2; ++i)
-            g->plan[i] = (int8_t)(i % 2 ? TG_VOC_AUG_BVII : TG_VOC_AUG_I);
+        const tg_chord_def *v = voc(g, minor);
         for (int i = 0; i < n; ++i)
-            if (i < n - 2) want[i] = -2;            /* taken */
-    }
-    for (int i = 1; i < n; ++i) {
-        if (want[i] == -2)
-            continue;
-        const tg_chord_def *prev = &v[g->plan[i - 1]];
-        bool allowed[TG_VOCAB];
-        if (prev->func == TF_SEC) {                 /* an applied chord resolves to its target */
-            g->plan[i] = prev->target;
-            continue;
+            g->plan_slip[i] = 0;
+
+        /* -1: free; TF_* + 10: a slot fixed to a function */
+        int want[TG_PLAN_MAX];
+        for (int i = 0; i < n; ++i) want[i] = -1;
+        if (n >= 4) {
+            want[n / 2 - 2] = TF_S + 10;
+            want[n / 2 - 1] = TF_D + 10;            /* half cadence */
+            want[n - 2] = TF_S + 10;
+            want[n - 1] = (g->plagal ? TF_S : TF_D) + 10;   /* into the next tonic: V - I, or IV - I */
+        } else {
+            want[n - 1] = TF_D + 10;
         }
-        int next_want = i + 1 < n ? want[i + 1] : TF_T + 10;
-        for (int k = 0; k < TG_VOCAB; ++k) {
-            const tg_chord_def *c = &v[k];
-            bool ok;
-            if (want[i] >= 10) {
-                int f = want[i] - 10;
-                ok = c->func == f;
-                if (f == TF_S && c->func == TF_SEC && v[c->target].func == TF_D)
-                    ok = true;                      /* V7/V before the dominant */
-                if (f == TF_D)
-                    ok = c->func == TF_D;
-            } else if (prev->func == TF_D || prev->quality == TQ_AUG) {
-                ok = c->func == TF_T;               /* dominants resolve */
-            } else if (prev->func == TF_S) {
-                ok = c->func == TF_S || c->func == TF_D;
-            } else {
-                ok = true;
+        /* the tonic: the plain triad or a coloured one (Imaj7, i7, a major tonic in minor) */
+        {
+            bool allowed[TG_VOCAB];
+            for (int k = 0; k < TG_VOCAB; ++k)
+                allowed[k] = voc_semis(g, &v[k]) == 0 && v[k].func == TF_T && v[k].quality != TQ_AUG;
+            g->plan[0] = (int8_t)pick_chord(g, allowed, -1);
+            g->plan_tonic = g->plan[0];
+            if (g->open_prev && !g->key_pending) {
+                g->plan[0] = g->open_chord_prev;    /* the deceptive (or open) arrival of the last period */
+                g->stat_open++;
             }
-            if (k == g->plan[i - 1])
-                ok = false;                         /* change the chord */
-            if (c->quality == TQ_AUG)
-                ok = false;                         /* only in whole-tone periods */
-            if (c->func == TF_SEC && want[i] < 10 && (i + 1 >= n || want[i + 1] >= 10))
-                ok = false;                         /* its target would land on a fixed slot */
-            if (c->func == TF_D && next_want == TF_S + 10)
-                ok = false;                         /* no dominant right before a pre-dominant */
-            allowed[k] = ok;
         }
-        g->plan[i] = (int8_t)pick_chord(g, allowed, prev->semis);
+        /* a whole-tone period: augmented chords drift until the cadence brings the key back */
+        g->plan_wt = n >= 4 && st->whole_tone > 0.0f && hrand(g) < st->whole_tone;
+        if (g->plan_wt) {
+            for (int i = 0; i < n - 2; ++i)
+                g->plan[i] = (int8_t)(i % 2 ? TG_VOC_AUG_BVII : TG_VOC_AUG_I);
+            for (int i = 0; i < n; ++i)
+                if (i < n - 2) want[i] = -2;        /* taken */
+        }
+        /* an octatonic period: the tonic chord moved by minor thirds (I, bIII, #IV, VI), then the cadence */
+        if (n >= 4 && (scale_now(g) == TS_OCT_HW || scale_now(g) == TS_OCT_WH) && g->period_scale >= 0) {
+            int last = 0;
+            for (int i = 0; i < n - 2; ++i) {
+                g->plan[i] = g->plan_tonic;
+                int k = i ? 1 + (int)(hrand(g) * 3.0f) : 0;
+                last = (last + 3 * k) % 12;
+                g->plan_slip[i] = (int8_t)(i ? last : 0);
+                want[i] = -2;
+            }
+        }
+        for (int i = 1; i < n; ++i) {
+            if (want[i] == -2)
+                continue;
+            const tg_chord_def *prev = &v[g->plan[i - 1]];
+            bool allowed[TG_VOCAB];
+            if (prev->func == TF_SEC) {             /* an applied chord resolves to its target */
+                g->plan[i] = prev->target;
+                continue;
+            }
+            int next_want = i + 1 < n ? want[i + 1] : TF_T + 10;
+            for (int k = 0; k < TG_VOCAB; ++k) {
+                const tg_chord_def *c = &v[k];
+                bool ok;
+                if (want[i] >= 10) {
+                    int f = want[i] - 10;
+                    ok = c->func == f;
+                    if (f == TF_S && c->func == TF_SEC && v[c->target].func == TF_D)
+                        ok = true;                  /* V7/V before the dominant */
+                    if (f == TF_D)
+                        ok = c->func == TF_D;
+                } else if (prev->func == TF_D || prev->quality == TQ_AUG) {
+                    ok = c->func == TF_T;           /* dominants resolve */
+                } else if (prev->func == TF_S) {
+                    ok = c->func == TF_S || c->func == TF_D;
+                } else {
+                    ok = true;
+                }
+                if (k == g->plan[i - 1])
+                    ok = false;                     /* change the chord */
+                if (c->quality == TQ_AUG)
+                    ok = false;                     /* only in whole-tone periods */
+                if (c->func == TF_SEC && want[i] < 10 && (i + 1 >= n || want[i + 1] >= 10))
+                    ok = false;                     /* its target would land on a fixed slot */
+                if (c->func == TF_D && next_want == TF_S + 10)
+                    ok = false;                     /* no dominant right before a pre-dominant */
+                allowed[k] = ok;
+            }
+            g->plan[i] = (int8_t)pick_chord(g, allowed, voc_semis(g, prev));
+        }
+        /* side-slips: a free chord moved a semitone, the music sliding off and back */
+        if (st->sideslip > 0.0f)
+            for (int i = 1; i < n - 2; ++i)
+                if (want[i] == -1 && !g->plan_slip[i - 1] && hrand(g) < st->sideslip) {
+                    g->plan_slip[i] = (int8_t)(hrand(g) < 0.5f ? 1 : -1);
+                    g->stat_slips++;
+                }
+    }
+ending:
+    /* does this period end away from the tonic? */
+    if (st->open > 0.0f && !g->key_pending && !(g->evolve && g->evolve_modulate) && hrand(g) < st->open) {
+        g->open_end = true;
+        g->open_chord = (int8_t)pick_open(g);
+        if (g->open_chord == 0)
+            g->open_end = false;
     }
 }
 
-void tg_apply_style(tg_gen *g, int id)
+void tg_apply_style(tg_gen *g, int id) { tg_apply_style_def(g, tg_style_get(id)); }
+
+void tg_apply_style_def(tg_gen *g, const tg_style *st)
 {
-    const tg_style *st = tg_style_get(id);
     g->style = st;
     if (!st)
         return;
@@ -527,6 +688,12 @@ void tg_apply_style(tg_gen *g, int id)
     g->pad_tones = st->pad_tones;
     g->max_leap = st->max_leap > 0 ? st->max_leap : 4;
     g->melody_mask = st->melody_mask;
+    g->mel_add = st->mel_add;
+    g->home_root = st->root;
+    g->home_scale = st->scale;
+    g->style_away = false;
+    g->period_scale = -1;
+    g->open_end = g->open_prev = false;
     g->syncopation = st->syncopation;
     g->chromatic = st->chromatic;
     g->arrival_bars = st->arrival_bars > 0 ? st->arrival_bars : 1;
@@ -556,15 +723,17 @@ void tg_apply_style(tg_gen *g, int id)
 
 static void reload_scale(tg_gen *g)
 {
-    if (g->loaded_scale == g->scale && g->loaded_prog == g->prog && g->loaded_step == g->chord_step &&
+    int sc = scale_now(g);
+    if (g->loaded_scale == sc && g->loaded_prog == g->prog && g->loaded_step == g->chord_step &&
         g->loaded_root == g->root)
         return;
     tg_chord_at(g, g->chord_step, 4, &g->chord);
     tm_scale s;
-    tg_scale_for_chord(&s, tt_scale_mask(g->scale), &g->chord);
+    uint16_t mask = tt_scale_mask(sc);
+    tg_scale_for_chord(&s, mask, &g->chord);
     tm_xy_load_scale(&g->xy, -1, &s);
-    g->allowed_pcs = tt_scale_mask(g->scale) | chord_mask(&g->chord, g->chord.n);
-    g->chord_scale = tg_chord_scale(tt_scale_mask(g->scale), &g->chord);
+    g->allowed_pcs = mask | chord_mask(&g->chord, g->chord.n);
+    g->chord_scale = tg_chord_scale(mask, &g->chord);
     bool aug = g->chord.n >= 3 && g->chord.tone[1] == 4 && g->chord.tone[2] == 8;
     if (aug) {
         g->chord_scale = tt_scale_mask(TS_WHOLE_TONE);  /* an augmented chord floats in whole tones */
@@ -578,7 +747,9 @@ static void reload_scale(tg_gen *g)
         if (bits >= 4)
             g->mel_scale = m;
     }
-    g->loaded_scale = g->scale;
+    if (g->mel_add && !aug)
+        g->mel_scale |= g->mel_add;                    /* blue notes */
+    g->loaded_scale = sc;
     g->loaded_prog = g->prog;
     g->loaded_step = g->chord_step;
     g->loaded_root = g->root;
@@ -957,8 +1128,21 @@ static void melody_tick(tg_gen *g, beat_pos b, float x2, int velocity, int offse
         }
     }
 
-    /* the tonic nearest the current note, inside the range */
-    int home = mask_nearest(tonic, g->root, g->mel_note);
+    /* where the period lands: the tonic, or after an open ending a tone of the chord it opens on (not
+     * its root: the ear should hear the music go on); at the arrival that chord is sounding already */
+    uint16_t target = tonic;
+    if (arrival ? g->open_prev : g->open_end) {
+        tt_chord nc;
+        if (arrival)
+            nc = g->chord;
+        else
+            tg_chord_at(g, (g->chord_step / g->plan_len + 1) * g->plan_len, 3, &nc);
+        uint16_t cm = chord_mask(&nc, 3);
+        uint16_t upper = (uint16_t)(cm & ~(1u << pmod12(nc.root)));
+        target = upper ? upper : cm;
+    }
+    /* the target nearest the current note, inside the range */
+    int home = mask_nearest(target, g->root, g->mel_note);
     if (home > hi) home -= 12;
     if (home < lo) home += 12;
 
@@ -1004,8 +1188,8 @@ static void melody_tick(tg_gen *g, beat_pos b, float x2, int velocity, int offse
         int down = mask_step(g->chord_scale, g->root, home, -1);
         /* a real step: over a borrowed chord the bent scale can put a third there (A-flat over
          * D-flat major in F); then take the key's own neighbour */
-        if (up - home > 2) up = mask_step(tt_scale_mask(g->scale), g->root, home, 1);
-        if (home - down > 2) down = mask_step(tt_scale_mask(g->scale), g->root, home, -1);
+        if (up - home > 2) up = mask_step(tt_scale_mask(scale_now(g)), g->root, home, 1);
+        if (home - down > 2) down = mask_step(tt_scale_mask(scale_now(g)), g->root, home, -1);
         if (up - home > 2) up = home + 2;
         if (home - down > 2) down = home - 1;
         int du = up > g->mel_note ? up - g->mel_note : g->mel_note - up;

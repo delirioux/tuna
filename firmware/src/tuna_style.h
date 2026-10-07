@@ -28,19 +28,54 @@ enum {
     TG_BASS_BAR,       /* the root on every downbeat */
     TG_BASS_MARCH,     /* root on beat 1, fifth on beat 3 */
     TG_BASS_PEDAL,     /* the tonic held under the period (a drone), with its fifth */
+    TG_BASS_DRONE,     /* the tonic held without end (an ison), struck again only at period starts */
+    TG_BASS_OSTINATO,  /* a rhythm (bass_rhythm, ticks of the bar) on chord tones (bass_notes, ladder steps) */
+    TG_BASS_LINE,      /* a fixed line per chord step (bass_notes: semitones from the tonic), e.g. a lament */
+    TG_BASS_REPEAT,    /* the root in repeated eighths (Vivaldi's drum bass) */
+    TG_BASS_TOLL,      /* the root struck low every two bars and left to ring (bells) */
+    TG_BASS_BEAT,      /* every beat, root and fifth in turn (pizzicato) */
+    TG_BASS_NONE,      /* no bass */
 };
 enum {
     TG_PAD_BLOCK,      /* held chords, voice-led */
     TG_PAD_ALBERTI,    /* low, high, middle, high */
     TG_PAD_COUNTER,    /* a counter-melody */
     TG_PAD_BROKEN,     /* wide broken chords over two octaves */
-    TG_PAD_AFTERBEAT,  /* the chord after the downbeat bass (oom-pah, Gymnopédie) */
+    TG_PAD_AFTERBEAT,  /* the chord after the downbeat bass (oom-pah, Gymnopedie) */
     TG_PAD_PARALLEL,   /* chords planing under each melody note */
-    TG_PAD_DOUBLE,     /* the melody doubled a third or sixth below */
+    TG_PAD_DOUBLE,     /* the melody doubled a third or sixth below (or pad_interval semitones) */
     TG_PAD_REPEAT,     /* the chord repeated in eighths, driving */
     TG_PAD_ARPEGGIO,   /* rising and falling arpeggios in sixteenths */
+    TG_PAD_OOMPAH,     /* the chord on the beats the bass leaves: 2 and 3 in 3/4, 2 and 4 in 4/4 */
+    TG_PAD_TREMOLO,    /* the chord re-struck on every tick */
+    TG_PAD_ORGANUM,    /* the melody in parallel, pad_interval semitones below */
+    TG_PAD_TINTI,      /* tintinnabuli: the tonic-triad note nearest below (or above) the melody */
+    TG_PAD_CANON,      /* the melody again, canon_ticks later, canon_steps scale steps away */
+    TG_PAD_FIGURE,     /* a figure over the chord (pad_figure, ladder steps), one note per tick */
+    TG_PAD_ADDITIVE,   /* the figure growing and shrinking by one note (Glass) */
+    TG_PAD_PHASE,      /* the melody's pattern, drifting a step ahead every phase_reps loops (Reich) */
+    TG_PAD_NONE,       /* no third part */
 };
-enum { TG_PERC_OFF, TG_PERC_PERIOD, TG_PERC_KIT };
+enum {
+    TG_MEL_PHRASE,     /* periods of question and answer (the default) */
+    TG_MEL_CHANT,      /* the same, unmetered: no accents, no bar lines */
+    TG_MEL_TINTI,      /* tintinnabuli M-voice: scale steps toward the tonic, one more each phrase */
+    TG_MEL_PATTERN,    /* the style's pattern, looped (pattern: scale steps from the tonic, or ladder steps) */
+    TG_MEL_BIRDSONG,   /* bursts of quick high notes, leaps and repeated notes, then silence */
+};
+enum { TG_HARM_PLANNED, TG_HARM_CYCLE, TG_HARM_DRONE };
+enum { TG_VOC_CLASSIC, TG_VOC_ROMANTIC, TG_VOC_JAZZ, TG_VOC_MODAL, TG_VOC_MODERN, TG_VOC_POP, TG_VOC_COUNT };
+/* instrument families: the host maps them to its sounds (Felucca presets) */
+enum {
+    TI_DEFAULT, TI_PIANO, TI_HARPSICHORD, TI_ORGAN, TI_STRINGS, TI_VIOLIN, TI_CELLO, TI_CONTRABASS, TI_PIZZ,
+    TI_FLUTE, TI_OBOE, TI_CLARINET, TI_BASSOON, TI_HORN, TI_TRUMPET, TI_BRASS, TI_TUBA, TI_HARP, TI_GUITAR,
+    TI_CHOIR, TI_VOICE, TI_BELLS, TI_CELESTA, TI_MARIMBA, TI_BANDONEON, TI_SAX, TI_SYNTH, TI_PAD, TI_WHISTLE,
+    TI_DRONE, TI_EPIANO, TI_COUNT
+};
+enum { TG_ORCH_FIXED, TG_ORCH_CYCLE, TG_ORCH_RANDOM, TG_ORCH_ENERGY, TG_ORCH_CONTRAST };
+enum { TG_MOD_RELATED, TG_MOD_UP_SEMITONE, TG_MOD_UP_TONE, TG_MOD_MEDIANT };
+#define TG_REST (-128)
+enum { TG_PERC_OFF, TG_PERC_PERIOD, TG_PERC_KIT, TG_PERC_PATTERN };
 /* period percussion instruments, the order of tg_style.perc */
 enum { TG_PI_TIMPANI, TG_PI_SNARE, TG_PI_BASS_DRUM, TG_PI_CYMBAL, TG_PI_TRIANGLE, TG_PI_TAMBOURINE, TG_PI_COUNT };
 enum {
@@ -51,13 +86,13 @@ enum {
 
 enum { TF_T, TF_S, TF_D, TF_SEC };          /* tonic, pre-dominant, dominant, applied chord */
 
-#define TG_VOCAB 22
+#define TG_VOCAB 24
 #define TG_PLAN_MAX 16
 #define TG_VOC_AUG_I 19                     /* vocabulary indices of the whole-tone colour chords */
 #define TG_VOC_AUG_BVII 20
 
 typedef struct {
-    int8_t semis;      /* chord root, semitones above the tonic */
+    int8_t semis;      /* chord root, semitones above the tonic (TQ_DIATONIC: the scale degree) */
     uint8_t quality;   /* TQ_* */
     uint8_t func;      /* TF_* */
     int8_t target;     /* TF_SEC: the vocabulary index it resolves to */
@@ -100,9 +135,66 @@ typedef struct {
     uint8_t perc[TG_PI_COUNT];       /* period percussion, 0..10 per instrument */
     uint8_t w_major[TG_VOCAB];       /* chord weights, major keys */
     uint8_t w_minor[TG_VOCAB];       /* chord weights, minor keys */
+
+    /* ---- the composer expansion: all zero gives the behaviour above ---- */
+    /* harmony */
+    uint8_t vocab;                   /* TG_VOC_*: the chord vocabulary the weights refer to */
+    uint8_t harmony;                 /* TG_HARM_*: planned periods, a fixed cycle, or a drone */
+    int8_t cycle[8], cycle2[8];      /* TG_HARM_CYCLE: vocabulary indices; a second cycle for contrast */
+    uint8_t cycle_len, cycle2_len, cycle_switch;   /* cycle_switch: periods per cycle before the other */
+    float open;                      /* chance a period ends away from the tonic (deceptive, open, on V) */
+    uint8_t color_scale;             /* TS_*: the colour of coloured periods (0: whole-tone, as whole_tone) */
+    float color;                     /* chance a period takes the colour scale */
+    float mixture;                   /* chance a period turns to the parallel mode */
+    float sideslip;                  /* chance a chord slips a semitone (and the next one back) */
+    float modulate;                  /* chance a period moves to a related key; home again later */
+    uint8_t mod_kind;                /* TG_MOD_*: what the evolution timer modulates to */
+    uint8_t tuning;                  /* TT_TUNE_* */
+    /* melody */
+    uint8_t mel_mode;                /* TG_MEL_* */
+    int8_t pattern[16];              /* TG_MEL_PATTERN (and PHASE): steps, TG_REST for a rest */
+    uint8_t pattern_len;
+    bool pattern_chord;              /* pattern steps are chord-ladder steps, not scale steps */
+    uint8_t mel_min_ticks;           /* the shortest melody note (long-note styles) */
+    float direction;                 /* -1..1: the melody's tendency to fall or rise */
+    float staccato;                  /* 0..1: notes shorter than their time */
+    uint16_t mel_add;                /* pitch classes (from the tonic) the melody may add: blue notes */
+    float turn;                      /* chance of a turn (upper, main, lower, main) on a downbeat */
+    float octave;                    /* chance a free leap is an octave */
+    /* bass and third part */
+    uint16_t bass_rhythm;            /* TG_BASS_OSTINATO: ticks of the bar that sound */
+    int8_t bass_notes[8];            /* OSTINATO: chord-ladder steps in turn; LINE: semitones per chord step */
+    uint8_t bass_len;
+    int8_t pad_figure[16];           /* TG_PAD_FIGURE / ADDITIVE: chord-ladder steps */
+    uint8_t figure_len;
+    int8_t pad_interval;             /* ORGANUM and DOUBLE: semitones below the melody (0: the default) */
+    uint8_t canon_ticks;             /* CANON: delay */
+    int8_t canon_steps;              /* CANON: scale steps away (-7: an octave below in a 7-note scale) */
+    uint8_t phase_reps;              /* PHASE: loops before the next step of drift */
+    uint8_t poly_semis;              /* BLOCK: a second major triad this far above the chord's root */
+    bool spread;                     /* BLOCK: open voicing over two octaves */
+    uint8_t strum_ms;                /* chords spread from low to high, ms per string */
+    /* form and dynamics */
+    float gp;                        /* chance of a general pause after an arrival */
+    float echo;                      /* chance a period is played softer, as an echo */
+    struct {                         /* contrast: every alt_every periods the music turns to this */
+        float bpm, density;          /* factors (0: unchanged) */
+        uint8_t mel_mode, bass_mode, pad_mode;   /* +1 (0: unchanged) */
+        uint8_t harmony;             /* +1 (0: unchanged) */
+    } alt;
+    uint8_t alt_every;
+    uint8_t evolve_periods;          /* the evolution timer on by default (Bolero, Pachelbel) */
+    float evolve_depth;
+    bool evolve_modulate;
+    /* instruments */
+    uint8_t orch[4][3];              /* sets of TI_* for bass, melody, third part */
+    uint8_t orch_n, orch_mode;       /* TG_ORCH_*: how the sets change between periods */
+    /* percussion pattern (TG_PERC_PATTERN): up to three instruments, ticks of the bar */
+    struct { uint8_t note, vel; uint16_t ticks; } drum_pat[3];
 } tg_style;
 
 const tg_style *tg_style_get(int id);
-const tg_chord_def *tg_vocab(bool minor);
+const tg_chord_def *tg_vocab(bool minor);               /* the classic vocabulary */
+const tg_chord_def *tg_vocab_of(int vocab, bool minor);
 
 #endif

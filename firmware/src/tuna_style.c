@@ -69,6 +69,7 @@ static const tg_style styles[TG_STYLE_COUNT] = {
         .bass_mode = TG_BASS_WALKING, .pad_mode = TG_PAD_COUNTER, .pad_base = 50, .pad_tones = 3,
         .fifth_bias = 4.0f, .repeat = 0.25f,
         .motif = 0.35f, .motif_beats = 2, .motif_use = 0.85f, .var_invert = 0.2f, .var_alter = 0.25f,
+        .perc_mode = TG_PERC_OFF, .perc = {6, 0, 0, 0, 0, 0}, /* festive works: trumpets and drums */
         .w_major = {10, 6, 3, 6, 5, 6, 6, 8, 4, 6, 4, 3, 4, 0, 0, 2, 0, 2, 0, 0, 0, 2},
         .w_minor = {10, 6, 5, 7, 3, 6, 6, 8, 5, 4, 3, 4, 5, 2, 4, 2, 0, 0, 2, 0, 0, 0},
     },
@@ -81,6 +82,7 @@ static const tg_style styles[TG_STYLE_COUNT] = {
         .bass_mode = TG_BASS_ROOT, .pad_mode = TG_PAD_ALBERTI, .pad_base = 48, .pad_tones = 3,
         .fifth_bias = 1.0f, .repeat = 0.5f,
         .motif = 0.5f, .motif_beats = 4, .motif_use = 0.65f, .var_invert = 0.1f, .var_alter = 0.3f,
+        .perc_mode = TG_PERC_OFF, .perc = {5, 0, 0, 0, 0, 0}, /* the classical orchestra: timpani */
         .w_major = {10, 4, 0, 8, 6, 4, 8, 9, 2, 5, 2, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0},
         .w_minor = {10, 5, 4, 8, 2, 5, 8, 9, 3, 4, 1, 1, 1, 2, 2, 0, 0, 0, 1, 0, 0, 0},
     },
@@ -94,6 +96,7 @@ static const tg_style styles[TG_STYLE_COUNT] = {
         .fifth_bias = 1.5f, .repeat = 0.3f,
         .motif = 0.6f, .motif_beats = 2, .motif_use = 0.85f, .var_invert = 0.3f, .var_alter = 0.35f,
         .sforzando = 0.12f, .swell = 0.8f, .rubato = 0.1f,
+        .perc_mode = TG_PERC_PERIOD, .perc = {9, 0, 0, 0, 0, 0}, /* timpani as a voice of its own */
         .w_major = {10, 5, 2, 7, 5, 3, 8, 10, 4, 6, 3, 2, 2, 3, 3, 0, 0, 0, 0, 0, 0, 0},
         .w_minor = {10, 7, 4, 8, 3, 5, 8, 10, 6, 5, 3, 4, 2, 5, 2, 0, 0, 0, 2, 0, 0, 0},
     },
@@ -107,6 +110,7 @@ static const tg_style styles[TG_STYLE_COUNT] = {
         .fifth_bias = 1.5f, .repeat = 0.4f, .plagal = true,
         .motif = 0.45f, .motif_beats = 3, .motif_use = 0.6f, .var_invert = 0.15f, .var_alter = 0.3f,
         .hemiola = true, .swell = 0.4f, .rubato = 0.2f,
+        .perc_mode = TG_PERC_OFF, .perc = {6, 0, 0, 0, 2, 0}, /* timpani; the Fourth has a triangle */
         .w_major = {10, 6, 3, 8, 6, 5, 6, 7, 2, 4, 3, 2, 2, 6, 4, 2, 0, 2, 0, 0, 0, 0},
         .w_minor = {10, 6, 4, 8, 3, 6, 6, 8, 3, 4, 2, 3, 2, 3, 4, 2, 0, 0, 2, 0, 0, 3},
     },
@@ -120,6 +124,7 @@ static const tg_style styles[TG_STYLE_COUNT] = {
         .fifth_bias = 1.5f, .repeat = 0.2f,
         .motif = 0.4f, .motif_beats = 4, .motif_use = 0.5f, .var_invert = 0.2f, .var_alter = 0.4f,
         .sforzando = 0.05f, .swell = 0.6f, .rubato = 0.35f,
+        .perc_mode = TG_PERC_PERIOD, .perc = {8, 7, 6, 5, 2, 0}, /* march snare, bass drum, cymbals */
         .w_major = {10, 7, 3, 7, 5, 5, 6, 7, 2, 5, 4, 3, 3, 7, 6, 3, 3, 3, 2, 0, 0, 0},
         .w_minor = {10, 7, 4, 7, 3, 5, 6, 8, 3, 4, 3, 3, 3, 3, 3, 3, 2, 2, 3, 0, 0, 5},
     },
@@ -134,6 +139,7 @@ static const tg_style styles[TG_STYLE_COUNT] = {
         .fifth_bias = 2.0f, .repeat = 0.4f,
         .motif = 0.4f, .motif_beats = 4, .motif_use = 0.5f, .var_invert = 0.1f, .var_alter = 0.4f,
         .swell = 0.4f, .rubato = 0.5f,
+        .perc_mode = TG_PERC_OFF, .perc = {3, 0, 0, 0, 0, 0}, /* only in the concertos */
         .w_major = {10, 6, 3, 6, 6, 6, 6, 9, 3, 6, 4, 3, 4, 4, 3, 2, 2, 2, 0, 0, 0, 0},
         .w_minor = {10, 6, 5, 7, 3, 6, 6, 9, 4, 5, 3, 3, 3, 4, 3, 2, 0, 2, 3, 0, 0, 2},
     },
@@ -147,6 +153,7 @@ static const tg_style styles[TG_STYLE_COUNT] = {
         .fifth_bias = 0.5f, .repeat = 0.6f,
         .motif = 0.7f, .motif_beats = 3, .motif_use = 0.6f, .var_invert = 0.1f, .var_alter = 0.2f,
         .rubato = 0.1f,
+        .perc_mode = TG_PERC_OFF, .perc = {0, 0, 2, 2, 0, 0}, /* a soft bass drum and cymbal, as in Parade */
         .w_major = {4, 2, 0, 2, 2, 4, 3, 1, 0, 0, 0, 0, 0, 0, 0, 10, 10, 4, 0, 0, 0, 2},
         .w_minor = {6, 3, 2, 4, 1, 3, 3, 1, 0, 0, 0, 0, 0, 0, 4, 6, 8, 4, 0, 0, 0, 0},
     },
@@ -160,6 +167,7 @@ static const tg_style styles[TG_STYLE_COUNT] = {
         .fifth_bias = 0.7f, .repeat = 0.3f, .plagal = true, .whole_tone = 0.4f,
         .motif = 0.5f, .motif_beats = 3, .motif_use = 0.5f, .var_invert = 0.2f, .var_alter = 0.3f,
         .swell = 0.3f, .rubato = 0.3f,
+        .perc_mode = TG_PERC_OFF, .perc = {3, 0, 0, 4, 3, 0}, /* soft rolls, suspended and antique cymbals */
         .w_major = {6, 5, 4, 6, 5, 7, 2, 1, 0, 1, 0, 0, 0, 2, 3, 8, 8, 6, 6, 0, 0, 5},
         .w_minor = {6, 5, 5, 5, 2, 5, 2, 1, 0, 1, 1, 1, 4, 2, 5, 6, 6, 6, 0, 0, 0, 0},
     },
@@ -174,6 +182,7 @@ static const tg_style styles[TG_STYLE_COUNT] = {
         .fifth_bias = 1.2f, .repeat = 0.5f,
         .motif = 0.6f, .motif_beats = 4, .motif_use = 0.7f, .var_invert = 0.1f, .var_alter = 0.3f,
         .sforzando = 0.03f, .swell = 0.4f, .rubato = 0.25f,
+        .perc_mode = TG_PERC_PERIOD, .perc = {6, 0, 0, 3, 6, 4}, /* triangle and tambourine, as in the Slavonic Dances */
         .w_major = {10, 7, 3, 7, 5, 3, 6, 7, 1, 3, 3, 2, 2, 5, 3, 0, 0, 3, 0, 0, 0, 0},
         .w_minor = {10, 6, 5, 6, 2, 4, 6, 7, 2, 3, 2, 2, 3, 1, 3, 2, 2, 2, 2, 0, 0, 4},
     },
@@ -187,6 +196,7 @@ static const tg_style styles[TG_STYLE_COUNT] = {
         .fifth_bias = 2.5f, .repeat = 0.55f,
         .motif = 0.5f, .motif_beats = 4, .motif_use = 0.7f, .var_invert = 0.2f, .var_alter = 0.25f,
         .sforzando = 0.05f, .swell = 0.4f, .rubato = 0.1f,
+        .perc_mode = TG_PERC_PERIOD, .perc = {7, 0, 3, 4, 3, 0}, /* timpani, cymbals, bass drum */
         .w_major = {10, 5, 3, 7, 6, 5, 7, 9, 4, 5, 3, 3, 3, 3, 4, 2, 0, 2, 0, 0, 0, 2},
         .w_minor = {10, 6, 5, 7, 3, 5, 7, 9, 5, 5, 4, 3, 4, 4, 2, 2, 0, 0, 3, 0, 0, 0},
     },

@@ -31,13 +31,14 @@ typedef struct {
     bool pad_restrike;
     int style;                /* TG_STYLE_*, -1 = the settings above */
     bool keys;                /* sketch synth: a keyboard sound for the third part (figures) */
+    int drums;                /* 0: the style's default, 1: off, 2: period, 3: kit */
 } preset;
 
 static const preset presets[] = {
     /* name     bpm  div root scale        prog           chord  T model                   bias  jit   dv    pw    pwstd len  spread xbias steps xdv  xlen ctrl                  seed dens pad restrike */
-    {"garden",  72,  2,  2,  TS_DORIAN,     TP_MODAL_VAMP,  16, TM_T_COMPLEMENTARY_BERNOULLI, 0.5f, 0.15f, 0.6f, 0.75f, 0.2f, 8,  0.40f, 0.5f, 0.80f, 0.70f, 8, TM_CONTROL_TILT,      1,  0.35f, 4, false, -1, false},
-    {"rhythm",  104, 4,  9,  TS_AEOLIAN,    TP_ANDALUSIAN,  32, TM_T_DRUMS,                 0.8f, 0.0f,  0.75f, 0.3f, 0.0f, 16, 0.55f, 0.5f, 0.68f, 0.80f, 16, TM_CONTROL_IDENTICAL, 7,  0.55f, 3, true, -1, false},
-    {"lydian",  84,  2,  5,  TS_LYDIAN,     TP_MODAL_VAMP,  16, TM_T_CLUSTERS,              0.65f, 0.3f, 0.4f, 0.6f, 0.4f, 8,  0.50f, 0.55f, 0.75f, 0.55f, 8, TM_CONTROL_BUMP,      42, 0.40f, 4, false, -1, false},
+    {"garden",  72,  2,  2,  TS_DORIAN,     TP_MODAL_VAMP,  16, TM_T_COMPLEMENTARY_BERNOULLI, 0.5f, 0.15f, 0.6f, 0.75f, 0.2f, 8,  0.40f, 0.5f, 0.80f, 0.70f, 8, TM_CONTROL_TILT,      1,  0.35f, 4, false, -1, false, 0},
+    {"rhythm",  104, 4,  9,  TS_AEOLIAN,    TP_ANDALUSIAN,  32, TM_T_DRUMS,                 0.8f, 0.0f,  0.75f, 0.3f, 0.0f, 16, 0.55f, 0.5f, 0.68f, 0.80f, 16, TM_CONTROL_IDENTICAL, 7,  0.55f, 3, true, -1, false, 3},
+    {"lydian",  84,  2,  5,  TS_LYDIAN,     TP_MODAL_VAMP,  16, TM_T_CLUSTERS,              0.65f, 0.3f, 0.4f, 0.6f, 0.4f, 8,  0.50f, 0.55f, 0.75f, 0.55f, 8, TM_CONTROL_BUMP,      42, 0.40f, 4, false, -1, false, 0},
     /* composer signatures: everything comes from the style; only name, seed and synth matter here */
     {.name = "bach",        .seed = 11, .style = TG_STYLE_BACH,        .keys = true},
     {.name = "mozart",      .seed = 5,  .style = TG_STYLE_MOZART,      .keys = true},
@@ -49,6 +50,9 @@ static const preset presets[] = {
     {.name = "debussy",     .seed = 6,  .style = TG_STYLE_DEBUSSY,     .keys = true},
     {.name = "dvorak",      .seed = 12, .style = TG_STYLE_DVORAK,      .keys = false},
     {.name = "saint-saens", .seed = 13, .style = TG_STYLE_SAINT_SAENS, .keys = true},
+    /* percussion is a switch on every composer */
+    {.name = "bach-timpani", .seed = 11, .style = TG_STYLE_BACH,       .keys = true, .drums = 2},
+    {.name = "mozart-kit",   .seed = 5,  .style = TG_STYLE_MOZART,     .keys = true, .drums = 3},
 };
 
 /* ---- event log (for MIDI and the synth) ------------------------------------------------------- */
@@ -61,6 +65,7 @@ typedef struct {
     long arrivals, arrivals_tonic, arrivals_tonic_chord, arrivals_by_step;
     long off_key, halves, halves_on_dominant, bass_changes, bass_roots, counter_notes, parallels;
     double motif_share;
+    long timp_bad, drum_hits, timp_hits;
     int counter_prev, counter_prev_iv, counter_prev_mel;
     int mel_prev;
 } evlog;
@@ -77,7 +82,14 @@ static void on_event(void *ctx, const tg_event *e)
     l->ev[l->n].t = l->now + e->offset;
     l->ev[l->n].e = *e;
     l->n++;
-    if (e->on) {
+    if (e->on && e->part == TG_PART_TIMPANI) {
+        int pc = ((e->note - cur->root) % 12 + 12) % 12;
+        l->timp_bad += pc != 0 && pc != 7;       /* kettledrums: tonic and dominant only */
+        l->timp_hits++;
+    }
+    if (e->on && e->part == TG_PART_DRUMS)
+        l->drum_hits++;
+    if (e->on && e->part < TG_PART_DRUMS) {
         /* in key: the scale, the current chord, or the scale bent to the chord */
         uint16_t allowed = tt_scale_mask(cur->scale) | cur->chord_scale;
         for (int k = 0; k < cur->chord.n; ++k)
@@ -172,6 +184,8 @@ styled:
         tg_apply_style(&g, p->style);
         tg_reseed(&g, p->seed);
     }
+    if (p->drums)
+        tg_set_percussion(&g, p->drums - 1);
     cur = &g;
     memset(l, 0, sizeof *l);
     l->mel_prev = -1;
@@ -211,10 +225,11 @@ static void write_midi(const char *path, const evlog *l, float bpm)
 {
     const int ppq = 480;
     const double ticks_per_sample = (double)ppq * bpm / 60.0 / SR;
-    static const char *names[TG_PARTS] = {"Bass", "Melody", "Pad"};
+    static const char *names[TG_EVENT_PARTS] = {"Bass", "Melody", "Third", "Drums", "Timpani"};
+    static const uint8_t channel[TG_EVENT_PARTS] = {0, 1, 2, 9, 4};      /* drums on GM channel 10 */
     FILE *f = fopen(path, "wb");
     if (!f) { perror(path); exit(1); }
-    fwrite("MThd", 1, 4, f); put32(f, 6); put16(f, 1); put16(f, TG_PARTS + 1); put16(f, (uint16_t)ppq);
+    fwrite("MThd", 1, 4, f); put32(f, 6); put16(f, 1); put16(f, TG_EVENT_PARTS + 1); put16(f, (uint16_t)ppq);
     /* tempo track */
     {
         uint32_t us = (uint32_t)(60000000.0 / bpm);
@@ -222,11 +237,16 @@ static void write_midi(const char *path, const evlog *l, float bpm)
         fwrite("MTrk", 1, 4, f); put32(f, sizeof t); fwrite(t, 1, sizeof t, f);
     }
     uint8_t *buf = malloc((size_t)l->n * 8 + 64);
-    for (int p = 0; p < TG_PARTS; ++p) {
+    for (int p = 0; p < TG_EVENT_PARTS; ++p) {
         int k = 0;
         k += varlen(buf + k, 0);
         buf[k++] = 0xFF; buf[k++] = 0x03; buf[k++] = (uint8_t)strlen(names[p]);
         memcpy(buf + k, names[p], strlen(names[p])); k += (int)strlen(names[p]);
+        if (p == TG_PART_TIMPANI) {
+            k += varlen(buf + k, 0);
+            buf[k++] = (uint8_t)(0xC0 | channel[p]);
+            buf[k++] = 47;                      /* GM program 48: timpani */
+        }
         uint32_t last = 0;
         for (long i = 0; i < l->n; ++i) {
             const logged *ev = &l->ev[i];
@@ -234,7 +254,7 @@ static void write_midi(const char *path, const evlog *l, float bpm)
             uint32_t tick = (uint32_t)(ev->t * ticks_per_sample + 0.5);
             k += varlen(buf + k, tick - last);
             last = tick;
-            buf[k++] = (uint8_t)((ev->e.on ? 0x90 : 0x80) | p);
+            buf[k++] = (uint8_t)((ev->e.on ? 0x90 : 0x80) | channel[p]);
             buf[k++] = ev->e.note;
             buf[k++] = ev->e.on ? ev->e.velocity : 64;
         }
@@ -250,8 +270,105 @@ typedef struct { float freq, amp, env, phase, phase2; bool on; int note; float k
 
 static float mtof(int n) { return 440.0f * powf(2.0f, (n - 69) / 12.0f); }
 
+/* percussion for the sketch synth: one-shot strokes */
+typedef struct { int kind; float age, vel, freq; bool live; } stroke;
+#define MAX_STROKES 32
+static stroke strokes[MAX_STROKES];
+static uint32_t drum_noise_state = 12345;
+static float drum_noise(void)
+{
+    drum_noise_state = drum_noise_state * 1664525u + 1013904223u;
+    return (float)(drum_noise_state >> 8) / 8388608.0f - 1.0f;
+}
+
+static void stroke_start(int part, int note, int velocity)
+{
+    int slot = 0;
+    for (int i = 0; i < MAX_STROKES; ++i) {
+        if (!strokes[i].live) { slot = i; break; }
+        if (strokes[i].age > strokes[slot].age) slot = i;
+    }
+    stroke *k = &strokes[slot];
+    k->kind = part == TG_PART_TIMPANI ? -1 : note;
+    k->freq = part == TG_PART_TIMPANI ? mtof(note) : 0.0f;
+    k->vel = velocity / 127.0f;
+    k->age = 0.0f;
+    k->live = true;
+}
+
+/* one sample of all strokes, stereo */
+static void strokes_render(float *out_l, float *out_r)
+{
+    static float hp_prev;
+    float n = drum_noise();
+    float hp = n - hp_prev;          /* a crude high-pass for metal */
+    hp_prev = n;
+    for (int i = 0; i < MAX_STROKES; ++i) {
+        stroke *k = &strokes[i];
+        if (!k->live)
+            continue;
+        float a = k->age, v = k->vel, x = 0.0f, pan = 0.5f;
+        switch (k->kind) {
+        case -1: {                      /* timpani: partials 1, 1.5, 1.98, a slight pitch drop, a felt attack */
+            float f = k->freq * (1.0f + 0.03f * expf(-a * 25.0f));
+            x = (sinf(6.2831853f * f * a) + 0.5f * sinf(6.2831853f * 1.5f * f * a) +
+                 0.25f * sinf(6.2831853f * 1.98f * f * a)) * expf(-a * 1.4f) * 0.55f + n * expf(-a * 70.0f) * 0.25f;
+            pan = 0.35f;
+            if (a > 3.0f) k->live = false;
+            break;
+        }
+        case TG_GM_KICK: case TG_GM_BASS_DRUM: {
+            bool big = k->kind == TG_GM_BASS_DRUM;
+            float f0 = big ? 38.0f : 45.0f, f1 = big ? 60.0f : 120.0f;
+            float ph = 6.2831853f * (f0 * a + (f1 - f0) / 30.0f * (1.0f - expf(-a * 30.0f)));
+            x = sinf(ph) * expf(-a * (big ? 3.5f : 8.0f)) * 0.9f;
+            if (a > (big ? 1.5f : 0.6f)) k->live = false;
+            break;
+        }
+        case TG_GM_SNARE:
+            x = (n * expf(-a * 16.0f) * 0.55f + sinf(6.2831853f * 190.0f * a) * expf(-a * 25.0f) * 0.35f);
+            pan = 0.55f;
+            if (a > 0.5f) k->live = false;
+            break;
+        case TG_GM_SIDE_STICK:
+            x = (n * expf(-a * 70.0f) * 0.4f + sinf(6.2831853f * 820.0f * a) * expf(-a * 50.0f) * 0.3f);
+            pan = 0.6f;
+            if (a > 0.15f) k->live = false;
+            break;
+        case TG_GM_HAT_CLOSED: case TG_GM_HAT_OPEN:
+            x = hp * expf(-a * (k->kind == TG_GM_HAT_OPEN ? 7.0f : 45.0f)) * 0.3f;
+            pan = 0.7f;
+            if (a > 0.8f) k->live = false;
+            break;
+        case TG_GM_CRASH:
+            x = hp * expf(-a * 1.8f) * 0.32f;
+            pan = 0.3f;
+            if (a > 3.0f) k->live = false;
+            break;
+        case TG_GM_TAMBOURINE:
+            x = hp * expf(-a * 11.0f) * (0.6f + 0.4f * sinf(6.2831853f * 26.0f * a)) * 0.35f;
+            pan = 0.75f;
+            if (a > 0.5f) k->live = false;
+            break;
+        case TG_GM_TRIANGLE:
+            x = (sinf(6.2831853f * 1250.0f * a) + 0.6f * sinf(6.2831853f * 3140.0f * a)) * expf(-a * 2.2f) * 0.12f;
+            pan = 0.8f;
+            if (a > 2.5f) k->live = false;
+            break;
+        default:
+            k->live = false;
+            break;
+        }
+        x *= v;
+        *out_l += x * (1.0f - pan) * 1.4f;
+        *out_r += x * pan * 1.4f;
+        k->age += 1.0f / SR;
+    }
+}
+
 static void write_wav(const char *path, const evlog *l, int seconds, bool keys)
 {
+    memset(strokes, 0, sizeof strokes);
     (void)seconds;
     long total = (l->n ? l->ev[l->n - 1].t : 0) + 4L * SR;    /* to the last note, plus its tail */
     float *mix = calloc((size_t)total * 2, sizeof(float));
@@ -263,6 +380,12 @@ static void write_wav(const char *path, const evlog *l, int seconds, bool keys)
     for (long t = 0; t < total; ++t) {
         while (e < l->n && l->ev[e].t <= t) {
             const tg_event *ev = &l->ev[e].e;
+            if (ev->part >= TG_PART_DRUMS) {         /* percussion: one-shot strokes, offs ignored */
+                if (ev->on)
+                    stroke_start(ev->part, ev->note, ev->velocity);
+                e++;
+                continue;
+            }
             if (ev->on) {
                 int vi = ev->part == 0 ? 0 : 1;
                 if (ev->part == 2) {                 /* a free pad voice, else the quietest */
@@ -331,6 +454,7 @@ static void write_wav(const char *path, const evlog *l, int seconds, bool keys)
             out_l += 0.16f * s * x->env * (k % 2 ? 1.0f : 0.6f);
             out_r += 0.16f * s * x->env * (k % 2 ? 0.6f : 1.0f);
         }
+        strokes_render(&out_l, &out_r);
         mix[t * 2] = out_l;
         mix[t * 2 + 1] = out_r;
     }
@@ -366,15 +490,34 @@ static void write_wav(const char *path, const evlog *l, int seconds, bool keys)
     free(mix);
 }
 
+/* switching percussion must not change one note of the three voices */
+static bool voices_identical(const evlog *a, const evlog *b)
+{
+    long i = 0, j = 0;
+    while (1) {
+        while (i < a->n && a->ev[i].e.part >= TG_PART_DRUMS) i++;
+        while (j < b->n && b->ev[j].e.part >= TG_PART_DRUMS) j++;
+        if (i >= a->n || j >= b->n)
+            return i >= a->n && j >= b->n;
+        const logged *x = &a->ev[i], *y = &b->ev[j];
+        if (x->t != y->t || x->e.part != y->e.part || x->e.note != y->e.note || x->e.on != y->e.on ||
+            (x->e.on && x->e.velocity != y->e.velocity))
+            return false;
+        i++, j++;
+    }
+}
+
 static int check(const preset *p, const evlog *pa, bool same, bool verbose)
 {
     const evlog a = *pa;
     int fails = 0;
-        long count[TG_PARTS] = {0};
+        long count[TG_EVENT_PARTS] = {0};
         int lo = 127, hi = 0;
         for (long k = 0; k < a.n; ++k)
             if (a.ev[k].e.on) {
                 count[a.ev[k].e.part]++;
+                if (a.ev[k].e.part >= TG_PART_DRUMS)
+                    continue;
                 int n = a.ev[k].e.note;
                 lo = n < lo ? n : lo;
                 hi = n > hi ? n : hi;
@@ -390,7 +533,10 @@ static int check(const preset *p, const evlog *pa, bool same, bool verbose)
                    " counter-melody parallels %ld/%ld, melody from the motif %.0f%%\n",
                    a.halves_on_dominant, a.halves, a.bass_roots, a.bass_changes, a.parallels, a.counter_notes,
                    a.motif_share);
-        fails += !same || a.off_key || !count[0] || !count[1] || !count[2];
+        if (verbose && (a.drum_hits || a.timp_hits))
+            printf("         percussion: %ld drum strokes, %ld timpani strokes (%ld off tonic/dominant)\n",
+                   a.drum_hits, a.timp_hits, a.timp_bad);
+        fails += !same || a.off_key || !count[0] || !count[1] || !count[2] || a.timp_bad;
         fails += a.mel_downbeat_chord != a.mel_downbeats;
         fails += !a.arrivals || a.arrivals_tonic != a.arrivals || a.arrivals_tonic_chord != a.arrivals ||
                  a.arrivals_by_step != a.arrivals;
@@ -415,6 +561,17 @@ int main(int argc, char **argv)
                 evlog a;
                 run(&q, seconds, &a);
                 int f = check(&q, &a, true, false);
+                if (a.drum_hits || a.timp_hits) {
+                    preset off = q;
+                    off.drums = 1;
+                    evlog z;
+                    run(&off, seconds, &z);
+                    if (!voices_identical(&a, &z)) {
+                        f++;
+                        if (bad < 2) printf("  %s seed %u: percussion changed the notes\n", q.name, q.seed);
+                    }
+                    free(z.ev);
+                }
                 if (f && bad < 2) {
                     printf("  %s seed %u fails:\n", q.name, q.seed);
                     check(&q, &a, true, true);
@@ -437,6 +594,16 @@ int main(int argc, char **argv)
             same = a.ev[k].t == b.ev[k].t && a.ev[k].e.part == b.ev[k].e.part && a.ev[k].e.note == b.ev[k].e.note &&
                    a.ev[k].e.velocity == b.ev[k].e.velocity && a.ev[k].e.on == b.ev[k].e.on;
         fails += check(p, &a, same, true);
+        if (a.drum_hits || a.timp_hits) {
+            preset off = *p;
+            off.drums = 1;
+            evlog z;
+            run(&off, seconds, &z);
+            bool ident = voices_identical(&a, &z);
+            printf("         notes identical with percussion off: %s\n", ident ? "yes" : "NO");
+            fails += !ident;
+            free(z.ev);
+        }
         char path[512];
         snprintf(path, sizeof path, "%s/tuna_%s.mid", dir, p->name);
         write_midi(path, &a, p->style >= 0 ? tg_style_get(p->style)->bpm : p->bpm);

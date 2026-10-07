@@ -39,12 +39,12 @@ preset and let it drift, from still and ambient to driving and rhythmic.
 | PLAY | start / stop; always from the top (the same seed plays the same music) |
 | SELECT / MASTER | tempo / volume |
 | PRESETS / ALGORITHM | the library: piece by piece, or a whole era at a time; playing, the new piece comes in at the end of the period. A tempo, root, percussion or evolution you set stays for the next pieces |
-| KNOB 1–4 | the page's four cards; on HOME the chaos knobs: RHYTHM, PITCH, DENSITY and MACRO (0 is the composer exactly) |
+| KNOB 1–4 | the page's four cards; on HOME the chaos knobs: RHYTHM, PITCH, DENSITY and MACRO (0 is the composer exactly), on melody, bass and pad, each in its own way |
 | keys | tap one: the root (from the next chord); hold several: that chord, while held; on SAVE / LOAD the 16 white keys are the slots |
 | OCT− / OCT+ | the seed: another piece in the same manner; on SAVE, LOAD and SEQ: back / do it |
 | REC | memory: the phrase locked (deja vu) / the composer's own |
 | HOME | the falling notes; held: the menu (colour, style) |
-| FX · SCL · EDIT · ARP · SEQ · GLO · SAVE | library · key, scale, tuning, memory · time, then the parts · evolution · freeze · mix, then reverb · save, then load |
+| FX · SCL · EDIT · ARP · SEQ · GLO · SAVE | library · key, scale, tuning, memory · time, then the parts, then which parts follow the chaos knobs · evolution · freeze · mix, then reverb · save, then load |
 | ENV · LFO | MIDI out · the resonator |
 
 ## Roadmap

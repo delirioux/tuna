@@ -35,7 +35,7 @@ enum {
 };
 enum {
     TU_PG_HOME, TU_PG_LIB, TU_PG_KEY, TU_PG_TIME, TU_PG_PARTS, TU_PG_EVOLVE, TU_PG_SEQ,
-    TU_PG_MIX, TU_PG_FX, TU_PG_SAVE, TU_PG_LOAD, TU_PG_MENU, TU_PG_MIDI, TU_PG_RESO, TU_PAGES
+    TU_PG_MIX, TU_PG_FX, TU_PG_SAVE, TU_PG_LOAD, TU_PG_MENU, TU_PG_MIDI, TU_PG_RESO, TU_PG_CHAOS, TU_PAGES
 };
 #define TU_KEY_LO 53                      /* F3: the FM-1's lowest key */
 #define TU_KEY_HI 79                      /* G5 */

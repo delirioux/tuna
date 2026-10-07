@@ -66,6 +66,11 @@ touched only where Tuna hooks in (`felucca.c`, `main.c`, `audio.c`, `tools/build
   at start (the browser: the page's random number), mixed with the moment of the first PLAY unless a seed was
   chosen by then. From there the same seed plays the same music; a slot loads exactly the music that was saved. The
   chaos knobs at 0 are the composer byte for byte. The tests depend on this.
+- **The chaos knobs move melody, bass and pad**, each in its own way: the melody inside its generator; bass
+  and pad through a filter on their events that leaves out, moves and adds notes (the bass keeps its root on
+  every chord change). The filter has its own random numbers, and added notes go out beside the parts, so the
+  harmony and everything else stays the composer's. At 0 nothing changes: the composer byte for byte.
+  The CHAOS page (EDIT a third time) chooses which parts follow; slots keep it (record version 2).
 - **The player's settings carry over.** A new composer brings its own key, tempo, scale, meter and sounds,
   except what the player set: the tempo (SELECT), the root (a key tapped, or KEY's knob), percussion, and
   evolution stay for the next pieces. Chaos, memory, mix, reverb, resonator and MIDI always stay.
@@ -87,8 +92,8 @@ node web/emu/tuna_emu_test.mjs build/tuna_emu/tuna.wasm
 `tuna_tests.sh` runs the browser build and its test too when `node` and `emcc` or `WASI_SYSROOT` are there. A
 WASI sysroot comes with the npm package `@yowasp/clang` (`gen/llvm-resources.tar`).
 
-Last full run, 7 Oct 2026: theory 230, mechanisms 1499, sequencer 1096, presets 1127, resonator 18, MIDI 102,
-maths 6, screen 141 checks, the browser test, and every composer over 10 seeds of 4 minutes: all pass.
+Last full run, 7 Oct 2026: theory 230, mechanisms 1591, sequencer 1096, presets 1127, resonator 18, MIDI 102,
+maths 6, screen 150 checks, the browser test, and every composer over 10 seeds of 4 minutes: all pass.
 
 ## Open risks
 

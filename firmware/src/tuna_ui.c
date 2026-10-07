@@ -134,7 +134,8 @@ static const char *const TU_SCALE_SHORT[TS_COUNT] = {"MAJ", "DOR", "PHRY", "LYD"
 static const char *const TU_PERC_NAMES[] = {"OFF", "PERIOD", "KIT", "PATTERN"};
 static const char *const TU_DEJA_NAMES[TA_DV_COUNT] = {"OFF", "OWN", "LOCK"};
 static const char *const TU_PAGE_NAMES[TU_PAGES] = {"HOME", "LIBRARY", "KEY", "TIME", "PARTS", "EVOLVE", "FREEZE",
-                                                 "MIX", "REVERB", "SAVE", "LOAD", "MENU", "MIDI", "RESONATOR"};
+                                                 "MIX", "REVERB", "SAVE", "LOAD", "MENU", "MIDI", "RESONATOR",
+                                                 "CHAOS"};
 const char *tu_page_name(int page) { return page >= 0 && page < TU_PAGES ? TU_PAGE_NAMES[page] : ""; }
 #define TU_NAMES_N(a) ((int)(sizeof a / sizeof a[0]))
 
@@ -283,6 +284,16 @@ static void tu_page_cards(tuna_ui *u, tu_card *c)
         tu_card_text(&c[2], "PAD", TU_PAD_NAMES[tu_clampi(e.pad, 0, TU_NAMES_N(TU_PAD_NAMES) - 1)], -1);
         tu_card_text(&c[3], "HARM", TU_HARM_NAMES[tu_clampi(e.harm, 0, TU_NAMES_N(TU_HARM_NAMES) - 1)], -1);
         break;
+    case TU_PG_CHAOS: {
+        static const char *const L[3] = {"MELODY", "BASS", "PAD"};
+        static const uint8_t part[3] = {TG_PART_MELODY, TG_PART_BASS, TG_PART_PAD};
+        for (int i = 0; i < 3; ++i) {
+            bool on = (g->chaos_parts >> part[i]) & 1u;
+            tu_card_text(&c[i], L[i], on ? "ON" : "OFF", on ? 1000 : 0);
+        }
+        c[3].off = true;
+        break;
+    }
     case TU_PG_EVOLVE:
         tu_card_text(&c[0], "EVOLVE", g->evolve ? "ON" : "OFF", g->evolve ? 1000 : 0);
         tu_card_int(&c[1], "LEN", g->evolve_periods, 2, 16);
@@ -642,6 +653,22 @@ static void tu_panel_parts(tuna_ui *u)
         cv_text_in(3, 104, 234, &AF_S, "AT THE PERIOD'S END", T_ACCENT, T_SURF);
 }
 
+/* CHAOS: which parts the HOME knobs move, and how far they are turned */
+static void tu_panel_chaos(tuna_ui *u)
+{
+    tg_gen *g = &u->app->g;
+    static const char *const P[3] = {"MELODY", "BASS", "PAD"};
+    static const uint8_t part[3] = {TG_PART_MELODY, TG_PART_BASS, TG_PART_PAD};
+    for (int i = 0; i < 3; ++i) {
+        int32_t y = 10 + i * 26;
+        bool on = (g->chaos_parts >> part[i]) & 1u;
+        cv_rrect(10, y + 4, 8, 8, 4, on ? tu_part_color(part[i]) : T_DIM, T_SURF);
+        cv_text_on(24, y + CAP_IN(S, 16), &AF_S, P[i], T_MID, T_SURF);
+        cv_text_on(100, y + CAP_IN(M, 16), &AF_M, on ? "THE KNOBS" : "AS WRITTEN", on ? T_TEXT : T_DIM, T_SURF);
+    }
+    cv_text_in(3, 92, 234, &AF_S, "HOME: RHYTHM PITCH DENSITY MACRO", T_MID, T_SURF);
+}
+
 /* EVOLVE: the energy arc over the cycle, the period now */
 static void tu_panel_evolve(tuna_ui *u)
 {
@@ -852,6 +879,7 @@ static void tu_draw_panel(tuna_ui *u)
         case TU_PG_MENU: tu_panel_menu(u); break;
         case TU_PG_MIDI: tu_panel_midi(u); break;
         case TU_PG_RESO: tu_panel_reso(u); break;
+        case TU_PG_CHAOS: tu_panel_chaos(u); break;
         }
     }
     cv_blit(0, TU_PANEL_Y);
@@ -1015,6 +1043,14 @@ void tu_knob(tuna_ui *u, int k, int d)
         if (g->style)
             tu_set_edit(u, 1 + c, d);
         break;
+    case TU_PG_CHAOS:
+        if (c < 3) {
+            static const uint8_t part[3] = {TG_PART_MELODY, TG_PART_BASS, TG_PART_PAD};
+            unsigned m = g->chaos_parts;
+            m = d > 0 ? m | (1u << part[c]) : m & ~(1u << part[c]);
+            ta_set_chaos_parts(a, m);
+        }
+        break;
     case TU_PG_EVOLVE:
         if (c == 0) ta_set_evolve(a, d > 0, g->evolve_periods, g->evolve_depth, g->evolve_modulate);
         else if (c == 1) ta_set_evolve(a, g->evolve, tu_clampi(g->evolve_periods + d, 2, 16), g->evolve_depth, g->evolve_modulate);
@@ -1154,7 +1190,7 @@ void tu_button(tuna_ui *u, int b, bool down)
     }
     case TU_B_FX: tu_goto_page(u, TU_PG_LIB); u->browse = a->pending >= 0 ? a->pending : a->item >= 0 ? a->item : 0; break;
     case TU_B_SCL: tu_goto_page(u, TU_PG_KEY); break;
-    case TU_B_EDIT: tu_goto_page(u, u->page == TU_PG_TIME ? TU_PG_PARTS : TU_PG_TIME); break;
+    case TU_B_EDIT: tu_goto_page(u, u->page == TU_PG_TIME ? TU_PG_PARTS : u->page == TU_PG_PARTS ? TU_PG_CHAOS : TU_PG_TIME); break;
     case TU_B_ARP: tu_goto_page(u, TU_PG_EVOLVE); break;
     case TU_B_SEQ: tu_goto_page(u, TU_PG_SEQ); break;
     case TU_B_GLO: tu_goto_page(u, u->page == TU_PG_MIX ? TU_PG_FX : TU_PG_MIX); break;

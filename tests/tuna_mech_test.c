@@ -996,6 +996,167 @@ static void test_orchestration(void)
 }
 
 
+/* ---- the chaos knobs on bass and pad ----------------------------------------------------------------------- */
+typedef struct {
+    long notes[3], ints[3], int_sum[3], off_key[3], spread_sum, spread_n, anchors;
+    uint64_t h_anchor, h_bp, h_all;
+    int prev[3];
+    long tick_pad;
+    int pad_lo, pad_hi;
+    int active[3][128];
+} part_stat;
+static part_stat ps;
+static void parts_cb(void *ctx, const tg_event *e)
+{
+    (void)ctx;
+    if (e->type != TG_EV_NOTE || e->part > TG_PART_PAD)
+        return;
+    int p = e->part;
+    uint8_t b[6] = {(uint8_t)g.ticks, (uint8_t)(g.ticks >> 8), e->part, e->note, e->velocity, e->on};
+    for (int i = 0; i < 6; ++i) {
+        ps.h_all = (ps.h_all ^ b[i]) * 1099511628211ull;
+        if (p != TG_PART_MELODY)
+            ps.h_bp = (ps.h_bp ^ b[i]) * 1099511628211ull;
+    }
+    if (!e->on) {
+        if (ps.active[p][e->note] > 0)
+            ps.active[p][e->note]--;
+        return;
+    }
+    ps.active[p][e->note]++;
+    ps.notes[p]++;
+    if (ps.prev[p] >= 0) {
+        ps.int_sum[p] += abs(e->note - ps.prev[p]);
+        ps.ints[p]++;
+    }
+    ps.prev[p] = e->note;
+    uint16_t allowed = tt_scale_mask(g.period_scale >= 0 ? g.period_scale : g.scale) | tt_scale_mask(g.scale) |
+                       g.chord_scale | g.mel_scale;
+    for (int k = 0; k < g.chord.n; ++k)
+        allowed |= (uint16_t)(1u << ((g.chord.root + g.chord.tone[k]) % 12));
+    if (p != TG_PART_MELODY)
+        ps.off_key[p] += !((allowed >> pc_of(e->note, g.root)) & 1);
+    if (p == TG_PART_BASS && g.cx_fresh) {               /* the bass on the chord change */
+        ps.anchors++;
+        uint8_t a[3] = {(uint8_t)g.ticks, (uint8_t)(g.ticks >> 8), e->note};
+        for (int i = 0; i < 3; ++i)
+            ps.h_anchor = (ps.h_anchor ^ a[i]) * 1099511628211ull;
+    }
+    if (p == TG_PART_PAD) {                              /* the voicing's span, chord by chord */
+        if (ps.tick_pad != g.ticks) {
+            if (ps.tick_pad >= 0 && ps.pad_hi > ps.pad_lo) {
+                ps.spread_sum += ps.pad_hi - ps.pad_lo;
+                ps.spread_n++;
+            }
+            ps.tick_pad = g.ticks;
+            ps.pad_lo = ps.pad_hi = e->note;
+        }
+        if (e->note < ps.pad_lo) ps.pad_lo = e->note;
+        if (e->note > ps.pad_hi) ps.pad_hi = e->note;
+    }
+}
+
+static long parts_hanging;
+static part_stat parts_run(int style, unsigned parts, float r, float pi, float d, float macro, float secs)
+{
+    tg_init(&g, 5, SR);
+    tg_apply_style(&g, style);
+    tg_set_chaos(&g, r, pi, d, macro);
+    tg_set_chaos_parts(&g, parts);
+    g.humanize = g.swing = g.lilt = 0.0f;                /* (events at once, so the callback sees their tick) */
+    g.strum_ms = 0;
+    tg_reseed(&g, 5);
+    memset(&ps, 0, sizeof ps);
+    ps.h_anchor = ps.h_bp = ps.h_all = 1469598103934665603ull;
+    ps.prev[0] = ps.prev[1] = ps.prev[2] = -1;
+    ps.tick_pad = -1;
+    long n = (long)(secs * SR) / BLOCK;
+    for (long i = 0; i < n; ++i)
+        tg_process(&g, BLOCK, parts_cb, NULL);
+    part_stat out = ps;
+    tg_all_off(&g, parts_cb, NULL);                      /* everything released, moved notes too */
+    parts_hanging = 0;
+    for (int p = 0; p < 3; ++p)
+        for (int k = 0; k < 128; ++k)
+            parts_hanging += ps.active[p][k];
+    return out;
+}
+
+static float mean_int(const part_stat *s, int p) { return (float)s->int_sum[p] / (float)(s->ints[p] ? s->ints[p] : 1); }
+static float mean_spread(const part_stat *s) { return (float)s->spread_sum / (float)(s->spread_n ? s->spread_n : 1); }
+
+static void test_hands_parts(void)
+{
+    const unsigned B = 1u << TG_PART_BASS, M = 1u << TG_PART_MELODY, P = 1u << TG_PART_PAD;
+    static const int held[] = {TG_STYLE_BEETHOVEN, TG_STYLE_MAHLER, TG_STYLE_GERSHWIN, TG_STYLE_TCHAIKOVSKY};
+    for (unsigned si = 0; si < sizeof held / sizeof held[0]; ++si) {
+        int st = held[si];
+        const char *nm = tg_style_get(st)->name;
+        part_stat base = parts_run(st, TG_CHAOS_ALL, 0.5f, 0.5f, 0.5f, 0.5f, 120.0f);
+        /* the knobs turned, but no part follows them: the composer exactly */
+        part_stat none = parts_run(st, 0, 1.0f, 1.0f, 1.0f, 0.5f, 120.0f);
+        CHECK(none.h_all == base.h_all, "%s: no part follows: not the composer", nm);
+        /* melody only: the melody moves, nothing is added to bass or pad (they share its random draws, so
+         * their choices may differ) */
+        part_stat mel = parts_run(st, M, 1.0f, 0.0f, 1.0f, 0.5f, 120.0f);
+        CHECK(mel.h_all != base.h_all && parts_hanging == 0, "%s: melody only", nm);
+        (void)M;
+        /* bass: DENSITY, PITCH, and the chord changes untouched */
+        part_stat bd0 = parts_run(st, B, 0.5f, 0.5f, 0.0f, 0.5f, 120.0f);
+        CHECK(parts_hanging == 0, "%s: bass density down: %ld notes left hanging", nm, parts_hanging);
+        part_stat bd1 = parts_run(st, B, 0.5f, 0.5f, 1.0f, 0.5f, 120.0f);
+        CHECK(parts_hanging == 0, "%s: bass density up: %ld notes left hanging", nm, parts_hanging);
+        /* (a bass that only plays the chord changes has nothing to leave out) */
+        CHECK(bd0.notes[0] <= base.notes[0] && base.notes[0] < bd1.notes[0], "%s: bass density %ld <= %ld < %ld", nm,
+              bd0.notes[0], base.notes[0], bd1.notes[0]);
+        part_stat bp1 = parts_run(st, B, 0.5f, 1.0f, 0.5f, 0.5f, 120.0f);
+        part_stat bp0 = parts_run(st, B, 0.5f, 0.0f, 0.5f, 0.5f, 120.0f);
+        CHECK(mean_int(&bp0, 0) <= mean_int(&base, 0) &&
+                  (mean_int(&base, 0) < mean_int(&bp1, 0) || bp1.notes[0] == bp1.anchors),
+              "%s: bass pitch: mean interval %.2f <= %.2f < %.2f", nm, mean_int(&bp0, 0), mean_int(&base, 0),
+              mean_int(&bp1, 0));
+        part_stat br1 = parts_run(st, B, 1.0f, 0.5f, 0.5f, 0.5f, 120.0f);
+        CHECK(br1.h_bp != base.h_bp, "%s: bass rhythm up changed nothing", nm);
+        part_stat bw = parts_run(st, B, 1.0f, 1.0f, 0.0f, 0.5f, 120.0f);
+        CHECK(bw.h_anchor == base.h_anchor && bw.anchors == base.anchors && base.anchors > 0,
+              "%s: the bass on the chord changes moved (%ld, the composer %ld)", nm, bw.anchors, base.anchors);
+        CHECK(bd0.off_key[0] + bd1.off_key[0] + bp1.off_key[0] + br1.off_key[0] + bw.off_key[0] == 0,
+              "%s: bass off key", nm);
+        /* pad: DENSITY, RHYTHM, PITCH (the voicing's span) */
+        part_stat pd0 = parts_run(st, P, 0.5f, 0.5f, 0.0f, 0.5f, 120.0f);
+        part_stat pd1 = parts_run(st, P, 0.5f, 0.5f, 1.0f, 0.5f, 120.0f);
+        CHECK(pd0.notes[2] <= base.notes[2] && base.notes[2] < pd1.notes[2], "%s: pad density %ld <= %ld < %ld", nm,
+              pd0.notes[2], base.notes[2], pd1.notes[2]);
+        part_stat pr1 = parts_run(st, P, 1.0f, 0.5f, 0.5f, 0.5f, 120.0f);
+        CHECK(parts_hanging == 0 && pr1.h_bp != base.h_bp, "%s: pad rhythm up (%ld hanging)", nm, parts_hanging);
+        part_stat pp1 = parts_run(st, P, 0.5f, 1.0f, 0.5f, 0.5f, 120.0f);
+        CHECK(parts_hanging == 0, "%s: pad pitch up: %ld notes left hanging", nm, parts_hanging);
+        part_stat pp0 = parts_run(st, P, 0.5f, 0.0f, 0.5f, 0.5f, 120.0f);
+        CHECK(mean_spread(&pp0) <= mean_spread(&base) && mean_spread(&base) < mean_spread(&pp1),
+              "%s: pad voicing span %.1f <= %.1f < %.1f", nm, mean_spread(&pp0), mean_spread(&base), mean_spread(&pp1));
+        CHECK(pd0.off_key[2] + pd1.off_key[2] + pr1.off_key[2] + pp1.off_key[2] + pp0.off_key[2] == 0, "%s: pad off key",
+              nm);
+        /* the macro: all three knobs at once, every part */
+        part_stat all = parts_run(st, TG_CHAOS_ALL, 1.0f, 1.0f, 1.0f, 0.5f, 60.0f);
+        part_stat mac = parts_run(st, TG_CHAOS_ALL, 0.5f, 0.5f, 0.5f, 1.0f, 60.0f);
+        CHECK(all.h_all == mac.h_all && parts_hanging == 0, "%s: the macro is not the three knobs together", nm);
+    }
+    /* the other modes (figures, drones, ostinatos, lines): wild and sparse, nothing hangs, nothing off key */
+    static const int other[] = {TG_STYLE_MOZART, TG_STYLE_HILDEGARD, TG_STYLE_GLASS, TG_STYLE_PURCELL, TG_STYLE_REICH,
+                                TG_STYLE_PART, TG_STYLE_DEBUSSY, TG_STYLE_BACH};
+    for (unsigned si = 0; si < sizeof other / sizeof other[0]; ++si) {
+        int st = other[si];
+        const char *nm = tg_style_get(st)->name;
+        for (int k = 0; k < 2; ++k) {
+            float v = k ? 1.0f : 0.0f;
+            part_stat x = parts_run(st, TG_CHAOS_ALL, v, v, v, v, 90.0f);
+            CHECK(parts_hanging == 0, "%s: chaos %.0f: %ld notes left hanging", nm, v, parts_hanging);
+            CHECK(x.off_key[0] + x.off_key[2] == 0, "%s: chaos %.0f: %ld bass, %ld pad notes off key", nm, v, x.off_key[0],
+                  x.off_key[2]);
+        }
+    }
+}
+
 /* ---- the player's hands: chaos knobs, a root from a key, a chord held ------------------------------------ */
 typedef struct { long notes, on_beat, leaps_sum, intervals, off_key; uint64_t h; } hand_stat;
 static hand_stat hs;
@@ -1147,6 +1308,7 @@ int main(void)
     test_form();
     test_orchestration();
     test_hands();
+    test_hands_parts();
     printf("tuna_mech: %d checks, %d failed\n", checks, fails);
     return fails ? 1 : 0;
 }

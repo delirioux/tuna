@@ -70,7 +70,8 @@ typedef struct {
     int mel_prev;
 } evlog;
 
-static tg_gen *cur;     /* the generator being rendered, for the checks in on_event */
+static tg_gen *cur;
+static int gen_div = 1;   /* TUNA_DIV: the generator at SR / gen_div, as the firmware may run it */     /* the generator being rendered, for the checks in on_event */
 
 static void on_event(void *ctx, const tg_event *e)
 {
@@ -79,7 +80,7 @@ static void on_event(void *ctx, const tg_event *e)
         l->cap = l->cap ? l->cap * 2 : 1024;
         l->ev = realloc(l->ev, (size_t)l->cap * sizeof *l->ev);
     }
-    l->ev[l->n].t = l->now + e->offset;
+    l->ev[l->n].t = l->now + (long)e->offset * gen_div;
     l->ev[l->n].e = *e;
     l->n++;
     if (e->on && e->part == TG_PART_TIMPANI) {
@@ -154,7 +155,7 @@ static void on_event(void *ctx, const tg_event *e)
 static void run(const preset *p, int seconds, evlog *l)
 {
     static tg_gen g;
-    tg_init(&g, p->seed, (float)SR);
+    tg_init(&g, p->seed, (float)SR / (float)gen_div);
     if (p->style >= 0)
         goto styled;              /* a signature brings its own settings */
     g.bpm = p->bpm;
@@ -192,11 +193,11 @@ styled:
     l->counter_prev = -1;
     long total = (long)seconds * SR;
     for (l->now = 0; l->now < total; l->now += BLOCK)
-        tg_process(&g, BLOCK, on_event, l);
+        tg_process(&g, BLOCK / gen_div, on_event, l);
     /* end like a song: play on to the next arrival on the tonic and let it ring for its bar */
     long arrived = -1;
     while (1) {
-        tg_process(&g, BLOCK, on_event, l);
+        tg_process(&g, BLOCK / gen_div, on_event, l);
         l->now += BLOCK;
         if (arrived < 0 && g.ticks > 1 && tg_period_position(&g, NULL) == 0)
             arrived = g.ticks;
@@ -550,6 +551,10 @@ int main(int argc, char **argv)
     const char *dir = argc > 1 ? argv[1] : ".";
     int seconds = argc > 2 ? atoi(argv[2]) : 60;
     int fails = 0;
+    if (getenv("TUNA_DIV"))
+        gen_div = atoi(getenv("TUNA_DIV"));
+    if (gen_div != 1 && gen_div != 2 && gen_div != 4 && gen_div != 8)
+        gen_div = 1;
     if (getenv("SWEEP")) {
         /* the same checks over many seeds per preset, no files */
         int seeds = atoi(getenv("SWEEP"));

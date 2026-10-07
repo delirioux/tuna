@@ -68,7 +68,7 @@ typedef struct {
     long n, cap, now;
     /* musical checks, harmonized mode */
     long mel_notes, mel_steps, mel_downbeats, mel_downbeat_chord;
-    long arrivals, arrivals_tonic, arrivals_tonic_chord, arrivals_by_step;
+    long arrivals, arrivals_tonic, arrivals_tonic_chord, arrivals_by_step, arrivals_open, arrivals_open_ok;
     long off_key, halves, halves_on_dominant, bass_changes, bass_roots, counter_notes, parallels;
     double motif_share;
     long timp_bad, drum_hits, timp_hits;
@@ -100,14 +100,17 @@ static void on_event(void *ctx, const tg_event *e)
         l->drum_hits++;
     if (e->on && e->part < TG_PART_DRUMS) {
         /* in key: the scale, the current chord, or the scale bent to the chord */
-        uint16_t allowed = tt_scale_mask(cur->scale) | cur->chord_scale;
+        uint16_t allowed = tt_scale_mask(cur->period_scale >= 0 ? cur->period_scale : cur->scale) | cur->chord_scale |
+                           cur->mel_scale;
         for (int k = 0; k < cur->chord.n; ++k)
             allowed |= (uint16_t)(1u << ((cur->chord.root + cur->chord.tone[k]) % 12));
         int pc = ((e->note - cur->root) % 12 + 12) % 12;
         bool leaning = e->part == TG_PART_MELODY && cur->mel_pending >= 0;   /* a chromatic appoggiatura */
         l->off_key += !((allowed >> pc) & 1) && !leaning;
     }
-    if (e->on && e->part == TG_PART_BASS && cur->style && cur->bass_mode != TG_BASS_PEDAL && cur->chord_ticks > 0 &&
+    bool root_bass = cur->bass_mode == TG_BASS_ROOT || cur->bass_mode == TG_BASS_BAR || cur->bass_mode == TG_BASS_WALKING ||
+                     cur->bass_mode == TG_BASS_MARCH || cur->bass_mode == TG_BASS_REPEAT || cur->bass_mode == TG_BASS_BEAT;
+    if (e->on && e->part == TG_PART_BASS && cur->style && root_bass && cur->chord_ticks > 0 &&
         (cur->ticks - 1) % cur->chord_ticks == 0) {
         l->bass_changes++;
         l->bass_roots += ((e->note - cur->root) % 12 + 12) % 12 == cur->chord.root;
@@ -130,25 +133,41 @@ static void on_event(void *ctx, const tg_event *e)
             l->mel_notes++;
         }
         l->mel_prev = e->note;
+        /* the phrase checks hold for phrases (and chant); the other melody modes have their own tests */
+        bool phrase = cur->mel_mode == TG_MEL_PHRASE || cur->mel_mode == TG_MEL_CHANT;
         int q = (int)(cur->ticks - 1);
         int period = 0, ppos = tg_period_position(cur, &period);
         bool aug = cur->chord.n >= 3 && cur->chord.tone[1] == 4 && cur->chord.tone[2] == 8;
-        if (cur->style && ppos == tg_half_position(cur) && !aug) {
+        bool octa = cur->period_scale == TS_OCT_HW || cur->period_scale == TS_OCT_WH;
+        if (phrase && cur->style && cur->harmony == TG_HARM_PLANNED && ppos == tg_half_position(cur) && !aug && !octa &&
+            !cur->plan_wt && cur->plan_len >= 4) {
             l->halves++;
-            l->halves_on_dominant += cur->chord.root == 7 || cur->chord.root == 11;
+            const tg_chord_def *v = tg_vocab_of(cur->style->vocab, cur->plan_minor);
+            l->halves_on_dominant += v[cur->plan[cur->plan_len / 2 - 1]].func == TF_D;
         }
-        if (q > 0 && ppos == 0) {
+        if (phrase && q > 0 && ppos == 0) {
+            int pc = ((e->note - cur->root) % 12 + 12) % 12;
             l->arrivals++;
             l->arrivals_by_step += step >= 1 && step <= 2;
-            l->arrivals_tonic += ((e->note - cur->root) % 12 + 12) % 12 == 0;
-            l->arrivals_tonic_chord += cur->chord.root == 0;
+            if (cur->chord.root == 0 && !cur->open_prev) {
+                l->arrivals_tonic += pc == 0;
+                l->arrivals_tonic_chord++;
+            } else {
+                bool tone = false;              /* an open ending: a tone of the chord it lands on */
+                for (int c = 0; c < cur->chord.n && c < 3; ++c)
+                    tone |= (cur->chord.root + cur->chord.tone[c]) % 12 == pc;
+                l->arrivals_open++;
+                l->arrivals_open_ok += tone;
+            }
         }
-        if (q % (cur->division * cur->beats_per_bar) == 0) {
+        tg_meter_pos m;
+        tg_meter_at(cur, q, &m);
+        if (cur->mel_mode == TG_MEL_PHRASE && m.bar_start) {
             l->mel_downbeats++;
             int pc = ((e->note - cur->root) % 12 + 12) % 12;
             tt_chord c = cur->chord;
-            if (cur->mel_pending >= 0) {
-                l->mel_downbeat_chord++;      /* an appoggiatura: a non-chord tone on purpose, resolving */
+            if (cur->mel_pending >= 0 || cur->orn_n > 0) {
+                l->mel_downbeat_chord++;      /* an appoggiatura or a turn: a non-chord tone on purpose */
             } else {
                 for (int k = 0; k < c.n && k < 3; ++k)
                     if ((c.root + c.tone[k]) % 12 == pc) {
@@ -539,6 +558,8 @@ static int check(const preset *p, const evlog *pa, bool same, bool verbose)
                p->name, a.n, count[0], count[1], count[2], lo, hi, a.off_key, same ? "yes" : "NO",
                a.mel_notes ? 100.0 * a.mel_steps / a.mel_notes : 0.0, a.mel_downbeat_chord, a.mel_downbeats,
                a.arrivals_tonic, a.arrivals, a.arrivals_tonic_chord, a.arrivals_by_step);
+        if (verbose && a.arrivals_open)
+            printf("         open endings: %ld, on a tone of their chord %ld\n", a.arrivals_open, a.arrivals_open_ok);
         if (p->style >= 0)
             if (verbose) printf("         style: half cadences on the dominant %ld/%ld, bass on the root at chord changes %ld/%ld,"
                    " counter-melody parallels %ld/%ld, melody from the motif %.0f%%\n",
@@ -549,18 +570,47 @@ static int check(const preset *p, const evlog *pa, bool same, bool verbose)
                    a.drum_hits, a.timp_hits, a.timp_bad);
         fails += !same || a.off_key || !count[0] || !count[1] || !count[2] || a.timp_bad;
         fails += a.mel_downbeat_chord != a.mel_downbeats;
-        fails += !a.arrivals || a.arrivals_tonic != a.arrivals || a.arrivals_tonic_chord != a.arrivals ||
-                 a.arrivals_by_step != a.arrivals;
+        {
+            const tg_style *st = p->style >= 0 ? tg_style_get(p->style) : NULL;
+            bool phrase = !st || st->mel_mode == TG_MEL_PHRASE || st->mel_mode == TG_MEL_CHANT;
+            if (phrase) {
+                fails += !a.arrivals || a.arrivals_tonic != a.arrivals_tonic_chord || a.arrivals_by_step != a.arrivals ||
+                         a.arrivals_open_ok != a.arrivals_open;
+                if (!st || st->open <= 0.0f)
+                    fails += a.arrivals_tonic_chord != a.arrivals;   /* no open endings: every arrival on the tonic */
+            }
+        }
         if (p->style >= 0)
             fails += a.halves_on_dominant != a.halves || a.bass_roots != a.bass_changes || a.parallels;
     return fails;
 }
+
+/* STYLES=a-b (or one id): every composer in the range as a preset, instead of the list above */
+static preset style_presets[TG_STYLE_COUNT];
+static char style_names[TG_STYLE_COUNT][24];
 
 int main(int argc, char **argv)
 {
     const char *dir = argc > 1 ? argv[1] : ".";
     int seconds = argc > 2 ? atoi(argv[2]) : 60;
     int fails = 0;
+    const preset *list = presets;
+    size_t nlist = sizeof presets / sizeof presets[0];
+    if (getenv("STYLES")) {
+        int a = 0, b = TG_STYLE_COUNT - 1;
+        if (sscanf(getenv("STYLES"), "%d-%d", &a, &b) == 1) b = a;
+        nlist = 0;
+        for (int i = a; i <= b && i < TG_STYLE_COUNT; ++i) {
+            const char *n = tg_style_get(i)->name;
+            int k = 0;
+            for (; n[k] && k < 23; ++k) style_names[i][k] = (char)(n[k] >= 'A' && n[k] <= 'Z' ? n[k] + 32 : n[k] == ' ' ? '-' : n[k]);
+            style_names[i][k] = 0;
+            preset q = {.name = style_names[i], .seed = 1, .style = i, .keys = true};
+            style_presets[nlist++] = q;
+        }
+        list = style_presets;
+    }
+    const char *only = getenv("ONLY");
     if (getenv("TUNA_DIV"))
         gen_div = atoi(getenv("TUNA_DIV"));
     if (gen_div != 1 && gen_div != 2 && gen_div != 4 && gen_div != 8)
@@ -568,10 +618,12 @@ int main(int argc, char **argv)
     if (getenv("SWEEP")) {
         /* the same checks over many seeds per preset, no files */
         int seeds = atoi(getenv("SWEEP"));
-        for (size_t i = 0; i < sizeof presets / sizeof presets[0]; ++i) {
+        for (size_t i = 0; i < nlist; ++i) {
+            if (only && strcmp(only, list[i].name))
+                continue;
             int bad = 0;
             for (int sd = 1; sd <= seeds; ++sd) {
-                preset q = presets[i];
+                preset q = list[i];
                 q.seed = (uint32_t)(sd * 7919 + 17);
                 evlog a;
                 run(&q, seconds, &a);
@@ -594,13 +646,15 @@ int main(int argc, char **argv)
                 bad += f > 0;
                 free(a.ev);
             }
-            printf("%-12s %d/%d seeds pass\n", presets[i].name, seeds - bad, seeds);
+            printf("%-14s %d/%d seeds pass\n", list[i].name, seeds - bad, seeds);
             fails += bad;
         }
         return fails ? 1 : 0;
     }
-    for (size_t i = 0; i < sizeof presets / sizeof presets[0]; ++i) {
-        const preset *p = &presets[i];
+    for (size_t i = 0; i < nlist; ++i) {
+        const preset *p = &list[i];
+        if (only && strcmp(only, p->name))
+            continue;
         evlog a, b;
         run(p, seconds, &a);
         run(p, seconds, &b);
@@ -623,7 +677,8 @@ int main(int argc, char **argv)
         snprintf(path, sizeof path, "%s/tuna_%s.mid", dir, p->name);
         write_midi(path, &a, p->style >= 0 ? tg_style_get(p->style)->bpm : p->bpm);
         snprintf(path, sizeof path, "%s/tuna_%s.wav", dir, p->name);
-        write_wav(path, &a, seconds, p->keys);
+        if (!getenv("NOWAV"))
+            write_wav(path, &a, seconds, p->keys);
         free(a.ev);
         free(b.ev);
     }

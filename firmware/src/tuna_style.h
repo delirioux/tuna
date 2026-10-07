@@ -194,6 +194,7 @@ typedef struct {
 } tg_style;
 
 const tg_style *tg_style_get(int id);
+const char *tg_family_name(int family);       /* TI_*: a short name for the screen */
 const tg_chord_def *tg_vocab(bool minor);               /* the classic vocabulary */
 const tg_chord_def *tg_vocab_of(int vocab, bool minor);
 

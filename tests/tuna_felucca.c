@@ -52,7 +52,8 @@ typedef struct {
     float t_bias, t_jitter, t_dv, x_spread, x_steps, x_dv;
 } piece_t;
 
-enum { E_ANALOG = 0, E_PHASE = 2, E_LOFI = 3, E_SAMPLE = 4, E_WHEEL = 7, E_GRAIN = 8, E_PHYS = 9, E_FM6 = 12 };
+enum { E_ANALOG = 0, E_PHASE = 2, E_LOFI = 3, E_SAMPLE = 4, E_VOICE = 5, E_TRIO = 6, E_WHEEL = 7, E_GRAIN = 8,
+       E_PHYS = 9, E_FM6 = 12 };
 #define SND(e, p) {(uint8_t)(e), (uint8_t)(p)}
 #define SUB_BASS SND(E_ANALOG, 7)
 #define SOFT_PAD SND(E_ANALOG, 1)
@@ -70,6 +71,41 @@ enum { E_ANALOG = 0, E_PHASE = 2, E_LOFI = 3, E_SAMPLE = 4, E_WHEEL = 7, E_GRAIN
 #define FM_BASS SND(E_FM6, 2)
 #define FM_PAD SND(E_FM6, 4)
 #define HARPSICHORD SND(E_FM6, 7)
+
+/* Tuna's instrument families on Felucca's sounds (the firmware will hold the same table) */
+static const sound_t FAMILY[TI_COUNT] = {
+    [TI_DEFAULT]    = SND(E_ANALOG, 1),
+    [TI_PIANO]      = SND(E_SAMPLE, 0),
+    [TI_HARPSICHORD]= SND(E_FM6, 7),
+    [TI_ORGAN]      = SND(E_WHEEL, 0),
+    [TI_STRINGS]    = SND(E_ANALOG, 11),
+    [TI_VIOLIN]     = SND(E_PHASE, 2),
+    [TI_CELLO]      = SND(E_PHASE, 2),
+    [TI_CONTRABASS] = SND(E_ANALOG, 7),
+    [TI_PIZZ]       = SND(E_PHYS, 2),
+    [TI_FLUTE]      = SND(E_SAMPLE, 2),
+    [TI_OBOE]       = SND(E_ANALOG, 10),
+    [TI_CLARINET]   = SND(E_WHEEL, 3),
+    [TI_BASSOON]    = SND(E_LOFI, 1),
+    [TI_HORN]       = SND(E_PHASE, 0),
+    [TI_TRUMPET]    = SND(E_ANALOG, 9),
+    [TI_BRASS]      = SND(E_FM6, 3),
+    [TI_TUBA]       = SND(E_FM6, 2),
+    [TI_HARP]       = SND(E_PHYS, 8),
+    [TI_GUITAR]     = SND(E_PHYS, 2),
+    [TI_CHOIR]      = SND(E_VOICE, 0),
+    [TI_VOICE]      = SND(E_VOICE, 1),
+    [TI_BELLS]      = SND(E_FM6, 1),
+    [TI_CELESTA]    = SND(E_PHASE, 4),
+    [TI_MARIMBA]    = SND(E_FM6, 5),
+    [TI_BANDONEON]  = SND(E_WHEEL, 2),
+    [TI_SAX]        = SND(E_SAMPLE, 3),
+    [TI_SYNTH]      = SND(E_ANALOG, 0),
+    [TI_PAD]        = SND(E_ANALOG, 1),
+    [TI_WHISTLE]    = SND(E_WHEEL, 3),
+    [TI_DRONE]      = SND(E_PHYS, 7),
+    [TI_EPIANO]     = SND(E_FM6, 0),
+};
 
 static const piece_t pieces[] = {
     {.name = "garden", .style = -1, .seed = 1, .s = {SUB_BASS, FM_BELL, CLOUD}, .level = {96, 104, 92, 96}, .rev = 40,
@@ -133,12 +169,78 @@ static int lk_param(int lk)
     default:          return -1;
     }
 }
-static long n_params;
+static long n_params, n_programs;
+static const piece_t *cur_piece;
+static int cur_family[3];
+
+/* a part's own settings over its sound: chords and figures polyphonic, its level, at least its reverb, short
+ * releases for quick figures (a piano tail would hold one of the 8 shared voices long after) */
+static void part_settings(uint32_t k)
+{
+    const piece_t *p = cur_piece;
+    if (k != 1u)
+        trk[k].p[P_VOICE] = V_POLY;               /* the melody keeps its preset's mode */
+    trk[k].p[P_LEVEL] = p->level[k];
+    if (trk[k].p[P_REV] < p->rev)
+        trk[k].p[P_REV] = p->rev;
+    if (k == 2u && (gen.pad_mode == TG_PAD_ALBERTI || gen.pad_mode == TG_PAD_BROKEN || gen.pad_mode == TG_PAD_ARPEGGIO ||
+                    gen.pad_mode == TG_PAD_REPEAT || gen.pad_mode == TG_PAD_COUNTER || gen.pad_mode == TG_PAD_TREMOLO ||
+                    gen.pad_mode == TG_PAD_FIGURE || gen.pad_mode == TG_PAD_ADDITIVE || gen.pad_mode == TG_PAD_OOMPAH ||
+                    gen.pad_mode == TG_PAD_PHASE)) {
+        if (trk[2].p[P_REL] > 34)
+            trk[2].p[P_REL] = 34;
+    }
+    if (k == 0u && (gen.bass_mode == TG_BASS_REPEAT || gen.bass_mode == TG_BASS_OSTINATO || gen.bass_mode == TG_BASS_BEAT)) {
+        if (trk[0].p[P_REL] > 40)
+            trk[0].p[P_REL] = 40;
+    }
+}
+
+static int lk_param(int lk);
+static void snapshot_base(uint32_t t)
+{
+    for (int lk = 0; lk < TG_LK_COUNT; ++lk)
+        if (lk_param(lk) >= 0)
+            base_val[t][lk] = trk[t].p[lk_param(lk)];
+}
+
+/* a part changes instrument: the sound fades over 3 ms and the new one takes the next notes */
+static void apply_family(uint32_t k, int fam, bool now)
+{
+    if (k > 2u || fam <= TI_DEFAULT || fam >= TI_COUNT || fam == cur_family[k])
+        return;
+    cur_family[k] = fam;
+    if (now)
+        host_preset(&trk[k], FAMILY[fam].engine, FAMILY[fam].preset);
+    else
+        host_preset_req(&trk[k], FAMILY[fam].engine, FAMILY[fam].preset);
+    part_settings(k);
+    snapshot_base(k);
+}
+
+/* a tuned note: the voice just started moves by the note's cents (1/16 semitone steps) */
+static void tune_voice(track_t *t, uint32_t note, int cents10)
+{
+    if (!cents10 || t->eng_req != t->engine || t->xf_on)
+        return;
+    voice_t *v = trk_vmode(t) == V_POLY ? &t->v[t->m_vi] : &t->v[0];
+    if (v->note != note)
+        return;
+    int d = (int)lrintf((float)cents10 * 16.0f / 1000.0f);
+    v->pitch16 += d;
+    if (!v->gstep)
+        v->pitch_cur = v->pitch16;
+}
 
 static void on_event(void *ctx, const tg_event *e)
 {
     (void)ctx;
     uint32_t tr = e->part >= TG_PART_DRUMS ? 3u : e->part;
+    if (e->type == TG_EV_PROGRAM) {
+        apply_family(tr, e->value, false);
+        n_programs++;
+        return;
+    }
     if (e->type == TG_EV_PARAM) {
         int prm = lk_param(e->param);
         if (prm >= 0)
@@ -153,6 +255,8 @@ static void on_event(void *ctx, const tg_event *e)
     }
     if (e->on) {
         trk_note_on(&trk[tr], note, e->velocity);
+        if (tr != 3u)
+            tune_voice(&trk[tr], note, e->value);
         n_events++;
     } else if (tr != 3u) {
         trk_note_off(&trk[tr], note);    /* a drum hit plays on through its decay */
@@ -197,28 +301,21 @@ static void setup(const piece_t *p)
         tg_set_percussion(&gen, p->drums - 1);
     gen.humanize = 1.0f;
     song.g[G_BPM] = (int16_t)lrintf(gen.bpm);
+    cur_piece = p;
     for (uint32_t k = 0; k < 3u; ++k) {
         host_preset(&trk[k], p->s[k].engine, p->s[k].preset);
-        if (k != 1u)
-            trk[k].p[P_VOICE] = V_POLY;               /* chords and figures; the melody keeps its preset's mode */
-        trk[k].p[P_LEVEL] = p->level[k];
-        if (trk[k].p[P_REV] < p->rev)
-            trk[k].p[P_REV] = p->rev;
+        cur_family[k] = -1;
+        part_settings(k);
     }
-    /* fast figures (Alberti, broken chords, arpeggios, repeated chords) release sooner: a piano
-     * note's tail would otherwise hold a voice of the shared 8 long after the next note sounds */
-    if (gen.pad_mode == TG_PAD_ALBERTI || gen.pad_mode == TG_PAD_BROKEN || gen.pad_mode == TG_PAD_ARPEGGIO ||
-        gen.pad_mode == TG_PAD_REPEAT || gen.pad_mode == TG_PAD_COUNTER) {
-        if (trk[2].p[P_REL] > 34)
-            trk[2].p[P_REL] = 34;
-    }
+    /* a style with its own instruments: the first set from the start (its programs at tick 0 then agree) */
+    if (gen.style && gen.style->orch_n)
+        for (uint32_t k = 0; k < 3u; ++k)
+            apply_family(k, gen.style->orch[0][k], true);
     host_drums(&trk[3]);
     trk[3].p[P_LEVEL] = p->level[3];
     tune_timpani(&trk[3], gen.root);
-    for (int t = 0; t < 4; ++t)
-        for (int lk = 0; lk < TG_LK_COUNT; ++lk)
-            if (lk_param(lk) >= 0)
-                base_val[t][lk] = trk[t].p[lk_param(lk)];
+    for (uint32_t t = 0; t < 4u; ++t)
+        snapshot_base(t);
     if (p->demo == 1)
         tg_evolve(&gen, true, 8, 1.0f, true);
 }
@@ -283,6 +380,7 @@ static int render(const piece_t *p, const char *dir, int seconds, stats_t *st)
     setup(p);
     n_events = 0;
     n_params = 0;
+    n_programs = 0;
     uint32_t kills0 = voice_kills;
     long total = (long)seconds * FS, f = 0, arrived = -1, tail_left = -1;
     const long seg = FS / 2;

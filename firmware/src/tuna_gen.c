@@ -304,6 +304,10 @@ void tg_reseed(tg_gen *g, uint32_t seed)
     g->oompah_off = -1;
     g->gp_from = g->gp_until = -1;
     g->echo_vel = 0;
+    for (int p = 0; p < TG_PARTS; ++p)
+        g->orch_cur[p] = -1;
+    g->orch_set = 0;
+    tm_rng_init(&g->orng, seed ^ 0x4f726368u);
     if (g->style && g->alt_on)
         apply_modes(g, false);                      /* a restart begins outside any contrast period */
     g->alt_on = false;
@@ -2588,6 +2592,40 @@ static void evolve_step(tg_gen *g)
         g->periods_away++;
 }
 
+/* instrumentation: the style's sets of families, changed at period starts (by turns, at random, with the
+ * energy of the evolution, or with the contrast periods); a PROGRAM event per part that changes */
+static void orch_step(tg_gen *g, int offset)
+{
+    const tg_style *st = g->style;
+    int n = st->orch_n;
+    if (n <= 0)
+        return;
+    int set = g->orch_set;
+    switch (st->orch_mode) {
+    case TG_ORCH_CYCLE:    set = (int)(g->period_index % n); break;
+    case TG_ORCH_RANDOM:
+        if (g->period_index > 0 && tm_rng_float(&g->orng) < 0.5f)
+            set = (int)(tm_rng_float(&g->orng) * (float)n);
+        break;
+    case TG_ORCH_ENERGY:
+        set = g->evolve ? (int)(g->energy * (float)n) : (int)(g->period_index % n);
+        break;
+    case TG_ORCH_CONTRAST: set = g->alt_on && n > 1 ? 1 : 0; break;
+    default:               set = 0; break;
+    }
+    if (set >= n) set = n - 1;
+    if (set < 0) set = 0;
+    g->orch_set = set;
+    for (int p = 0; p < TG_PARTS; ++p) {
+        int f = st->orch[set][p];
+        if (f == TI_DEFAULT || f == g->orch_cur[p])
+            continue;
+        g->orch_cur[p] = f;
+        tg_event e = {(uint8_t)p, 0, 0, false, (uint16_t)offset, TG_EV_PROGRAM, 0, (int16_t)f};
+        out_event(g, &e);
+    }
+}
+
 /* the form at a period's start: a contrast period (other modes, tempo, density), an echo, a general
  * pause after the arrival */
 static void form_step(tg_gen *g, int offset)
@@ -2603,6 +2641,7 @@ static void form_step(tg_gen *g, int offset)
                 g->base_density = st->melody_density * (on && st->alt.density > 0.0f ? st->alt.density : 1.0f);
         }
     }
+    orch_step(g, offset);
     g->echo_vel = g->echo > 0.0f && hrand(g) < g->echo ? -22 : 0;
     if (g->gp > 0.0f && hrand(g) < g->gp) {
         int bar = bar_ticks_of(g);
@@ -2667,6 +2706,8 @@ static void seq_tick(tg_gen *g, int offset)
         r->root = (int8_t)(g->key_pending ? g->next_root : g->root);
         r->scale = (int8_t)(g->key_pending ? g->next_scale : g->scale);
     } else if (g->ticks == 1) {
+        if (g->style)
+            orch_step(g, offset);                   /* the opening instruments */
         g->rec[g->rec_cur].n = 0;
         g->rec[g->rec_cur].len = (uint16_t)period;
         g->rec[g->rec_cur].root = (int8_t)g->root;

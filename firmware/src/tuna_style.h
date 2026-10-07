@@ -235,6 +235,7 @@ typedef struct {
 } tg_style;
 
 const tg_style *tg_style_get(int id);
+int tg_style_index(const tg_style *st);           /* TG_STYLE_* of a library style, or -1 */
 const char *tg_family_name(int family);       /* TI_*: a short name for the screen */
 const tg_chord_def *tg_vocab(bool minor);               /* the classic vocabulary */
 const tg_chord_def *tg_vocab_of(int vocab, bool minor);

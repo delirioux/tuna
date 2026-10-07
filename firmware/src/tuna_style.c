@@ -1846,3 +1846,8 @@ static const char *const family_names[TI_COUNT] = {
 const char *tg_family_name(int f) { return f >= 0 && f < TI_COUNT ? family_names[f] : "?"; }
 
 const tg_style *tg_style_get(int id) { return id >= 0 && id < TG_STYLE_COUNT ? &styles[id] : 0; }
+
+int tg_style_index(const tg_style *st)
+{
+    return st >= styles && st < styles + TG_STYLE_COUNT ? (int)(st - styles) : -1;
+}

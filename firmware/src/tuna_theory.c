@@ -17,6 +17,13 @@ static const struct { uint16_t mask; const char *name; } scales[TS_COUNT] = {
     [TS_PENT_MINOR] = {0x4A9, "PENT MIN"},    /* 0 3 5 7 10 */
     [TS_BLUES]      = {0x4E9, "BLUES"},       /* 0 3 5 6 7 10 */
     [TS_WHOLE_TONE] = {0x555, "WHOLE T"},     /* 0 2 4 6 8 10 */
+    [TS_OCT_HW]     = {0x6DB, "OCT H-W"},     /* 0 1 3 4 6 7 9 10 */
+    [TS_OCT_WH]     = {0xB6D, "OCT W-H"},     /* 0 2 3 5 6 8 9 11 */
+    [TS_MESSIAEN3]  = {0xDDD, "MODE 3"},      /* 0 2 3 4 6 7 8 10 11 */
+    [TS_ACOUSTIC]   = {0x6D5, "ACOUSTIC"},    /* 0 2 4 6 7 9 10 */
+    [TS_HUNG_MINOR] = {0x9CD, "HUNGARIAN"},   /* 0 2 3 6 7 8 11 */
+    [TS_DOUBLE_HARM]= {0x9B3, "BYZANTINE"},   /* 0 1 4 5 7 8 11 */
+    [TS_PHRYG_DOM]  = {0x5B3, "PHRYG DOM"},   /* 0 1 4 5 7 8 10 */
 };
 
 static int clamp_note(int n) { return n < 0 ? 0 : n > 127 ? 127 : n; }
@@ -90,6 +97,26 @@ static const struct { uint8_t n; int8_t t[TT_CHORD_MAX]; } qualities[TQ_COUNT] =
     [TQ_MIN7]  = {4, {0, 3, 7, 10}},
     [TQ_DOM7]  = {4, {0, 4, 7, 10}},
     [TQ_HDIM7] = {4, {0, 3, 6, 10}},
+    [TQ_MAJ6]    = {4, {0, 4, 7, 9}},
+    [TQ_MIN6]    = {4, {0, 3, 7, 9}},
+    [TQ_ADD9]    = {4, {0, 4, 7, 14}},
+    [TQ_MADD9]   = {4, {0, 3, 7, 14}},
+    [TQ_MAJ9]    = {4, {0, 4, 11, 14}},
+    [TQ_MIN9]    = {4, {0, 3, 10, 14}},
+    [TQ_DOM9]    = {4, {0, 4, 10, 14}},
+    [TQ_DOM13]   = {4, {0, 4, 10, 21}},
+    [TQ_DOM7B9]  = {4, {0, 4, 10, 13}},
+    [TQ_SUS7]    = {4, {0, 5, 7, 10}},
+    [TQ_DIM7]    = {4, {0, 3, 6, 9}},
+    [TQ_MINMAJ7] = {4, {0, 3, 7, 11}},
+    [TQ_MAJ7S11] = {4, {0, 4, 11, 18}},
+    [TQ_SIXNINE] = {4, {0, 4, 9, 14}},
+    [TQ_MIN11]   = {4, {0, 3, 10, 17}},
+    [TQ_AUG7]    = {4, {0, 4, 8, 10}},
+    [TQ_DOM7B5]  = {4, {0, 4, 6, 10}},
+    [TQ_QUARTAL] = {4, {0, 5, 10, 15}},
+    [TQ_FIFTH]   = {2, {0, 7}},
+    [TQ_ADD2]    = {4, {0, 2, 4, 7}},
 };
 
 void tt_chord_fixed(tt_chord *c, int root_semi, int quality)
@@ -151,6 +178,38 @@ void tt_prog_chord(tt_chord *c, int prog, int step_i, int scale, int tones)
     tt_chord_fixed(c, s.v, s.q);
     if (tones < c->n)                         /* triad requested: drop the 7th of fixed 7th chords */
         c->n = (uint8_t)tones;
+}
+
+/* ---- tunings ------------------------------------------------------------------------------- */
+/* cents x10 from equal temperament, by pitch class above the tuning root (the root itself exact):
+ * meantone        quarter-comma, fifths of 696.58 cents from E-flat to G-sharp
+ * Werckmeister    III (1691)
+ * Pythagorean     pure fifths from E-flat to G-sharp
+ * just            5-limit: 16/15 9/8 6/5 5/4 4/3 45/32 3/2 8/5 5/3 16/9 15/8 */
+static const int16_t tunings[TT_TUNE_USER][12] = {
+    [TT_TUNE_EQUAL]       = {0},
+    [TT_TUNE_MEANTONE]    = {0, -240, -68, 103, -137, 34, -205, -34, -274, -103, 68, -171},
+    [TT_TUNE_WERCKMEISTER]= {0, -98, -78, -59, -98, -20, -117, -39, -78, -117, -39, -78},
+    [TT_TUNE_PYTHAGOREAN] = {0, 137, 39, -59, 78, -20, 117, 20, 156, 59, -39, 98},
+    [TT_TUNE_JUST]        = {0, 117, 39, 156, -137, -20, -98, 20, 137, -156, -39, -117},
+};
+static int16_t user_tuning[12];
+static const char *const tuning_names[TT_TUNE_COUNT] = {"EQUAL", "MEANTONE", "WERCKM", "PYTHAG", "JUST", "USER"};
+
+const char *tt_tuning_name(int t) { return t >= 0 && t < TT_TUNE_COUNT ? tuning_names[t] : "?"; }
+
+int tt_tuning_cents10(int t, int pc_rel)
+{
+    pc_rel = pmod(pc_rel, 12);
+    if (t == TT_TUNE_USER)
+        return user_tuning[pc_rel];
+    return t > 0 && t < TT_TUNE_USER ? tunings[t][pc_rel] : 0;
+}
+
+void tt_tuning_set_user(const int16_t *c)
+{
+    for (int i = 0; i < 12; i++)
+        user_tuning[i] = c[i];
 }
 
 /* ---- held keys ---------------------------------------------------------------------------- */

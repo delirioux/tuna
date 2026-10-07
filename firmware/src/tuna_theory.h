@@ -19,11 +19,17 @@ enum {
     TS_PENT_MAJOR, TS_PENT_MINOR,                                                         /* pentatonic */
     TS_BLUES,
     TS_WHOLE_TONE,                                                                        /* colour */
+    TS_OCT_HW, TS_OCT_WH,           /* octatonic (Messiaen's mode 2): half-whole, whole-half */
+    TS_MESSIAEN3,                   /* Messiaen's mode 3: whole, half, half, repeated (9 notes) */
+    TS_ACOUSTIC,                    /* Lydian dominant (Bartok's acoustic scale) */
+    TS_HUNG_MINOR,                  /* Hungarian (gypsy) minor: two augmented seconds */
+    TS_DOUBLE_HARM,                 /* double harmonic (Byzantine) */
+    TS_PHRYG_DOM,                   /* Phrygian dominant (Spanish, flamenco) */
     TS_COUNT
 };
 
 uint16_t    tt_scale_mask(int scale);              /* 12-bit pitch-class set, relative to the root */
-int         tt_scale_size(int scale);              /* number of notes per octave (5..7) */
+int         tt_scale_size(int scale);              /* number of notes per octave (5..9) */
 const char *tt_scale_name(int scale);              /* short UI name, e.g. "DORIAN" */
 
 /* Scale degree -> MIDI note. degree may be negative or span octaves (degree 7 of a 7-note scale
@@ -34,14 +40,24 @@ int tt_degree_note(int scale, int base_note, int degree);
 int tt_quantize(int note, int scale, int root);
 
 /* ---- chords ------------------------------------------------------------------------------ */
-enum { TQ_DIATONIC, TQ_MAJ, TQ_MIN, TQ_DIM, TQ_AUG, TQ_SUS2, TQ_SUS4, TQ_MAJ7, TQ_MIN7, TQ_DOM7, TQ_HDIM7, TQ_COUNT };
+enum {
+    TQ_DIATONIC, TQ_MAJ, TQ_MIN, TQ_DIM, TQ_AUG, TQ_SUS2, TQ_SUS4, TQ_MAJ7, TQ_MIN7, TQ_DOM7, TQ_HDIM7,
+    /* added and extended chords: four tones at most, the fifth left out where the colour needs room */
+    TQ_MAJ6, TQ_MIN6, TQ_ADD9, TQ_MADD9, TQ_MAJ9, TQ_MIN9, TQ_DOM9, TQ_DOM13, TQ_DOM7B9, TQ_SUS7,
+    TQ_DIM7, TQ_MINMAJ7, TQ_MAJ7S11, TQ_SIXNINE, TQ_MIN11, TQ_AUG7, TQ_DOM7B5,
+    TQ_QUARTAL,                     /* stacked fourths */
+    TQ_FIFTH,                       /* the bare fifth (drones, organum) */
+    TQ_ADD2,                        /* a close cluster: root, second, third, fifth */
+    TQ_COUNT
+};
 
 #define TT_CHORD_MAX 4
 
 typedef struct {
     int8_t  root;                  /* semitones above the key's tonic, 0..11 */
     uint8_t n;                     /* number of tones */
-    int8_t  tone[TT_CHORD_MAX];    /* semitones above the chord root, ascending, tone[0] = 0 */
+    int8_t  tone[TT_CHORD_MAX];    /* semitones above the chord root, ascending, tone[0] = 0; ninths and
+                                      above may exceed 12 (their pitch class is what counts) */
 } tt_chord;
 
 /* Fixed-quality chord on a root (semitones above the tonic). */
@@ -75,6 +91,19 @@ const char *tt_prog_name(int prog);
 /* Chord at step (wraps) of a progression. Steps marked diatonic follow the current scale, so a
  * modal vamp changes colour with the mode; fixed steps keep their quality in any scale. */
 void tt_prog_chord(tt_chord *c, int prog, int step, int scale, int tones);
+
+/* ---- tunings ------------------------------------------------------------------------------- */
+/* Twelve-note temperaments, as cents away from equal temperament per pitch class above the tuning
+ * root (the piece's home tonic: the temperament is laid on the key, as a player retunes for a piece).
+ * TT_TUNE_USER is a table the user loads (a 12-note Scala file). */
+enum { TT_TUNE_EQUAL, TT_TUNE_MEANTONE, TT_TUNE_WERCKMEISTER, TT_TUNE_PYTHAGOREAN, TT_TUNE_JUST, TT_TUNE_USER,
+       TT_TUNE_COUNT };
+
+const char *tt_tuning_name(int tuning);
+/* cents (x10) from equal temperament of pitch class pc_rel above the tuning root */
+int  tt_tuning_cents10(int tuning, int pc_rel);
+/* set the user table: 12 values, cents x10 */
+void tt_tuning_set_user(const int16_t *cents10);
 
 /* ---- held keys ---------------------------------------------------------------------------- */
 /* Pitch-class set of the held MIDI notes (bit pc). The lowest held note is reported as the bass

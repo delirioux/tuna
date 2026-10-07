@@ -69,6 +69,10 @@ typedef struct {
     int root, scale;                 /* default key */
     float bpm;
     int division, beats_per_bar, chord_beats, period_bars;
+    uint8_t meter[8];                /* beat groups in ticks (0-terminated), e.g. {3, 3, 2}; chord_beats then
+                                        counts whole cycles of the meter */
+    uint8_t meter_bars;              /* bit i: group i starts a new bar (changing meters) */
+    float swing, lilt;               /* off-beat eighths late; the waltz's second beat early */
     float melody_density;
     int melody_base, melody_range;
     float profile[4];                /* melody interval thresholds: repeat < step < third < fourth */

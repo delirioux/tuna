@@ -128,6 +128,10 @@ static void defaults(tg_gen *g)
     g->pad_tones = 3;
     g->pad_restrike = false;
     g->beats_per_bar = 4;
+    g->meter[0] = 0;
+    g->meter_bars = 0;
+    g->swing = 0.0f;
+    g->lilt = 0.0f;
     g->bass_mode = TG_BASS_MARBLES;
     g->pad_mode = TG_PAD_BLOCK;
     g->appoggiatura = 0.0f;
@@ -230,6 +234,7 @@ void tg_reseed(tg_gen *g, uint32_t seed)
     tm_rng_init(&g->hum_rng, seed ^ 0x48756d61u);
     g->hq_n = 0;
     g->clock = 0;
+    g->tick_delay = 0;
     /* sequencer: recording from the start; the overlay's steps and FILL are settings and stay */
     g->rec_cur = 0;
     g->rec_valid = false;
@@ -283,6 +288,70 @@ void tg_init(tg_gen *g, uint32_t seed, float sample_rate)
     g->t.model = TM_T_COMPLEMENTARY_BERNOULLI;
     g->t.pulse_width_mean = 0.5f;
     tg_reseed(g, seed);
+}
+
+/* ---- meter ------------------------------------------------------------------------------------------ */
+int tg_meter_cycle(const tg_gen *g, int *bars)
+{
+    if (!g->meter[0]) {
+        if (bars) *bars = 1;
+        return g->division * g->beats_per_bar;
+    }
+    int sum = 0, nb = 0;
+    for (int i = 0; i < TG_METER_MAX && g->meter[i]; ++i) {
+        sum += g->meter[i];
+        nb += i == 0 || ((g->meter_bars >> i) & 1);
+    }
+    if (bars) *bars = nb;
+    return sum > 0 ? sum : 1;
+}
+
+/* the average bar: what "a bar" means for holds, homing and periods */
+static int bar_ticks_of(const tg_gen *g)
+{
+    int nb, c = tg_meter_cycle(g, &nb);
+    return nb > 1 ? c / nb : c;
+}
+
+void tg_meter_at(const tg_gen *g, long q, tg_meter_pos *m)
+{
+    if (!g->meter[0]) {
+        int bar = g->division * g->beats_per_bar;
+        int pos = (int)(q % bar);
+        m->group = m->beat = pos / g->division;
+        m->sub = pos % g->division;
+        m->glen = g->division;
+        m->bar_pos = pos;
+        m->bar_len = bar;
+        m->nbeats = g->beats_per_bar;
+        m->bar_start = pos == 0;
+        return;
+    }
+    int cycle = tg_meter_cycle(g, NULL);
+    int pos = (int)(q % cycle), at = 0, bar_at = 0, beat = 0, cur = -1;
+    m->bar_start = false;
+    for (int i = 0; i < TG_METER_MAX && g->meter[i]; ++i) {
+        bool starts_bar = i == 0 || ((g->meter_bars >> i) & 1);
+        if (starts_bar) {
+            if (cur >= 0)
+                break;                              /* the bar holding pos has ended */
+            bar_at = at;
+            beat = 0;
+        }
+        if (cur < 0 && pos < at + g->meter[i]) {
+            cur = i;
+            m->group = i;
+            m->beat = beat;
+            m->sub = pos - at;
+            m->glen = g->meter[i];
+            m->bar_start = starts_bar && pos == at;
+        }
+        at += g->meter[i];
+        beat++;
+    }
+    m->bar_pos = pos - bar_at;
+    m->bar_len = at - bar_at;
+    m->nbeats = beat;
 }
 
 /* ---- harmony: the fixed progression, or a style's planned periods ---------------------------------- */
@@ -344,7 +413,7 @@ static void plan_period(tg_gen *g)
     if (!g->style)
         return;
     const tg_style *st = g->style;
-    int n = st->period_bars * g->beats_per_bar / (st->chord_beats > 0 ? st->chord_beats : 1);
+    int n = st->period_bars * bar_ticks_of(g) / (g->chord_ticks > 0 ? g->chord_ticks : 1);
     if (n < 2) n = 2;
     if (n > TG_PLAN_MAX) n = TG_PLAN_MAX;
     bool minor = key_is_minor(g);
@@ -436,7 +505,13 @@ void tg_apply_style(tg_gen *g, int id)
     g->bpm = st->bpm;
     g->division = st->division;
     g->beats_per_bar = st->beats_per_bar;
-    g->chord_ticks = st->chord_beats * st->division;
+    for (int i = 0; i < TG_METER_MAX; ++i)
+        g->meter[i] = i < 8 ? st->meter[i] : 0;
+    g->meter_bars = st->meter_bars;
+    g->swing = st->swing;
+    g->lilt = st->lilt;
+    /* a chord lasts chord_beats beats, or with beat groups chord_beats whole cycles of the meter */
+    g->chord_ticks = g->meter[0] ? st->chord_beats * tg_meter_cycle(g, NULL) : st->chord_beats * st->division;
     g->phrase_bars = st->period_bars;
     g->melody_density = st->melody_density;
     g->base_note[TG_PART_MELODY] = st->melody_base - st->root;
@@ -584,15 +659,18 @@ void tg_all_off(tg_gen *g, tg_event_fn fn, void *ctx)
 }
 
 /* ---- the harmonizer -------------------------------------------------------------------------------- */
-typedef struct { bool downbeat, on_beat; int q, bar_ticks; } beat_pos;
+/* where the tick just started falls: bar_ticks is the average bar (one bar unless the meter changes);
+ * beats are the meter's groups, so in 3+3+2 the beats are three, of 3, 3 and 2 ticks */
+typedef struct { bool downbeat, on_beat; int q, bar_ticks; tg_meter_pos m; } beat_pos;
 
 static beat_pos position(const tg_gen *g)
 {
     beat_pos b;
     b.q = (int)(g->ticks - 1);               /* index of the tick just started */
-    b.bar_ticks = g->division * g->beats_per_bar;
-    b.downbeat = b.q % b.bar_ticks == 0;
-    b.on_beat = b.q % g->division == 0;
+    b.bar_ticks = bar_ticks_of(g);
+    tg_meter_at(g, b.q, &b.m);
+    b.downbeat = b.m.bar_start;
+    b.on_beat = b.m.sub == 0;
     return b;
 }
 
@@ -606,7 +684,7 @@ int tg_period_position(const tg_gen *g, int *period);
 /* true in the two bars before an arrival of a 3/4 style with hemiola: beats regroup in twos */
 static bool hemiola_zone(const tg_gen *g, beat_pos b, int *strong)
 {
-    if (!g->hemiola || g->beats_per_bar != 3)
+    if (!g->hemiola || g->beats_per_bar != 3 || g->meter[0])
         return false;
     int period, d = tg_period_position(g, &period);
     int to_arrival = period - d;
@@ -774,7 +852,7 @@ static void period_of(const tg_gen *g, int bar_ticks, int *period, int *anchor)
 
 int tg_period_position(const tg_gen *g, int *period)
 {
-    int p, a, bar = g->division * g->beats_per_bar;
+    int p, a, bar = bar_ticks_of(g);
     period_of(g, bar, &p, &a);
     if (period)
         *period = p;
@@ -1150,7 +1228,7 @@ static void pad_counter(tg_gen *g, beat_pos b, int velocity, int offset, tg_even
         g->counter_note = mask_nearest(chord, g->root, clampi(mel - 9, lo, hi));
     int dir = g->mel_last_dir ? -g->mel_last_dir : (g->counter_note < (lo + hi) / 2 ? 1 : -1);
     int cand = mask_step(g->chord_scale, g->root, g->counter_note, dir);
-    bool strong = b.q % g->division == 0;
+    bool strong = b.on_beat;
     if (strong) {
         int best = cand, best_score = 1 << 20;
         bool mel_moved = g->counter_prev_mel >= 0 && mel != g->counter_prev_mel;
@@ -1215,12 +1293,11 @@ static void bass_bar(tg_gen *g, beat_pos b, int velocity, int offset, tg_event_f
 /* bass, march: root on beat 1, fifth on beat 3 */
 static void bass_march(tg_gen *g, beat_pos b, int velocity, int offset, tg_event_fn fn, void *ctx)
 {
-    int pos = b.q % b.bar_ticks;
     int root = bass_root_note(g, g->chord.root);
     int note;
-    if (pos == 0 || g->chord_fresh)
+    if (b.downbeat || g->chord_fresh)
         note = root;
-    else if (g->beats_per_bar == 4 && pos == 2 * g->division)
+    else if (b.on_beat && b.m.nbeats >= 4 && b.m.beat == b.m.nbeats / 2)
         note = mask_nearest(chord_mask(&g->chord, 3), g->root, root + 7 > g->base_note[TG_PART_BASS] + g->root + 14 ? root - 5 : root + 7);
     else
         return;
@@ -1232,7 +1309,7 @@ static void bass_march(tg_gen *g, beat_pos b, int velocity, int offset, tg_event
 /* bass, pedal: the tonic held under the harmony, struck again every two bars */
 static void bass_pedal(tg_gen *g, beat_pos b, int velocity, int offset, tg_event_fn fn, void *ctx)
 {
-    if (b.q % (2 * b.bar_ticks) != 0 && g->sounding[TG_PART_BASS] >= 0)
+    if ((!b.downbeat || b.q % (2 * b.bar_ticks) >= b.m.bar_len) && g->sounding[TG_PART_BASS] >= 0)
         return;
     int note = g->base_note[TG_PART_BASS] + g->root;
     g->bass_note = note;
@@ -1248,10 +1325,19 @@ static int chord_ladder(const tg_gen *g, int lo, int *out, int max)
     int root = g->root + c.root;
     while (root < lo) root += 12;
     while (root >= lo + 12) root -= 12;
+    /* pitch classes from the root upward (a ninth counts as a second), then stacked by octaves */
+    int pcs[TT_CHORD_MAX], np = 0;
+    for (int k = 0; k < c.n; ++k) {
+        int s = c.tone[k] % 12, at = np;
+        while (at > 0 && pcs[at - 1] > s) { pcs[at] = pcs[at - 1]; --at; }
+        pcs[at] = s;
+        np++;
+    }
     int n = 0;
-    for (int oct = 0; n < max && oct < 4; ++oct)
-        for (int k = 0; k < c.n && n < max; ++k)
-            out[n++] = root + 12 * oct + c.tone[k];
+    for (int oct = 0; n < max && oct < 5; ++oct)
+        for (int k = 0; k < np && n < max; ++k)
+            if (k == 0 || pcs[k] != pcs[k - 1])
+                out[n++] = root + 12 * oct + pcs[k];
     return n;
 }
 
@@ -1273,10 +1359,9 @@ static void pad_broken(tg_gen *g, beat_pos b, int velocity, int offset, tg_event
 /* third part, afterbeat (Gymnopédie, oom-pah): the bass takes beat 1, the chord comes on beat 2 */
 static void pad_afterbeat(tg_gen *g, beat_pos b, int velocity, int offset, tg_event_fn fn, void *ctx)
 {
-    int pos = b.q % b.bar_ticks;
-    if (pos == 0)
+    if (b.downbeat)
         pad_off(g, offset, fn, ctx);
-    else if (pos == g->division)
+    else if (b.on_beat && b.m.beat == 1)
         pad_voice(g, offset, accent(velocity, b) - 22, true, false, fn, ctx);
 }
 
@@ -1374,7 +1459,7 @@ static void perc_period(tg_gen *g, beat_pos b, int velocity, int offset, tg_even
     int to_arrival = period - d;
     bool arrival = d == 0 && b.q > 0;
     bool chord_change = g->chord_ticks > 0 && b.q % g->chord_ticks == 0;
-    int pos = b.q % b.bar_ticks, beat = pos / g->division, sub = pos % g->division;
+    int beat = b.m.beat, sub = b.m.sub;
     uint16_t cm = chord_mask(&g->chord, 3);
     bool has_tonic = cm & 1, has_dom = (cm >> 7) & 1;
     float swell = (float)d / (float)period;
@@ -1412,9 +1497,9 @@ static void perc_period(tg_gen *g, beat_pos b, int velocity, int offset, tg_even
         int sv = velocity - 16;
         if (to_arrival <= b.bar_ticks && to_arrival > 0)
             drum_hit(g, TG_GM_SNARE, sv + 20 * (b.bar_ticks - to_arrival) / b.bar_ticks, offset, fn, ctx);
-        else if (sub == 0 || (beat == 1 && g->division >= 2 && sub == g->division / 2))
+        else if (sub == 0 || (beat == 1 && b.m.glen >= 2 && sub == b.m.glen / 2))
             drum_hit(g, TG_GM_SNARE, sv + (beat == 0 ? 14 : 0), offset, fn, ctx);
-        if (w[TG_PI_BASS_DRUM] && sub == 0 && (beat == 0 || (g->beats_per_bar == 4 && beat == 2)))
+        if (w[TG_PI_BASS_DRUM] && sub == 0 && (beat == 0 || (b.m.nbeats == 4 && beat == 2)))
             drum_hit(g, TG_GM_BASS_DRUM, velocity - 4, offset, fn, ctx);
     } else if (w[TG_PI_BASS_DRUM]) {
         float wb = (float)w[TG_PI_BASS_DRUM] / 10.0f;
@@ -1442,7 +1527,7 @@ static void perc_period(tg_gen *g, beat_pos b, int velocity, int offset, tg_even
     /* tambourine: off-beats in the second half of the period, as the music gathers */
     if (w[TG_PI_TAMBOURINE]) {
         float wt = (float)w[TG_PI_TAMBOURINE] / 10.0f;
-        bool off = g->division >= 2 ? sub == g->division / 2 : !b.on_beat;
+        bool off = b.m.glen >= 2 ? sub == b.m.glen / 2 : !b.on_beat;
         if ((swell > 0.5f && off && prand(g) < wt * 0.8f) || (arrival && prand(g) < wt))
             drum_hit(g, TG_GM_TAMBOURINE, velocity - 20, offset, fn, ctx);
     }
@@ -1457,8 +1542,8 @@ static void perc_kit(tg_gen *g, beat_pos b, int velocity, bool t1, bool t3, int 
     int period, d = tg_period_position(g, &period);
     int to_arrival = period - d;
     bool arrival = d == 0 && b.q > 0;
-    int pos = b.q % b.bar_ticks, beat = pos / g->division, sub = pos % g->division;
-    bool eighth = sub == 0 || (g->division >= 2 && sub == g->division / 2);
+    int beat = b.m.beat, sub = b.m.sub;
+    bool eighth = g->meter[0] ? true : sub == 0 || (g->division >= 2 && sub == g->division / 2);
     if (arrival) {
         drum_hit(g, TG_GM_CRASH, velocity + 14, offset, fn, ctx);
         drum_hit(g, TG_GM_KICK, velocity + 14, offset, fn, ctx);
@@ -1468,7 +1553,15 @@ static void perc_kit(tg_gen *g, beat_pos b, int velocity, bool t1, bool t3, int 
         drum_hit(g, TG_GM_SNARE, velocity - 12 + 20 * (g->division - to_arrival) / g->division, offset, fn, ctx);
         return;
     }
-    if (g->beats_per_bar == 3) {                                        /* waltz: kick on one, side stick after */
+    if (g->meter[0]) {
+        /* beat groups: kick on the bar, snare on its last group; between, kicks in short bars (3+3+2:
+         * kick kick snare, the tresillo), kick and snare in turn in long ones */
+        if (sub == 0) {
+            bool last = beat == b.m.nbeats - 1 && b.m.nbeats > 1;
+            bool kick = beat == 0 || (!last && (b.m.nbeats <= 3 || beat % 2 == 0));
+            drum_hit(g, kick ? TG_GM_KICK : TG_GM_SNARE, velocity + (beat == 0 ? 8 : 0), offset, fn, ctx);
+        }
+    } else if (g->beats_per_bar == 3) {                                 /* waltz: kick on one, side stick after */
         if (b.downbeat)
             drum_hit(g, TG_GM_KICK, velocity + 6, offset, fn, ctx);
         else if (sub == 0)
@@ -1484,7 +1577,7 @@ static void perc_kit(tg_gen *g, beat_pos b, int velocity, bool t1, bool t3, int 
     if (t3 && !b.on_beat && prand(g) < 0.3f)
         drum_hit(g, TG_GM_SNARE, velocity - 38, offset, fn, ctx);      /* ghost notes */
     if (eighth) {
-        bool open = beat == g->beats_per_bar - 1 && sub != 0 && prand(g) < 0.35f;
+        bool open = beat == b.m.nbeats - 1 && sub != 0 && prand(g) < 0.35f;
         drum_hit(g, open ? TG_GM_HAT_OPEN : TG_GM_HAT_CLOSED, velocity - (sub == 0 ? 18 : 28), offset, fn, ctx);
     }
 }
@@ -1509,6 +1602,7 @@ static void hum_collect(void *ctx, const tg_event *e)
     } else if (x.on) {
         float r = tm_rng_float(&g->hum_rng);
         d = (long)(r * r * HUMAN_MS[x.part] * 0.001f * g->sample_rate * g->humanize);   /* mostly small */
+        d += g->tick_delay;                         /* swing, lilt */
         g->hdelay[x.part][x.note] = (uint16_t)d;
         int dv = (int)lrintf((tm_rng_float(&g->hum_rng) * 2.0f - 1.0f) * 8.0f * g->humanize);
         x.velocity = (uint8_t)clampi(x.velocity + dv, 1, 127);
@@ -1561,7 +1655,7 @@ void tg_process(tg_gen *g, int size, tg_event_fn fn, void *ctx)
  * enters at the overlay, so locks and conditions treat both alike. */
 static void out_event(tg_gen *g, const tg_event *e)
 {
-    if (g->humanize > 0.0f || g->hq_n)
+    if (g->humanize > 0.0f || g->hq_n || g->tick_delay)
         hum_collect(g, e);
     else
         g->user_fn(g->user_ctx, e);
@@ -2081,7 +2175,7 @@ static void process_block(tg_gen *g, int size, tg_event_fn fn, void *ctx)
     if (g->harmonize && g->rubato > 0.0f && g->ticks > 0) {
         /* rubato: broaden through the last bar into the arrival, a tempo after it */
         int period, d = tg_period_position(g, &period);
-        int bar = g->division * g->beats_per_bar, to_arrival = period - d;
+        int bar = bar_ticks_of(g), to_arrival = period - d;
         if (to_arrival <= bar)
             bpm *= 1.0f - 0.32f * g->rubato * (1.0f - (float)to_arrival / (float)bar);
         else if (d < g->division)
@@ -2111,6 +2205,20 @@ static void process_block(tg_gen *g, int size, tg_event_fn fn, void *ctx)
                     plan_period(g);                  /* a new period: plan its harmony */
             }
             reload_scale(g);
+            g->tick_delay = 0;
+            if ((g->swing > 0.0f || g->lilt > 0.0f) && !g->meter[0]) {
+                /* swing: the off-beat eighth late by up to a sixth of a beat (2:1); lilt: in 3/4 the
+                 * first beat holds back and the second comes early */
+                float tickp = g->sample_rate / g->t.rate_hz;
+                tg_meter_pos m;
+                tg_meter_at(g, g->ticks - 1, &m);
+                float d = 0.0f;
+                if (g->swing > 0.0f && g->division % 2 == 0 && m.sub == g->division / 2)
+                    d += g->swing * tickp * (float)g->division / 6.0f;
+                if (g->lilt > 0.0f && g->beats_per_bar == 3)
+                    d += g->lilt * tickp * (float)g->division * (m.beat == 0 ? 0.15f : m.beat == 2 ? 0.07f : 0.0f);
+                g->tick_delay = (int)d;
+            }
         }
 
         if (!g->harmonize) {

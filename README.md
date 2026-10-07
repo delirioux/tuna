@@ -81,6 +81,12 @@ node web/emu/tuna_emu_test.mjs build/tuna_emu/tuna.wasm  # boot, play, browse, r
 For the FM-1 itself: `FELUCCA_TUNA=1` with Felucca's build, described in [BUILDING.md](BUILDING.md). Untested
 on hardware so far.
 
+## Documentation
+
+- [docs/SPEC.md](docs/SPEC.md): the specification and all 89 composers, era by era
+- [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md): the working notes: agreements, workflow, design decisions, risks,
+  and the steps for the first build on the FM-1
+
 ## Credits and licence
 
 Tuna is a modified version of **Felucca** by Leo Kuroshita (@kurogedelic), Hügelton Instruments

@@ -128,7 +128,7 @@ static void test_freeze(int style, uint32_t seed)
     run_ticks(2L * P + P / 3);                      /* a third into period 2 */
     uint32_t heard = (uint32_t)g.period_index;      /* the period playing when FREEZE is pressed */
     CHECK(tg_freeze(&g), "freeze refused");
-    run_ticks(P - P / 3 + 4L * P);                  /* to the boundary, then 4 loops */
+    run_ticks(P - P / 3 + 4L * P + 1);              /* to the boundary, then 4 loops (and a tick: late notes) */
     CHECK(g.frozen, "%s: not frozen after the boundary", tg_style_get(style)->name);
     CHECK(g.pat.len == P, "pattern length %d, period %d", g.pat.len, P);
 
@@ -163,10 +163,11 @@ static void test_freeze(int style, uint32_t seed)
         int left = 0;
         for (long i = 0; i < nlg; ++i) {
             const tg_event *e = &lg[i].e;
-            if (!lg[i].frozen || e->type != TG_EV_NOTE || e->part == TG_PART_DRUMS)
+            if (e->type != TG_EV_NOTE || e->part == TG_PART_DRUMS)
                 continue;
-            if (e->on) open[e->part][e->note]++;
-            else if (open[e->part][e->note]) open[e->part][e->note]--;
+            /* the pattern's starts; their ends may arrive just after the hand-over (swung, strummed) */
+            if (e->on && lg[i].frozen) open[e->part][e->note]++;
+            else if (!e->on && open[e->part][e->note]) open[e->part][e->note]--;
         }
         for (int p = 0; p < TG_EVENT_PARTS; ++p)
             for (int n = 0; n < 128; ++n)

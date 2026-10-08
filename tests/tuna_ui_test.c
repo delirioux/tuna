@@ -334,6 +334,36 @@ static void test_reset(void)
     CHECK(app.seed == (before + 1) % 256, "it came in (%u)", app.seed);
     CHECK(app.g.ticks < 4, "the new seed starts its piece from the top (tick %ld; asked at %d, half %d)", app.g.ticks, d0,
           half);
+    /* on the beat: the new seed's first tick a tick after the old one's last, as if nothing changed (it went in
+     * before the boundary tick, the clock's phase kept); a piece and a form change likewise */
+    for (int kind = 0; kind < 3; ++kind) {
+        long f = 0, t_prev = -1, t_last = -1, t_new = -1, gap_old = -1;
+        while (app.g.ticks < 3) { ta_process(&app, 1); f++; }
+        if (kind == 0) ta_seed_step(&app, 1);
+        else if (kind == 1) ta_select(&app, ta_lib_first(2) + 1);
+        else { ta_edit e; ta_edit_get(&app, &e); e.mel = e.mel == 0 ? 1 : 0; ta_edit_set(&app, &e); }
+        long tk = app.g.ticks;
+        bool waiting = true;
+        for (guard = 0; guard < 400000 && t_new < 0; ++guard) {
+            ta_process(&app, 1);
+            f++;
+            waiting = waiting && (app.seed_req >= 0 || app.pending >= 0 || app.req_on);
+            if (app.g.ticks != tk) {
+                if (app.g.ticks == 1 && !waiting) {
+                    t_new = f;
+                } else {
+                    t_prev = t_last;
+                    t_last = f;
+                }
+                tk = app.g.ticks;
+            }
+        }
+        gap_old = t_last - t_prev;
+        long gap = t_new - t_last, tol = gap_old / 20 + 2;
+        static const char *const what[3] = {"seed", "piece", "form"};
+        CHECK(t_new > 0 && t_prev > 0 && labs(gap - gap_old) <= tol + (kind == 1 ? gap_old : 0),
+              "%s: no hiccup, the first new tick %ld frames after the last old one (a tick: %ld)", what[kind], gap, gap_old);
+    }
     ta_play(&app, false);
     ta_select(&app, 0);
 }

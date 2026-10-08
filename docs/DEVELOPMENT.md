@@ -82,6 +82,8 @@ touched only where Tuna hooks in (`felucca.c`, `main.c`, `audio.c`, `tools/build
   the piece's). Volume is the MASTER knob alone, read by Felucca.
 - **Changes land on half periods.** A piece, a seed (OCT) or a form setting chosen while playing comes in at the
   next half of the period: its start (on the cadence) or its middle (on the half cadence). Seeds run 0..255.
+  The change goes in just before that tick, with the clock's phase kept: the new music starts on the beat, with no
+  gap and no clipped notes from the old.
 - **Genres are data.** The 86 popular genres live in `tools/genres/d1950.py` .. `d2020.py` (readable: grooves as
   tick strings, chords by name); `python3 tools/tuna_genres.py` writes `firmware/src/tuna_genres.inc` and checks
   them (chord names against the vocabularies, lengths, names); `tuna_tests.sh` fails if the two differ. A

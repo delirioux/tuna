@@ -87,6 +87,16 @@ touched only where Tuna hooks in (`felucca.c`, `main.c`, `audio.c`, `tools/build
 - **A new piece, a new seed.** A seed means nothing across pieces, so choosing a piece draws one of the 256 (stirred
   by the moment of each touch on the panel): every visit plays something new. Turn back to the piece playing and
   nothing changes; a slot still loads exactly what was saved.
+- **Manners are changes.** A composer's profile (`tuna_style.c`) is its first manner; `tools/manners/*.py` (one
+  file per era) add the others as changes to it, and `python3 tools/tuna_manners.py` checks them against the
+  fields of `tg_style` and writes `tuna_manners.inc` (only what differs from the profile: 285 manners in about
+  27 KB) and the field table `tuna_style_fields.inc`; `--show NAME` prints a profile in the manners' syntax.
+  The generator plays a library style through a copy with its manner applied (`tg_apply_manner`,
+  `style_id`). The seed picks the manner (each seed its own, so a new seed may bring a chorale where a fugue was);
+  LIBRARY's K4 fixes one; a slot keeps it (record version 4). The render sweeps play every manner as a piece of
+  its own. What the fields cannot say yet, by the composers' manners: dotted and other fixed melodic rhythm
+  cells, a stress on a given beat, a drum pattern per manner, glissandi, a one-time form (one crescendo, march
+  then trio), a cantus firmus in the bass, a choir without accompaniment.
 - **Genres are data.** The 86 popular genres live in `tools/genres/d1950.py` .. `d2020.py` (readable: grooves as
   tick strings, chords by name); `python3 tools/tuna_genres.py` writes `firmware/src/tuna_genres.inc` and checks
   them (chord names against the vocabularies, lengths, names); `tuna_tests.sh` fails if the two differ. A

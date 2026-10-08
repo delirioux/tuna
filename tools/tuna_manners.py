@@ -31,8 +31,10 @@ import sys
 import tempfile
 import importlib.util
 
+import os
+
 ROOT = pathlib.Path(__file__).resolve().parent.parent
-SRC = ROOT / "firmware" / "src"
+SRC = pathlib.Path(os.environ.get("TUNA_SRC", ROOT / "firmware" / "src"))   # (a private copy: TUNA_SRC=dir)
 OUT = SRC / "tuna_manners.inc"
 FIELDS_OUT = SRC / "tuna_style_fields.inc"
 MANNER_DIR = ROOT / "tools" / "manners"
@@ -155,9 +157,9 @@ def field_table(fields):
 
 # ---- the base profiles, as the firmware holds them (tests/tuna_style_dump.c) --------------------------------
 def base_profiles():
-    exe = pathlib.Path(tempfile.gettempdir()) / "tuna_style_dump"
-    srcs = ["tests/tuna_style_dump.c", "firmware/src/tuna_style.c", "firmware/src/tuna_theory.c"]
-    r = subprocess.run(["cc", "-O0", "-w", "-Ifirmware/src", "-o", str(exe)] + srcs + ["-lm"], cwd=ROOT,
+    exe = pathlib.Path(tempfile.mkdtemp()) / "tuna_style_dump"
+    srcs = [str(ROOT / "tests/tuna_style_dump.c"), str(SRC / "tuna_style.c"), str(SRC / "tuna_theory.c")]
+    r = subprocess.run(["cc", "-O0", "-w", "-I" + str(SRC), "-o", str(exe)] + srcs + ["-lm"], cwd=ROOT,
                        capture_output=True, text=True)
     if r.returncode:
         die("the profile dump does not build:\n" + r.stderr[-2000:])
@@ -277,6 +279,9 @@ def deltas(ctx, sname, manner, base, where):
 
 def load_manners():
     files = sorted(MANNER_DIR.glob("*.py"))
+    if "--only" in sys.argv:                               # one file alone (the others left out of the build)
+        only = pathlib.Path(sys.argv[sys.argv.index("--only") + 1]).resolve()
+        files = [f for f in files if f.resolve() == only] or [only]
     allm = {}
     for f in files:
         spec = importlib.util.spec_from_file_location(f.stem, f)
@@ -409,7 +414,7 @@ def main():
         print(f"tuna_manners: {n} manners, up to date")
         return
     OUT.write_text(text)
-    print(f"tuna_manners: {n} manners ({nd} changes) -> {OUT.relative_to(ROOT)}"
+    print(f"tuna_manners: {n} manners ({nd} changes) -> {OUT}"
           + (f"; composers without manners: {len(missing)}" if missing else ""))
 
 

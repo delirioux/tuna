@@ -211,6 +211,7 @@ int main(int argc, char **argv)
     /* drums only on 10 */
     nout = 0;
     ta_select(&app, item_of(TG_STYLE_LLOYD_WEBBER));
+    ta_set_manner(&app, 0);                        /* (its profile: the manner the test knows) */
     ta_play(&app, true);
     run_seconds(30.0f);
     ta_play(&app, false);
@@ -223,6 +224,7 @@ int main(int argc, char **argv)
     /* a historical tuning: bends on the one-note parts, none on the pad */
     nout = 0;
     ta_select(&app, item_of(TG_STYLE_BACH));
+    ta_set_manner(&app, 0);                        /* (its profile: the manner the test knows) */
     app.g.tuning = TT_TUNE_MEANTONE;
     ta_play(&app, true);
     run_seconds(30.0f);

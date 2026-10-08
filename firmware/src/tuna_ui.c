@@ -967,6 +967,22 @@ void tu_init(tuna_ui *u, tuna_app *a)
 
 static float tu_chaos_add(float v, int d) { return (float)tu_clampi(tu_chaos_val(v) + 2 * d, 0, 100) / 100.0f; }
 
+/* the scales in the knob's order: major and minor first, side by side; the minor variants; pentatonics and
+ * blues; the church modes from bright to dark (each click changes one note); the colourful; the symmetric */
+static const uint8_t TU_SCALE_ORDER[TS_COUNT] = {
+    TS_IONIAN, TS_AEOLIAN, TS_HARM_MINOR, TS_MEL_MINOR, TS_PENT_MAJOR, TS_PENT_MINOR, TS_BLUES,
+    TS_LYDIAN, TS_MIXOLYDIAN, TS_DORIAN, TS_PHRYGIAN, TS_LOCRIAN,
+    TS_ACOUSTIC, TS_PHRYG_DOM, TS_DOUBLE_HARM, TS_HUNG_MINOR,
+    TS_WHOLE_TONE, TS_OCT_HW, TS_OCT_WH, TS_MESSIAEN3};
+
+static int tu_scale_step(int scale, int d)
+{
+    int i = 0;
+    while (i < TS_COUNT - 1 && TU_SCALE_ORDER[i] != scale)
+        ++i;
+    return TU_SCALE_ORDER[tu_wrap(i + d, TS_COUNT)];
+}
+
 static void tu_set_edit(tuna_ui *u, int which, int d)
 {
     tuna_app *a = u->app;
@@ -981,7 +997,7 @@ static void tu_set_edit(tuna_ui *u, int which, int d)
     case 2: e.bass = (int8_t)tu_mode_step(&a->g, 1, cur.bass, d); break;
     case 3: e.pad = (int8_t)tu_mode_step(&a->g, 2, cur.pad, d); break;
     case 4: e.harm = (int8_t)tu_mode_step(&a->g, 3, cur.harm, d); break;
-    case 5: e.scale = (int8_t)tu_wrap(cur.scale + d, TS_COUNT); break;
+    case 5: e.scale = (int8_t)tu_scale_step(cur.scale, d); break;
     }
     ta_edit_set(a, &e);
 }

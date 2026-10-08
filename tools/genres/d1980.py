@@ -125,7 +125,9 @@ GENRES = [
                      profile=(0.25, 0.7, 0.88, 0.96)),
          bass=dict(mode="REPEAT"),
          pad=dict(mode="RHYTHM", rhythm=OFF8 * 2, gate=1, base=57, tones=3),
-         groove="G80_NEWWAVE", orch=[("EBASS", "SYNTH", "EGUITAR"), ("EBASS", "SINEKEY", "EGUITAR")]),
+         groove="G80_NEWWAVE",
+         orch=[("SYNTHBASS", "SYNCLEAD", "EGUITAR"), ("SYNTHBASS", "SYNTH", "PLUCKSYNTH"),
+               ("SYNTHBASS", "ROCKORGAN", "EGUITAR")]),
     dict(id="POST_PUNK_80S", name="POST-PUNK", decade=1980, year=1978,
          comment="Joy Division, early Cure, Gang of Four: the bass high and melodic as the lead (Peter Hook), the "
                  "floor-tom beat, stark minor chords stabbed by a thin guitar",
@@ -135,7 +137,8 @@ GENRES = [
                      pattern=(4, "-", 4, 3, 2, "-", 0, "-", 4, "-", 4, 5, 4, "-", 2, "-")),
          bass=dict(mode="REPEAT"),
          pad=dict(mode="RHYTHM", rhythm="x.....x.......x.x.....x.......x.", gate=2, base=57, tones=3),
-         groove="G80_POSTPUNK", orch=[("EBASS", "EBASS", "EGUITAR"), ("WAVEBASS", "EBASS", "EGUITAR")]),
+         groove="G80_POSTPUNK",
+         orch=[("EBASS", "EBASS", "EGUITAR"), ("EBASS", "METALLEAD", "EGUITAR"), ("EBASS", "EGUITAR", "STRMACH")]),
     dict(id="SYNTH_POP_80S", name="SYNTH-POP", decade=1980, year=1980, reverb="HALL",
          comment="Depeche Mode, the Human League, OMD: drum machine, a sequenced octave synth bass, a bright "
                  "arpeggio and a synth hook, minor i VI III VII",
@@ -144,7 +147,9 @@ GENRES = [
          melody=dict(density=0.5, base=67, range=12, sync=0.3, motif=0.8, profile=(0.25, 0.72, 0.9, 0.97)),
          bass=dict(mode="OSTINATO", rhythm=E8, notes=(0, 12), semis=True, gate=1),
          pad=dict(mode="ARPEGGIO", base=60, tones=3),
-         groove="G80_SYNTHPOP", orch=[("WAVEBASS", "SYNTH", "PLUCKSYNTH"), ("WAVEBASS", "SINEKEY", "CHIP")]),
+         groove="G80_SYNTHPOP",
+         orch=[("SYNTHBASS", "SYNTH", "ARPLEAD"), ("SYNTHBASS", "CHIPCHOIR", "PLUCKSYNTH"),
+               ("FRETLESS", "SAWLEAD", "SINEKEY"), ("WAVEBASS", "MARIMBA", "PLUCKSYNTH")]),
     dict(id="HARDCORE_PUNK_80S", name="HARDCORE PUNK", decade=1980, year=1981,
          comment="Black Flag, Minor Threat, Dead Kennedys: the skank beat flat out, distorted power chords in "
                  "eighths, the bass doubling the roots, a chord every two beats",
@@ -153,7 +158,7 @@ GENRES = [
          melody=dict(density=0.3, base=64, range=10, sync=0.1, staccato=0.3, motif=0.8, min_ticks=4),
          bass=dict(mode="REPEAT"),
          pad=dict(mode="RHYTHM", rhythm=E8 * 2, gate=1, base=52, tones=3, power=True),
-         groove="G80_HARDCORE", orch=[("WAVEBASS", "EGUITAR", "DISTGUITAR")]),
+         groove="G80_HARDCORE", orch=[("WAVEBASS", "DISTGUITAR", "DISTGUITAR"), ("EBASS", "EGUITAR", "DISTGUITAR")]),
     dict(id="THRASH_METAL_80S", name="THRASH METAL", decade=1980, year=1983,
          comment="Metallica, Slayer, Megadeth: palm-muted sixteenth riffs on the low E with Phrygian half-steps, "
                  "double-kick gallops, power-chord stabs",
@@ -163,7 +168,7 @@ GENRES = [
                      pattern=(0, 0, 0, 1, 0, 0, 3, None, 0, 0, 4, 3, 0, 0, 1, 2)),
          bass=dict(mode="OSTINATO", rhythm=E8, notes=(0,), semis=True, gate=1),
          pad=dict(mode="RHYTHM", rhythm="x.......x.......x.......x.....x.", gate=2, base=52, tones=3, power=True),
-         groove="G80_THRASH", orch=[("WAVEBASS", "DISTGUITAR", "DISTGUITAR")]),
+         groove="G80_THRASH", orch=[("EBASS", "DISTGUITAR", "DISTGUITAR"), ("EBASS", "EBASS", "DISTGUITAR")]),
     dict(id="GLAM_METAL_80S", name="GLAM METAL", decade=1980, year=1983,
          comment="Def Leppard, Bon Jovi, Motley Crue: the huge gated snare mid-tempo, chugging power chords, an "
                  "anthem in major with bVII, a shredding guitar lead",
@@ -173,7 +178,9 @@ GENRES = [
                      profile=(0.15, 0.65, 0.85, 0.95)),
          bass=dict(mode="REPEAT"),
          pad=dict(mode="RHYTHM", rhythm=E8 * 2, gate=1, base=52, tones=3, power=True),
-         groove="G80_GLAM", orch=[("EBASS", "DISTGUITAR", "DISTGUITAR"), ("EBASS", "DISTGUITAR", "SYNTH")]),
+         groove="G80_GLAM",
+         orch=[("EBASS", "DISTGUITAR", "DISTGUITAR"), ("EBASS", "SYNBRASS", "DISTGUITAR"),
+               ("EBASS", "DISTGUITAR", "STRINGS")]),
     dict(id="GOTHIC_ROCK_80S", name="GOTHIC ROCK", decade=1980, year=1981, reverb="HALL",
          comment="Sisters of Mercy, Siouxsie, Bauhaus: a machine beat with pounding toms, a deep driving bass, a "
                  "flanged guitar arpeggio circling the minor chord, choir in the background",
@@ -183,7 +190,8 @@ GENRES = [
                      pattern=(0, "-", 1, "-", 2, "-", 3, "-", 4, "-", 3, "-", 2, "-", 1, "-")),
          bass=dict(mode="REPEAT"),
          pad=dict(mode="BLOCK", base=55, tones=3),
-         groove="G80_GOTH", orch=[("WAVEBASS", "EGUITAR", "CHOIR"), ("WAVEBASS", "SHIMMER", "CHOIR")]),
+         groove="G80_GOTH",
+         orch=[("CELLO", "CHOIR", "EGUITAR"), ("EBASS", "EGUITAR", "SYNTH"), ("FATBASS", "SHIMMER", "EGUITAR")]),
     dict(id="ALT_INDIE_80S", name="ALTERNATIVE", decade=1980, year=1983,
          comment="R.E.M., the Smiths, the Pixies: a jangling arpeggiated guitar in eighths, a melodic bass, "
                  "vi IV I V, a tambourine on the backbeat; louder sets bring the distortion",
@@ -194,7 +202,8 @@ GENRES = [
          bass=dict(mode="OSTINATO", rhythm="x.x.x.xxx.x.x.x.", notes=(0, 0, 2, 3, 0, 0, 2, 1)),
          pad=dict(mode="FIGURE", base=55, tones=3, figure=(0, 2, 3, 1, 2, 3, 1, 2), strum_ms=0),
          groove="G80_INDIE", orch_mode="ENERGY",
-         orch=[("EBASS", "EGUITAR", "GUITAR"), ("EBASS", "EGUITAR", "EGUITAR"), ("EBASS", "DISTGUITAR", "EGUITAR")]),
+         orch=[("EBASS", "GUITAR", "EGUITAR"), ("EBASS", "EGUITAR", "EGUITAR"), ("EBASS", "VIOLIN", "EGUITAR"),
+               ("EBASS", "DISTGUITAR", "EGUITAR")]),
     dict(id="CHICAGO_HOUSE", name="CHICAGO HOUSE", decade=1980, year=1985,
          comment="Frankie Knuckles, Marshall Jefferson, Larry Heard: the 909 four-on-the-floor, a jacking "
                  "syncopated bass, piano stabs on i7 IV in Dorian, an organ riff",
@@ -204,7 +213,8 @@ GENRES = [
                      pattern=(4, None, None, 4, None, None, 6, None, None, 4, None, 3, None, 2, None, None)),
          bass=dict(mode="OSTINATO", rhythm="x..x..x...x..x.x", notes=(0, 0, 12, 0, 10, 0), semis=True, gate=2),
          pad=dict(mode="RHYTHM", rhythm="..x..x....x...x...x..x....x..x..", gate=2, base=57, tones=4),
-         groove="G80_HOUSE", orch=[("WAVEBASS", "ORGAN", "PIANO"), ("WAVEBASS", "SINEKEY", "PIANO")]),
+         groove="G80_HOUSE",
+         orch=[("SYNTHBASS", "VOICE", "PIANO"), ("ACID", "SINEKEY", "GOSPEL"), ("SYNTHBASS", "ARPLEAD", "PAD")]),
     dict(id="DETROIT_TECHNO", name="DETROIT TECHNO", decade=1980, year=1987,
          comment="Juan Atkins, Derrick May, Model 500, Rhythim Is Rhythim: machine funk on the 909, a sequenced synth riff, "
                  "sweeping strings over minor sevenths, a syncopated sequencer bass",
@@ -214,7 +224,9 @@ GENRES = [
                      pattern=(3, None, 2, 3, None, 2, None, 1, 3, None, 2, 3, None, 4, None, 2)),
          bass=dict(mode="OSTINATO", rhythm="x.x..x.x..x..x.x", notes=(0, 0, 0, 12, 0, 7, 0), semis=True, gate=1),
          pad=dict(mode="BLOCK", base=55, tones=3),
-         groove="G80_TECHNO", orch=[("WAVEBASS", "PLUCKSYNTH", "STRINGS"), ("WAVEBASS", "CHIP", "PAD")]),
+         groove="G80_TECHNO",
+         orch=[("SYNTHBASS", "PIANO", "STRINGS"), ("SYNTHBASS", "RESOSYNTH", "STRMACH"),
+               ("WAVEBASS", "BELLS", "SINEKEY")]),
     dict(id="INDUSTRIAL_80S", name="INDUSTRIAL", decade=1980, year=1984,
          comment="Front 242, Nitzer Ebb, Skinny Puppy, early Ministry: a distorted machine, the EBM bass "
                  "sequencing sixteenths around the kick, Phrygian menace, metal hits and noise stabs",
@@ -224,7 +236,8 @@ GENRES = [
                      pattern=(None, None, None, None, None, None, 1, 0, None, None, None, None, 4, None, 1, None)),
          bass=dict(mode="OSTINATO", rhythm=".xxx.xxx.xxx.xxx", notes=(0, 0, 12, 0, 0, 12, 1, 0), semis=True, gate=1),
          pad=dict(mode="RHYTHM", rhythm="x...............x.....x.........", gate=2, base=52, tones=3, power=True),
-         groove="G80_INDUSTRIAL", orch=[("ACID", "GLITCH", "DISTGUITAR"), ("WAVEBASS", "GLITCH", "DISTGUITAR")]),
+         groove="G80_INDUSTRIAL",
+         orch=[("FATBASS", "GLITCH", "SYNTH"), ("ACID", "RINGMOD", "SYNTH"), ("FATBASS", "METALLEAD", "SYNBRASS")]),
     dict(id="NEW_JACK_SWING", name="NEW JACK SWING", decade=1980, year=1987,
          comment="Teddy Riley, Guy, Bobby Brown, Keith Sweat: hard-swung sixteenths, a slamming snare, a "
                  "syncopated synth bass, brassy synth stabs, gospel minor sevenths",
@@ -233,7 +246,9 @@ GENRES = [
          melody=dict(density=0.45, base=65, range=12, sync=0.5, staccato=0.3, add=("b5",), motif=0.75),
          bass=dict(mode="OSTINATO", rhythm="x..x..x...x..x..", notes=(0, 0, 10, 12, 7), semis=True, gate=2),
          pad=dict(mode="RHYTHM", rhythm="......x..x....x.......x..x...x..", gate=1, base=58, tones=3),
-         groove="G80_NJS", orch=[("WAVEBASS", "SINEKEY", "BRASS"), ("WAVEBASS", "SYNTH", "EPIANO")]),
+         groove="G80_NJS",
+         orch=[("SYNTHBASS", "SINEKEY", "SYNBRASS"), ("SLAPBASS", "EPIANO", "SYNBRASS"),
+               ("TALKBASS", "SAX", "CLAV")]),
     dict(id="GOLDEN_AGE_HIP_HOP", name="HIP HOP 80S", decade=1980, year=1986,
          comment="Run-DMC, LL Cool J, Eric B. & Rakim, Public Enemy: the 808 boom under a hard snare, a one-chord "
                  "loop, horn-stab samples and scratch-like chirps",
@@ -243,5 +258,6 @@ GENRES = [
                      pattern=(None, None, None, None, None, None, 4, 5, 4, None, None, None, 2, None, 0, None)),
          bass=dict(mode="808"),
          pad=dict(mode="RHYTHM", rhythm="..........x.........x.x.........", gate=2, base=57, tones=3),
-         groove="G80_HIPHOP", orch=[("808", "GLITCH", "BRASS"), ("808", "CHIP", "PIANO")]),
+         groove="G80_HIPHOP",
+         orch=[("808", "GLITCH", "BRASS"), ("808", "SAX", "EPIANO"), ("808", "SYNCLEAD", "STRMACH")]),
 ]

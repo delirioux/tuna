@@ -112,7 +112,7 @@
         .bass_notes = {0, 4, 7, 9, 10, 9, 7, 4}, .bass_len = 8,
         .bass_semis = true,
         .pad_rhythm = 0x55555555u, .pad_gate = 1,
-        .orch = {{TI_EBASS, TI_SAX, TI_PIANO}, {TI_EBASS, TI_EGUITAR, TI_PIANO}}, .orch_n = 2, .orch_mode = TG_ORCH_RANDOM,
+        .orch = {{TI_PIZZ, TI_SAX, TI_PIANO}, {TI_PIANO, TI_PIANO, TI_SAX}, {TI_PIZZ, TI_DISTGUITAR, TI_PIANO}}, .orch_n = 3, .orch_mode = TG_ORCH_RANDOM,
         .groove = 84,
     },
     [TG_STYLE_G_RHYTHM_AND_BLUES] = {
@@ -136,7 +136,7 @@
         .bass_notes = {0, 4, 7, 9}, .bass_len = 4,
         .bass_semis = true,
         .pad_rhythm = 0x00FFFFFFu, .pad_gate = 1,
-        .orch = {{TI_EBASS, TI_SAX, TI_PIANO}, {TI_CONTRABASS, TI_TRUMPET, TI_PIANO}}, .orch_n = 2, .orch_mode = TG_ORCH_RANDOM,
+        .orch = {{TI_UPRIGHT, TI_HARMONICA, TI_EGUITAR}, {TI_BASSOON, TI_SAX, TI_TRUMPET}, {TI_UPRIGHT, TI_TRUMPET, TI_SAX}}, .orch_n = 3, .orch_mode = TG_ORCH_RANDOM,
         .groove = 85,
     },
     [TG_STYLE_G_DOO_WOP] = {
@@ -159,7 +159,7 @@
         .bass_rhythm = 0x0249u,
         .bass_notes = {0, 7, 12, 7}, .bass_len = 4,
         .bass_semis = true,
-        .orch = {{TI_EBASS, TI_VOICE, TI_CHOIR}, {TI_EBASS, TI_SAX, TI_CHOIR}}, .orch_n = 2, .orch_mode = TG_ORCH_RANDOM,
+        .orch = {{TI_TALKBASS, TI_VOICE, TI_PIANO}, {TI_PIZZ, TI_SAX, TI_VOICE}, {TI_TALKBASS, TI_CHOIR, TI_VOICE}}, .orch_n = 3, .orch_mode = TG_ORCH_RANDOM,
         .groove = 2,
     },
     [TG_STYLE_G_ROCKABILLY] = {
@@ -184,7 +184,7 @@
         .staccato = 0.3f,
         .mel_add = 0x008,
         .pad_rhythm = 0x44444444u, .pad_gate = 1,
-        .orch = {{TI_PIZZ, TI_EGUITAR, TI_EGUITAR}, {TI_CONTRABASS, TI_EGUITAR, TI_PIANO}}, .orch_n = 2, .orch_mode = TG_ORCH_RANDOM,
+        .orch = {{TI_PIZZ, TI_EGUITAR, TI_GUITAR}, {TI_PIZZ, TI_EGUITAR, TI_EGUITAR}}, .orch_n = 2, .orch_mode = TG_ORCH_RANDOM,
         .groove = 83,
     },
     [TG_STYLE_G_EARLY_SOUL] = {
@@ -206,7 +206,7 @@
         .mel_min_ticks = 2,
         .turn = 0.15f,
         .mel_add = 0x408,
-        .orch = {{TI_EBASS, TI_VOICE, TI_GOSPEL}, {TI_EBASS, TI_SAX, TI_PIANO}}, .orch_n = 2, .orch_mode = TG_ORCH_RANDOM,
+        .orch = {{TI_UPRIGHT, TI_VOICE, TI_GOSPEL}, {TI_UPRIGHT, TI_REEDEP, TI_BRASS}, {TI_UPRIGHT, TI_GOSPEL, TI_BRASS}}, .orch_n = 3, .orch_mode = TG_ORCH_RANDOM,
         .groove = 86,
     },
     [TG_STYLE_G_COUNTRY] = {
@@ -229,7 +229,7 @@
         .turn = 0.1f,
         .pad_rhythm = 0x10101010u, .pad_gate = 2,
         .strum_ms = 8,
-        .orch = {{TI_CONTRABASS, TI_VIOLIN, TI_GUITAR}, {TI_CONTRABASS, TI_EGUITAR, TI_GUITAR}}, .orch_n = 2, .orch_mode = TG_ORCH_RANDOM,
+        .orch = {{TI_PIZZ, TI_VIOLIN, TI_GUITAR}, {TI_PIZZ, TI_BANJO, TI_GUITAR}, {TI_GUITAR, TI_VIOLIN, TI_BANJO}}, .orch_n = 3, .orch_mode = TG_ORCH_RANDOM,
         .groove = 1,
     },
     [TG_STYLE_G_JAZZ_50S] = {
@@ -249,7 +249,7 @@
         .mel_mode = TG_MEL_PHRASE,
         .mel_add = 0x448,
         .pad_rhythm = 0x00005004u, .pad_gate = 2,
-        .orch = {{TI_CONTRABASS, TI_SAX, TI_PIANO}, {TI_CONTRABASS, TI_TRUMPET, TI_PIANO}}, .orch_n = 2, .orch_mode = TG_ORCH_RANDOM,
+        .orch = {{TI_UPRIGHT, TI_MUTETRUMPET, TI_PIANO}, {TI_UPRIGHT, TI_SAX, TI_VIBES}, {TI_ORGAN, TI_FLUGELHORN, TI_JAZZORGAN}}, .orch_n = 3, .orch_mode = TG_ORCH_RANDOM,
         .groove = 82,
     },
     [TG_STYLE_G_SOUL_60S] = {
@@ -274,7 +274,7 @@
         .bass_rhythm = 0x4141u,
         .bass_notes = {0, 12, 0, 7}, .bass_len = 4,
         .bass_semis = true,
-        .orch = {{TI_EBASS, TI_BRASS, TI_PIANO}, {TI_EBASS, TI_SAX, TI_ORGAN}, {TI_EBASS, TI_TRUMPET, TI_ORGAN}}, .orch_n = 3, .orch_mode = TG_ORCH_CYCLE,
+        .orch = {{TI_EBASS, TI_BRASS, TI_JAZZORGAN}, {TI_EBASS, TI_JAZZORGAN, TI_BRASS}, {TI_EBASS, TI_TRUMPET, TI_GOSPEL}}, .orch_n = 3, .orch_mode = TG_ORCH_CYCLE,
         .groove = 43,
     },
     [TG_STYLE_G_MOTOWN] = {
@@ -299,7 +299,7 @@
         .bass_notes = {0, 12, 7, 5, 7, 12, 7, 0}, .bass_len = 8,
         .bass_semis = true,
         .pad_rhythm = 0x11111111u, .pad_gate = 2,
-        .orch = {{TI_EBASS, TI_SAX, TI_PIANO}, {TI_EBASS, TI_VOICE, TI_PIANO}, {TI_EBASS, TI_BELLS, TI_PIANO}}, .orch_n = 3, .orch_mode = TG_ORCH_RANDOM,
+        .orch = {{TI_EBASS, TI_HARMONICA, TI_PIANO}, {TI_EBASS, TI_GLOCKEN, TI_STRINGS}, {TI_EBASS, TI_SAX, TI_STRINGS}}, .orch_n = 3, .orch_mode = TG_ORCH_RANDOM,
         .groove = 39,
     },
     [TG_STYLE_G_SURF_ROCK] = {
@@ -326,7 +326,7 @@
         .bass_semis = true,
         .pad_rhythm = 0x24492449u, .pad_gate = 1,
         .strum_ms = 4,
-        .orch = {{TI_EBASS, TI_EGUITAR, TI_GUITAR}, {TI_EBASS, TI_EGUITAR, TI_ROCKORGAN}}, .orch_n = 2, .orch_mode = TG_ORCH_RANDOM,
+        .orch = {{TI_EGUITAR, TI_EGUITAR, TI_EGUITAR}, {TI_EGUITAR, TI_EGUITAR, TI_ROCKORGAN}, {TI_EGUITAR, TI_ROCKORGAN, TI_EGUITAR}}, .orch_n = 3, .orch_mode = TG_ORCH_RANDOM,
         .groove = 44,
     },
     [TG_STYLE_G_MERSEYBEAT] = {
@@ -350,7 +350,7 @@
         .bass_semis = true,
         .pad_rhythm = 0x55555555u, .pad_gate = 1,
         .strum_ms = 5,
-        .orch = {{TI_EBASS, TI_VOICE, TI_EGUITAR}, {TI_EBASS, TI_EGUITAR, TI_GUITAR}}, .orch_n = 2, .orch_mode = TG_ORCH_RANDOM,
+        .orch = {{TI_EBASS, TI_EGUITAR, TI_GUITAR}, {TI_EBASS, TI_HARMONICA, TI_EGUITAR}, {TI_EBASS, TI_EGUITAR, TI_REEDEP}}, .orch_n = 3, .orch_mode = TG_ORCH_RANDOM,
         .groove = 38,
     },
     [TG_STYLE_G_FOLK_ROCK] = {
@@ -373,7 +373,7 @@
         .bass_notes = {0, 7, 12}, .bass_len = 3,
         .bass_semis = true,
         .pad_figure = {0, 1, 2, 3, 4, 3, 2, 1}, .figure_len = 8,
-        .orch = {{TI_EBASS, TI_VOICE, TI_EGUITAR}, {TI_EBASS, TI_FLUTE, TI_EGUITAR}}, .orch_n = 2, .orch_mode = TG_ORCH_RANDOM,
+        .orch = {{TI_EBASS, TI_EGUITAR, TI_EGUITAR}, {TI_EBASS, TI_HARMONICA, TI_GUITAR}, {TI_UPRIGHT, TI_DULCIMER, TI_GUITAR}, {TI_EBASS, TI_PANFLUTE, TI_EGUITAR}}, .orch_n = 4, .orch_mode = TG_ORCH_RANDOM,
         .groove = 35,
     },
     [TG_STYLE_G_GARAGE_ROCK] = {
@@ -400,7 +400,7 @@
         .bass_notes = {0}, .bass_len = 1,
         .pad_rhythm = 0x05150515u, .pad_gate = 1,
         .power = true,
-        .orch = {{TI_EBASS, TI_ROCKORGAN, TI_DISTGUITAR}, {TI_EBASS, TI_EGUITAR, TI_DISTGUITAR}}, .orch_n = 2, .orch_mode = TG_ORCH_RANDOM,
+        .orch = {{TI_DISTGUITAR, TI_ROCKORGAN, TI_DISTGUITAR}, {TI_DISTGUITAR, TI_DISTGUITAR, TI_ROCKORGAN}, {TI_DISTGUITAR, TI_HARMONICA, TI_ROCKORGAN}}, .orch_n = 3, .orch_mode = TG_ORCH_RANDOM,
         .groove = 37,
     },
     [TG_STYLE_G_PSYCHEDELIC] = {
@@ -428,7 +428,7 @@
         .bass_notes = {0, 0, 12, 10}, .bass_len = 4,
         .bass_semis = true,
         .spread = true,
-        .orch = {{TI_EBASS, TI_DISTGUITAR, TI_ORGAN}, {TI_EBASS, TI_FLUTE, TI_ORGAN}, {TI_EBASS, TI_DISTGUITAR, TI_STRINGS}}, .orch_n = 3, .orch_mode = TG_ORCH_CYCLE,
+        .orch = {{TI_CELLO, TI_SITAR, TI_STRINGS}, {TI_ORGAN, TI_DISTGUITAR, TI_ROCKORGAN}, {TI_CELLO, TI_FLUTE, TI_HARPSICHORD}}, .orch_n = 3, .orch_mode = TG_ORCH_CYCLE,
         .groove = 40,
     },
     [TG_STYLE_G_SKA] = {
@@ -452,7 +452,7 @@
         .mel_min_ticks = 2,
         .staccato = 0.2f,
         .pad_rhythm = 0x44444444u, .pad_gate = 1,
-        .orch = {{TI_CONTRABASS, TI_TRUMPET, TI_PIANO}, {TI_CONTRABASS, TI_SAX, TI_GUITAR}, {TI_EBASS, TI_TRUMPET, TI_GUITAR}}, .orch_n = 3, .orch_mode = TG_ORCH_RANDOM,
+        .orch = {{TI_PIZZ, TI_TRUMPET, TI_GUITAR}, {TI_PIZZ, TI_BRASS, TI_JAZZORGAN}, {TI_PIZZ, TI_SAX, TI_GUITAR}}, .orch_n = 3, .orch_mode = TG_ORCH_RANDOM,
         .groove = 42,
     },
     [TG_STYLE_G_ROCKSTEADY] = {
@@ -478,7 +478,7 @@
         .bass_notes = {0, 0, 1, 2}, .bass_len = 4,
         .bass_gate = 3,
         .pad_rhythm = 0x10101010u, .pad_gate = 2,
-        .orch = {{TI_EBASS, TI_SAX, TI_GUITAR}, {TI_EBASS, TI_TRUMPET, TI_PIANO}}, .orch_n = 2, .orch_mode = TG_ORCH_RANDOM,
+        .orch = {{TI_EBASS, TI_SAX, TI_GUITAR}, {TI_EBASS, TI_REEDORGAN, TI_GUITAR}, {TI_EBASS, TI_TRUMPET, TI_ORGAN}}, .orch_n = 3, .orch_mode = TG_ORCH_RANDOM,
         .groove = 41,
     },
     [TG_STYLE_G_FUNK_60S] = {
@@ -505,7 +505,7 @@
         .bass_semis = true,
         .bass_gate = 2,
         .pad_rhythm = 0xB4D4D4D4u, .pad_gate = 1,
-        .orch = {{TI_EBASS, TI_BRASS, TI_EGUITAR}, {TI_EBASS, TI_TRUMPET, TI_EGUITAR}, {TI_EBASS, TI_SAX, TI_EGUITAR}}, .orch_n = 3, .orch_mode = TG_ORCH_RANDOM,
+        .orch = {{TI_SLAPBASS, TI_BRASS, TI_EGUITAR}, {TI_SLAPBASS, TI_TRUMPET, TI_EGUITAR}, {TI_SLAPBASS, TI_JAZZORGAN, TI_BRASS}}, .orch_n = 3, .orch_mode = TG_ORCH_RANDOM,
         .groove = 36,
     },
     [TG_STYLE_G_HARD_ROCK_70S] = {
@@ -532,7 +532,7 @@
         .bass_semis = true,
         .pad_rhythm = 0x29492549u, .pad_gate = 2,
         .power = true,
-        .orch = {{TI_WAVEBASS, TI_DISTGUITAR, TI_DISTGUITAR}, {TI_EBASS, TI_EGUITAR, TI_DISTGUITAR}, {TI_WAVEBASS, TI_ROCKORGAN, TI_DISTGUITAR}}, .orch_n = 3, .orch_mode = TG_ORCH_RANDOM,
+        .orch = {{TI_EBASS, TI_DISTGUITAR, TI_DISTGUITAR}, {TI_EBASS, TI_ROCKORGAN, TI_DISTGUITAR}, {TI_EBASS, TI_HARMONICA, TI_DISTGUITAR}}, .orch_n = 3, .orch_mode = TG_ORCH_RANDOM,
         .groove = 48,
     },
     [TG_STYLE_G_HEAVY_METAL_70S] = {
@@ -558,7 +558,7 @@
         .bass_gate = 1,
         .pad_rhythm = 0x55555555u, .pad_gate = 1,
         .power = true,
-        .orch = {{TI_WAVEBASS, TI_DISTGUITAR, TI_DISTGUITAR}, {TI_EBASS, TI_EGUITAR, TI_DISTGUITAR}}, .orch_n = 2, .orch_mode = TG_ORCH_RANDOM,
+        .orch = {{TI_DISTGUITAR, TI_DISTGUITAR, TI_ROCKORGAN}, {TI_DISTGUITAR, TI_TUBULAR, TI_DISTGUITAR}, {TI_EBASS, TI_DISTGUITAR, TI_CHOIR}}, .orch_n = 3, .orch_mode = TG_ORCH_RANDOM,
         .groove = 49,
     },
     [TG_STYLE_G_PROG_ROCK_70S] = {
@@ -582,7 +582,7 @@
         .bass_rhythm = 0x2959u,
         .bass_notes = {0, 7, 12, 7, 0, 12, 10}, .bass_len = 7,
         .bass_semis = true,
-        .orch = {{TI_WAVEBASS, TI_SAWLEAD, TI_STRINGS}, {TI_WAVEBASS, TI_SAWLEAD, TI_ROCKORGAN}, {TI_EBASS, TI_FLUTE, TI_PIANO}}, .orch_n = 3, .orch_mode = TG_ORCH_CONTRAST,
+        .orch = {{TI_FATBASS, TI_SAWLEAD, TI_STRMACH}, {TI_BASSOON, TI_FLUTE, TI_HARPSICHORD}, {TI_FATBASS, TI_SYNCLEAD, TI_ROCKORGAN}, {TI_FATBASS, TI_GLOCKEN, TI_STRMACH}}, .orch_n = 4, .orch_mode = TG_ORCH_CONTRAST,
         .groove = 52,
     },
     [TG_STYLE_G_GLAM_ROCK] = {
@@ -610,7 +610,7 @@
         .bass_semis = true,
         .pad_rhythm = 0x55555555u, .pad_gate = 1,
         .power = true,
-        .orch = {{TI_EBASS, TI_SAX, TI_DISTGUITAR}, {TI_EBASS, TI_EGUITAR, TI_PIANO}}, .orch_n = 2, .orch_mode = TG_ORCH_RANDOM,
+        .orch = {{TI_EBASS, TI_SAX, TI_EGUITAR}, {TI_CELLO, TI_OBOE, TI_STRINGS}, {TI_EBASS, TI_EGUITAR, TI_ROCKORGAN}}, .orch_n = 3, .orch_mode = TG_ORCH_RANDOM,
         .groove = 47,
     },
     [TG_STYLE_G_ROOTS_REGGAE] = {
@@ -638,7 +638,7 @@
         .bass_gate = 3,
         .pad_rhythm = 0x10101010u, .pad_gate = 2,
         .strum_ms = 4,
-        .orch = {{TI_EBASS, TI_FLUTE, TI_GUITAR}, {TI_EBASS, TI_SAX, TI_GUITAR}}, .orch_n = 2, .orch_mode = TG_ORCH_RANDOM,
+        .orch = {{TI_EBASS, TI_REEDORGAN, TI_ORGAN}, {TI_EBASS, TI_TRUMPET, TI_GUITAR}, {TI_EBASS, TI_SAX, TI_REEDEP}}, .orch_n = 3, .orch_mode = TG_ORCH_RANDOM,
         .groove = 51,
     },
     [TG_STYLE_G_DISCO] = {
@@ -664,7 +664,7 @@
         .bass_semis = true,
         .bass_gate = 1,
         .pad_rhythm = 0xD4D4D4D4u, .pad_gate = 1,
-        .orch = {{TI_EBASS, TI_STRINGS, TI_GUITAR}, {TI_EBASS, TI_FLUTE, TI_GUITAR}, {TI_SYNTHBASS, TI_STRINGS, TI_GUITAR}}, .orch_n = 3, .orch_mode = TG_ORCH_RANDOM,
+        .orch = {{TI_SLAPBASS, TI_STRINGS, TI_CLAV}, {TI_SYNTHBASS, TI_SYNCLEAD, TI_STRMACH}, {TI_SLAPBASS, TI_FLUTE, TI_EPIANO}, {TI_SLAPBASS, TI_BRASS, TI_VIBES}}, .orch_n = 4, .orch_mode = TG_ORCH_RANDOM,
         .groove = 46,
     },
     [TG_STYLE_G_PUNK_70S] = {
@@ -690,7 +690,7 @@
         .bass_gate = 2,
         .pad_rhythm = 0x55555555u, .pad_gate = 1,
         .power = true,
-        .orch = {{TI_WAVEBASS, TI_EGUITAR, TI_DISTGUITAR}, {TI_WAVEBASS, TI_DISTGUITAR, TI_DISTGUITAR}}, .orch_n = 2, .orch_mode = TG_ORCH_RANDOM,
+        .orch = {{TI_EBASS, TI_DISTGUITAR, TI_DISTGUITAR}, {TI_EBASS, TI_EGUITAR, TI_DISTGUITAR}, {TI_EBASS, TI_SAX, TI_DISTGUITAR}}, .orch_n = 3, .orch_mode = TG_ORCH_RANDOM,
         .groove = 53,
     },
     [TG_STYLE_G_SALSA] = {
@@ -714,7 +714,7 @@
         .bass_rhythm = 0x1040u,
         .bass_notes = {0, 2}, .bass_len = 2,
         .pad_figure = {3, -128, 2, 4, -128, 3, -128, 2, 4, -128, 3, -128, 1, 3, -128, 2}, .figure_len = 16,
-        .orch = {{TI_EBASS, TI_TRUMPET, TI_PIANO}, {TI_EBASS, TI_BRASS, TI_PIANO}}, .orch_n = 2, .orch_mode = TG_ORCH_RANDOM,
+        .orch = {{TI_FRETLESS, TI_TRUMPET, TI_PIANO}, {TI_FRETLESS, TI_BRASS, TI_PIANO}, {TI_FRETLESS, TI_FLUTE, TI_VIOLIN}, {TI_FRETLESS, TI_VIBES, TI_PIANO}}, .orch_n = 4, .orch_mode = TG_ORCH_RANDOM,
         .groove = 54,
     },
     [TG_STYLE_G_OLD_SCHOOL_HIP_HOP] = {
@@ -741,7 +741,7 @@
         .bass_semis = true,
         .bass_gate = 2,
         .pad_rhythm = 0xA4252424u, .pad_gate = 1,
-        .orch = {{TI_EBASS, TI_BRASS, TI_EGUITAR}, {TI_EBASS, TI_SAX, TI_CLAV}}, .orch_n = 2, .orch_mode = TG_ORCH_RANDOM,
+        .orch = {{TI_SLAPBASS, TI_BRASS, TI_EGUITAR}, {TI_SLAPBASS, TI_SAX, TI_CLAV}, {TI_SLAPBASS, TI_JAZZORGAN, TI_EGUITAR}}, .orch_n = 3, .orch_mode = TG_ORCH_RANDOM,
         .groove = 45,
     },
     [TG_STYLE_G_KRAUTROCK] = {
@@ -763,7 +763,7 @@
         .mel_mode = TG_MEL_PATTERN,
         .pattern = {0, TG_REST, 4, TG_REST, 7, TG_REST, 4, TG_REST, 9, TG_REST, 7, TG_REST, 4, TG_REST, 2, TG_REST}, .pattern_len = 16, .pattern_chord = false,
         .mel_min_ticks = 2,
-        .orch = {{TI_EBASS, TI_EGUITAR, TI_GUITAR}, {TI_WAVEBASS, TI_SYNTH, TI_SINEKEY}, {TI_WAVEBASS, TI_CHIP, TI_ORGAN}}, .orch_n = 3, .orch_mode = TG_ORCH_CYCLE,
+        .orch = {{TI_FATBASS, TI_RINGMOD, TI_PLUCKSYNTH}, {TI_ORGAN, TI_FLUTE, TI_SINEKEY}, {TI_FATBASS, TI_ARPLEAD, TI_STRMACH}, {TI_WAVEBASS, TI_SYNTH, TI_ROCKORGAN}}, .orch_n = 4, .orch_mode = TG_ORCH_CYCLE,
         .groove = 50,
     },
     [TG_STYLE_G_NEW_WAVE_80S] = {
@@ -785,7 +785,7 @@
         .mel_min_ticks = 2,
         .staccato = 0.35f,
         .pad_rhythm = 0x44444444u, .pad_gate = 1,
-        .orch = {{TI_EBASS, TI_SYNTH, TI_EGUITAR}, {TI_EBASS, TI_SINEKEY, TI_EGUITAR}}, .orch_n = 2, .orch_mode = TG_ORCH_RANDOM,
+        .orch = {{TI_SYNTHBASS, TI_SYNCLEAD, TI_EGUITAR}, {TI_SYNTHBASS, TI_SYNTH, TI_PLUCKSYNTH}, {TI_SYNTHBASS, TI_ROCKORGAN, TI_EGUITAR}}, .orch_n = 3, .orch_mode = TG_ORCH_RANDOM,
         .groove = 62,
     },
     [TG_STYLE_G_POST_PUNK_80S] = {
@@ -807,7 +807,7 @@
         .pattern = {4, TG_HOLD, 4, 3, 2, TG_HOLD, 0, TG_HOLD, 4, TG_HOLD, 4, 5, 4, TG_HOLD, 2, TG_HOLD}, .pattern_len = 16, .pattern_chord = false,
         .mel_min_ticks = 1,
         .pad_rhythm = 0x40414041u, .pad_gate = 2,
-        .orch = {{TI_EBASS, TI_EBASS, TI_EGUITAR}, {TI_WAVEBASS, TI_EBASS, TI_EGUITAR}}, .orch_n = 2, .orch_mode = TG_ORCH_RANDOM,
+        .orch = {{TI_EBASS, TI_EBASS, TI_EGUITAR}, {TI_EBASS, TI_METALLEAD, TI_EGUITAR}, {TI_EBASS, TI_EGUITAR, TI_STRMACH}}, .orch_n = 3, .orch_mode = TG_ORCH_RANDOM,
         .groove = 64,
     },
     [TG_STYLE_G_SYNTH_POP_80S] = {
@@ -832,7 +832,7 @@
         .bass_notes = {0, 12}, .bass_len = 2,
         .bass_semis = true,
         .bass_gate = 1,
-        .orch = {{TI_WAVEBASS, TI_SYNTH, TI_PLUCKSYNTH}, {TI_WAVEBASS, TI_SINEKEY, TI_CHIP}}, .orch_n = 2, .orch_mode = TG_ORCH_RANDOM,
+        .orch = {{TI_SYNTHBASS, TI_SYNTH, TI_ARPLEAD}, {TI_SYNTHBASS, TI_CHIPCHOIR, TI_PLUCKSYNTH}, {TI_FRETLESS, TI_SAWLEAD, TI_SINEKEY}, {TI_WAVEBASS, TI_MARIMBA, TI_PLUCKSYNTH}}, .orch_n = 4, .orch_mode = TG_ORCH_RANDOM,
         .groove = 65,
     },
     [TG_STYLE_G_HARDCORE_PUNK_80S] = {
@@ -855,7 +855,7 @@
         .staccato = 0.3f,
         .pad_rhythm = 0x55555555u, .pad_gate = 1,
         .power = true,
-        .orch = {{TI_WAVEBASS, TI_EGUITAR, TI_DISTGUITAR}}, .orch_n = 1, .orch_mode = TG_ORCH_RANDOM,
+        .orch = {{TI_WAVEBASS, TI_DISTGUITAR, TI_DISTGUITAR}, {TI_EBASS, TI_EGUITAR, TI_DISTGUITAR}}, .orch_n = 2, .orch_mode = TG_ORCH_RANDOM,
         .groove = 57,
     },
     [TG_STYLE_G_THRASH_METAL_80S] = {
@@ -882,7 +882,7 @@
         .bass_gate = 1,
         .pad_rhythm = 0x41010101u, .pad_gate = 2,
         .power = true,
-        .orch = {{TI_WAVEBASS, TI_DISTGUITAR, TI_DISTGUITAR}}, .orch_n = 1, .orch_mode = TG_ORCH_RANDOM,
+        .orch = {{TI_EBASS, TI_DISTGUITAR, TI_DISTGUITAR}, {TI_EBASS, TI_EBASS, TI_DISTGUITAR}}, .orch_n = 2, .orch_mode = TG_ORCH_RANDOM,
         .groove = 67,
     },
     [TG_STYLE_G_GLAM_METAL_80S] = {
@@ -905,7 +905,7 @@
         .mel_add = 0x008,
         .pad_rhythm = 0x55555555u, .pad_gate = 1,
         .power = true,
-        .orch = {{TI_EBASS, TI_DISTGUITAR, TI_DISTGUITAR}, {TI_EBASS, TI_DISTGUITAR, TI_SYNTH}}, .orch_n = 2, .orch_mode = TG_ORCH_RANDOM,
+        .orch = {{TI_EBASS, TI_DISTGUITAR, TI_DISTGUITAR}, {TI_EBASS, TI_SYNBRASS, TI_DISTGUITAR}, {TI_EBASS, TI_DISTGUITAR, TI_STRINGS}}, .orch_n = 3, .orch_mode = TG_ORCH_RANDOM,
         .groove = 55,
     },
     [TG_STYLE_G_GOTHIC_ROCK_80S] = {
@@ -927,7 +927,7 @@
         .mel_mode = TG_MEL_PATTERN,
         .pattern = {0, TG_HOLD, 1, TG_HOLD, 2, TG_HOLD, 3, TG_HOLD, 4, TG_HOLD, 3, TG_HOLD, 2, TG_HOLD, 1, TG_HOLD}, .pattern_len = 16, .pattern_chord = true,
         .mel_min_ticks = 1,
-        .orch = {{TI_WAVEBASS, TI_EGUITAR, TI_CHOIR}, {TI_WAVEBASS, TI_SHIMMER, TI_CHOIR}}, .orch_n = 2, .orch_mode = TG_ORCH_RANDOM,
+        .orch = {{TI_CELLO, TI_CHOIR, TI_EGUITAR}, {TI_EBASS, TI_EGUITAR, TI_SYNTH}, {TI_FATBASS, TI_SHIMMER, TI_EGUITAR}}, .orch_n = 3, .orch_mode = TG_ORCH_RANDOM,
         .groove = 56,
     },
     [TG_STYLE_G_ALT_INDIE_80S] = {
@@ -951,7 +951,7 @@
         .bass_rhythm = 0x55D5u,
         .bass_notes = {0, 0, 2, 3, 0, 0, 2, 1}, .bass_len = 8,
         .pad_figure = {0, 2, 3, 1, 2, 3, 1, 2}, .figure_len = 8,
-        .orch = {{TI_EBASS, TI_EGUITAR, TI_GUITAR}, {TI_EBASS, TI_EGUITAR, TI_EGUITAR}, {TI_EBASS, TI_DISTGUITAR, TI_EGUITAR}}, .orch_n = 3, .orch_mode = TG_ORCH_ENERGY,
+        .orch = {{TI_EBASS, TI_GUITAR, TI_EGUITAR}, {TI_EBASS, TI_EGUITAR, TI_EGUITAR}, {TI_EBASS, TI_VIOLIN, TI_EGUITAR}, {TI_EBASS, TI_DISTGUITAR, TI_EGUITAR}}, .orch_n = 4, .orch_mode = TG_ORCH_ENERGY,
         .groove = 60,
     },
     [TG_STYLE_G_CHICAGO_HOUSE] = {
@@ -978,7 +978,7 @@
         .bass_semis = true,
         .bass_gate = 2,
         .pad_rhythm = 0x24244424u, .pad_gate = 2,
-        .orch = {{TI_WAVEBASS, TI_ORGAN, TI_PIANO}, {TI_WAVEBASS, TI_SINEKEY, TI_PIANO}}, .orch_n = 2, .orch_mode = TG_ORCH_RANDOM,
+        .orch = {{TI_SYNTHBASS, TI_VOICE, TI_PIANO}, {TI_ACID, TI_SINEKEY, TI_GOSPEL}, {TI_SYNTHBASS, TI_ARPLEAD, TI_PAD}}, .orch_n = 3, .orch_mode = TG_ORCH_RANDOM,
         .groove = 59,
     },
     [TG_STYLE_G_DETROIT_TECHNO] = {
@@ -1003,7 +1003,7 @@
         .bass_notes = {0, 0, 0, 12, 0, 7, 0}, .bass_len = 7,
         .bass_semis = true,
         .bass_gate = 1,
-        .orch = {{TI_WAVEBASS, TI_PLUCKSYNTH, TI_STRINGS}, {TI_WAVEBASS, TI_CHIP, TI_PAD}}, .orch_n = 2, .orch_mode = TG_ORCH_RANDOM,
+        .orch = {{TI_SYNTHBASS, TI_PIANO, TI_STRINGS}, {TI_SYNTHBASS, TI_RESOSYNTH, TI_STRMACH}, {TI_WAVEBASS, TI_BELLS, TI_SINEKEY}}, .orch_n = 3, .orch_mode = TG_ORCH_RANDOM,
         .groove = 66,
     },
     [TG_STYLE_G_INDUSTRIAL_80S] = {
@@ -1030,7 +1030,7 @@
         .bass_gate = 1,
         .pad_rhythm = 0x00410001u, .pad_gate = 2,
         .power = true,
-        .orch = {{TI_ACID, TI_GLITCH, TI_DISTGUITAR}, {TI_WAVEBASS, TI_GLITCH, TI_DISTGUITAR}}, .orch_n = 2, .orch_mode = TG_ORCH_RANDOM,
+        .orch = {{TI_FATBASS, TI_GLITCH, TI_SYNTH}, {TI_ACID, TI_RINGMOD, TI_SYNTH}, {TI_FATBASS, TI_METALLEAD, TI_SYNBRASS}}, .orch_n = 3, .orch_mode = TG_ORCH_RANDOM,
         .groove = 61,
     },
     [TG_STYLE_G_NEW_JACK_SWING] = {
@@ -1058,7 +1058,7 @@
         .bass_semis = true,
         .bass_gate = 2,
         .pad_rhythm = 0x22404240u, .pad_gate = 1,
-        .orch = {{TI_WAVEBASS, TI_SINEKEY, TI_BRASS}, {TI_WAVEBASS, TI_SYNTH, TI_EPIANO}}, .orch_n = 2, .orch_mode = TG_ORCH_RANDOM,
+        .orch = {{TI_SYNTHBASS, TI_SINEKEY, TI_SYNBRASS}, {TI_SLAPBASS, TI_EPIANO, TI_SYNBRASS}, {TI_TALKBASS, TI_SAX, TI_CLAV}}, .orch_n = 3, .orch_mode = TG_ORCH_RANDOM,
         .groove = 63,
     },
     [TG_STYLE_G_GOLDEN_AGE_HIP_HOP] = {
@@ -1081,7 +1081,7 @@
         .pattern = {TG_REST, TG_REST, TG_REST, TG_REST, TG_REST, TG_REST, 4, 5, 4, TG_REST, TG_REST, TG_REST, 2, TG_REST, 0, TG_REST}, .pattern_len = 16, .pattern_chord = false,
         .mel_min_ticks = 1,
         .pad_rhythm = 0x00500400u, .pad_gate = 2,
-        .orch = {{TI_808, TI_GLITCH, TI_BRASS}, {TI_808, TI_CHIP, TI_PIANO}}, .orch_n = 2, .orch_mode = TG_ORCH_RANDOM,
+        .orch = {{TI_808, TI_GLITCH, TI_BRASS}, {TI_808, TI_SAX, TI_EPIANO}, {TI_808, TI_SYNCLEAD, TI_STRMACH}}, .orch_n = 3, .orch_mode = TG_ORCH_RANDOM,
         .groove = 58,
     },
     [TG_STYLE_G_GRUNGE] = {
@@ -1108,7 +1108,7 @@
         .bass_gate = 2,
         .pad_rhythm = 0x49494949u, .pad_gate = 1,
         .power = true,
-        .orch = {{TI_EBASS, TI_EGUITAR, TI_EGUITAR}, {TI_WAVEBASS, TI_DISTGUITAR, TI_DISTGUITAR}}, .orch_n = 2, .orch_mode = TG_ORCH_CONTRAST,
+        .orch = {{TI_EBASS, TI_EGUITAR, TI_EGUITAR}, {TI_EBASS, TI_DISTGUITAR, TI_DISTGUITAR}, {TI_EBASS, TI_GUITAR, TI_CELLO}}, .orch_n = 3, .orch_mode = TG_ORCH_CONTRAST,
         .groove = 75,
     },
     [TG_STYLE_G_BRITPOP] = {
@@ -1135,7 +1135,7 @@
         .bass_gate = 2,
         .pad_rhythm = 0x56515651u, .pad_gate = 2,
         .strum_ms = 9,
-        .orch = {{TI_EBASS, TI_EGUITAR, TI_GUITAR}, {TI_EBASS, TI_PIANO, TI_GUITAR}, {TI_WAVEBASS, TI_SAX, TI_GUITAR}}, .orch_n = 3, .orch_mode = TG_ORCH_RANDOM,
+        .orch = {{TI_EBASS, TI_EGUITAR, TI_JAZZORGAN}, {TI_EBASS, TI_SITAR, TI_GUITAR}, {TI_EBASS, TI_STRINGS, TI_GUITAR}}, .orch_n = 3, .orch_mode = TG_ORCH_RANDOM,
         .groove = 68,
     },
     [TG_STYLE_G_GANGSTA_RAP] = {
@@ -1159,7 +1159,7 @@
         .mel_min_ticks = 2,
         .bass_gate = 6,
         .pad_rhythm = 0x10000001u, .pad_gate = 3,
-        .orch = {{TI_808, TI_PIANO, TI_STRINGS}, {TI_808, TI_BELLS, TI_PIANO}, {TI_WAVEBASS, TI_PIANO, TI_STRINGS}}, .orch_n = 3, .orch_mode = TG_ORCH_RANDOM,
+        .orch = {{TI_808, TI_PIANO, TI_STRINGS}, {TI_808, TI_TUBULAR, TI_PIANO}, {TI_808, TI_VIOLIN, TI_PIANO}}, .orch_n = 3, .orch_mode = TG_ORCH_RANDOM,
         .groove = 73,
     },
     [TG_STYLE_G_G_FUNK] = {
@@ -1184,7 +1184,7 @@
         .bass_rhythm = 0x4481u,
         .bass_notes = {0, 12, 10, 7}, .bass_len = 4,
         .bass_semis = true,
-        .orch = {{TI_WAVEBASS, TI_SAWLEAD, TI_EPIANO}, {TI_WAVEBASS, TI_TALKBASS, TI_EPIANO}, {TI_SYNTHBASS, TI_SAWLEAD, TI_SINEKEY}}, .orch_n = 3, .orch_mode = TG_ORCH_RANDOM,
+        .orch = {{TI_TALKBASS, TI_SAWLEAD, TI_EPIANO}, {TI_SYNTHBASS, TI_SINEKEY, TI_EPIANO}, {TI_SYNTHBASS, TI_TALKBASS, TI_CLAV}}, .orch_n = 3, .orch_mode = TG_ORCH_RANDOM,
         .groove = 74,
     },
     [TG_STYLE_G_RNB_90S] = {
@@ -1207,7 +1207,7 @@
         .mel_min_ticks = 2,
         .turn = 0.3f,
         .mel_add = 0x408,
-        .orch = {{TI_808, TI_SINEKEY, TI_EPIANO}, {TI_WAVEBASS, TI_VOICE, TI_EPIANO}, {TI_808, TI_SAX, TI_PAD}}, .orch_n = 3, .orch_mode = TG_ORCH_RANDOM,
+        .orch = {{TI_808, TI_VOICE, TI_EPIANO}, {TI_FRETLESS, TI_SAX, TI_REEDEP}, {TI_808, TI_SINEKEY, TI_STRINGS}}, .orch_n = 3, .orch_mode = TG_ORCH_RANDOM,
         .groove = 79,
     },
     [TG_STYLE_G_TRIP_HOP] = {
@@ -1232,7 +1232,7 @@
         .bass_rhythm = 0x0501u,
         .bass_notes = {0, 0, 7}, .bass_len = 3,
         .bass_semis = true,
-        .orch = {{TI_WAVEBASS, TI_SINEKEY, TI_STRINGS}, {TI_WAVEBASS, TI_SAWLEAD, TI_EPIANO}, {TI_808, TI_FLUTE, TI_PAD}}, .orch_n = 3, .orch_mode = TG_ORCH_RANDOM,
+        .orch = {{TI_SYNTHBASS, TI_WHISTLE, TI_SINEKEY}, {TI_UPRIGHT, TI_TABLA, TI_STRINGS}, {TI_WAVEBASS, TI_VOICE, TI_HARPSICHORD}}, .orch_n = 3, .orch_mode = TG_ORCH_RANDOM,
         .groove = 81,
     },
     [TG_STYLE_G_JUNGLE] = {
@@ -1256,7 +1256,7 @@
         .bass_notes = {0, 0, 7, 0}, .bass_len = 4,
         .bass_semis = true,
         .pad_rhythm = 0x01000100u, .pad_gate = 2,
-        .orch = {{TI_808, TI_SAWLEAD, TI_ORGAN}, {TI_WAVEBASS, TI_PLUCKSYNTH, TI_ORGAN}, {TI_808, TI_SINEKEY, TI_PIANO}}, .orch_n = 3, .orch_mode = TG_ORCH_RANDOM,
+        .orch = {{TI_808, TI_SYNCLEAD, TI_ORGAN}, {TI_FATBASS, TI_FLUTE, TI_PAD}, {TI_808, TI_VOICE, TI_STRINGS}}, .orch_n = 3, .orch_mode = TG_ORCH_RANDOM,
         .groove = 76,
     },
     [TG_STYLE_G_DRUM_AND_BASS] = {
@@ -1279,7 +1279,7 @@
         .bass_rhythm = 0x0401u,
         .bass_notes = {0, 0, 1, 0}, .bass_len = 4,
         .bass_semis = true,
-        .orch = {{TI_FATBASS, TI_PLUCKSYNTH, TI_SINEKEY}, {TI_FATBASS, TI_SINEKEY, TI_SHIMMER}, {TI_FATBASS, TI_GLITCH, TI_SINEKEY}}, .orch_n = 3, .orch_mode = TG_ORCH_RANDOM,
+        .orch = {{TI_FATBASS, TI_ERHU, TI_SINEKEY}, {TI_UPRIGHT, TI_FLUGELHORN, TI_EPIANO}, {TI_FATBASS, TI_SHIMMER, TI_SINEKEY}}, .orch_n = 3, .orch_mode = TG_ORCH_RANDOM,
         .groove = 70,
     },
     [TG_STYLE_G_TRANCE_90S] = {
@@ -1306,7 +1306,7 @@
         .bass_semis = true,
         .bass_gate = 2,
         .spread = true,
-        .orch = {{TI_WAVEBASS, TI_PLUCKSYNTH, TI_PAD}, {TI_WAVEBASS, TI_PLUCKSYNTH, TI_SUPERSAW}, {TI_WAVEBASS, TI_CHIP, TI_SUPERSAW}}, .orch_n = 3, .orch_mode = TG_ORCH_ENERGY,
+        .orch = {{TI_WAVEBASS, TI_PLUCKSYNTH, TI_STRMACH}, {TI_ACID, TI_ARPLEAD, TI_SYNTH}, {TI_WAVEBASS, TI_SUPERSAW, TI_SUPERSAW}}, .orch_n = 3, .orch_mode = TG_ORCH_ENERGY,
         .groove = 80,
     },
     [TG_STYLE_G_EURODANCE] = {
@@ -1332,7 +1332,7 @@
         .bass_semis = true,
         .bass_gate = 1,
         .pad_rhythm = 0x24492449u, .pad_gate = 2,
-        .orch = {{TI_WAVEBASS, TI_SYNCLEAD, TI_PIANO}, {TI_WAVEBASS, TI_SAWLEAD, TI_PIANO}, {TI_808, TI_SYNCLEAD, TI_PLUCKSYNTH}}, .orch_n = 3, .orch_mode = TG_ORCH_RANDOM,
+        .orch = {{TI_ORGAN, TI_SYNCLEAD, TI_PIANO}, {TI_WAVEBASS, TI_VOICE, TI_PLUCKSYNTH}, {TI_SYNTHBASS, TI_SAWLEAD, TI_PIANO}}, .orch_n = 3, .orch_mode = TG_ORCH_RANDOM,
         .groove = 72,
     },
     [TG_STYLE_G_NU_METAL] = {
@@ -1359,7 +1359,7 @@
         .bass_gate = 2,
         .pad_rhythm = 0x14450A45u, .pad_gate = 1,
         .power = true,
-        .orch = {{TI_EBASS, TI_GLITCH, TI_DISTGUITAR}, {TI_EBASS, TI_EGUITAR, TI_DISTGUITAR}}, .orch_n = 2, .orch_mode = TG_ORCH_RANDOM,
+        .orch = {{TI_EBASS, TI_DISTGUITAR, TI_DISTGUITAR}, {TI_SLAPBASS, TI_METALLEAD, TI_DISTGUITAR}, {TI_EBASS, TI_GLITCH, TI_DISTGUITAR}}, .orch_n = 3, .orch_mode = TG_ORCH_RANDOM,
         .groove = 77,
     },
     [TG_STYLE_G_POP_PUNK_90S] = {
@@ -1381,7 +1381,7 @@
         .mel_min_ticks = 2,
         .pad_rhythm = 0x55555555u, .pad_gate = 1,
         .power = true,
-        .orch = {{TI_WAVEBASS, TI_DISTGUITAR, TI_DISTGUITAR}, {TI_EBASS, TI_EGUITAR, TI_DISTGUITAR}}, .orch_n = 2, .orch_mode = TG_ORCH_RANDOM,
+        .orch = {{TI_EBASS, TI_DISTGUITAR, TI_DISTGUITAR}, {TI_EBASS, TI_EGUITAR, TI_DISTGUITAR}}, .orch_n = 2, .orch_mode = TG_ORCH_RANDOM,
         .groove = 78,
     },
     [TG_STYLE_G_MIDWEST_EMO] = {
@@ -1404,7 +1404,7 @@
         .bass_rhythm = 0x10441u,
         .bass_notes = {0, 0, 2, 1}, .bass_len = 4,
         .pad_figure = {0, 2, 4, 3, 1, 3, 5, 4, 2, 4}, .figure_len = 10,
-        .orch = {{TI_EBASS, TI_EGUITAR, TI_GUITAR}, {TI_EBASS, TI_GUITAR, TI_EGUITAR}, {TI_EBASS, TI_TRUMPET, TI_GUITAR}}, .orch_n = 3, .orch_mode = TG_ORCH_RANDOM,
+        .orch = {{TI_EBASS, TI_EGUITAR, TI_EGUITAR}, {TI_EBASS, TI_TRUMPET, TI_EGUITAR}, {TI_EBASS, TI_GUITAR, TI_EGUITAR}}, .orch_n = 3, .orch_mode = TG_ORCH_RANDOM,
         .groove = 71,
     },
     [TG_STYLE_G_REGGAETON_90S] = {
@@ -1430,7 +1430,7 @@
         .bass_semis = true,
         .bass_gate = 2,
         .pad_rhythm = 0x48484848u, .pad_gate = 1,
-        .orch = {{TI_808, TI_SYNCLEAD, TI_PLUCKSYNTH}, {TI_WAVEBASS, TI_CHIP, TI_PIANO}, {TI_808, TI_SAWLEAD, TI_MARIMBA}}, .orch_n = 3, .orch_mode = TG_ORCH_RANDOM,
+        .orch = {{TI_808, TI_SYNCLEAD, TI_PLUCKSYNTH}, {TI_WAVEBASS, TI_STEELDRUM, TI_GUITAR}, {TI_808, TI_SAWLEAD, TI_MARIMBA}}, .orch_n = 3, .orch_mode = TG_ORCH_RANDOM,
         .groove = 69,
     },
     [TG_STYLE_G_CRUNK] = {
@@ -1452,7 +1452,7 @@
         .pattern = {7, TG_REST, TG_REST, 7, TG_REST, TG_REST, 8, TG_REST, 7, TG_REST, TG_REST, TG_REST, 5, TG_REST, 4, TG_REST}, .pattern_len = 16, .pattern_chord = false,
         .mel_min_ticks = 2,
         .pad_rhythm = 0x05410441u, .pad_gate = 2,
-        .orch = {{TI_808, TI_SYNCLEAD, TI_SYNTH}, {TI_808, TI_SAWLEAD, TI_SYNTH}}, .orch_n = 2, .orch_mode = TG_ORCH_RANDOM,
+        .orch = {{TI_808, TI_SYNCLEAD, TI_SYNTH}, {TI_808, TI_SAWLEAD, TI_SYNBRASS}, {TI_FATBASS, TI_SYNCLEAD, TI_SYNBRASS}}, .orch_n = 3, .orch_mode = TG_ORCH_RANDOM,
         .groove = 3,
     },
     [TG_STYLE_G_SNAP_MUSIC] = {
@@ -1474,7 +1474,7 @@
         .mel_mode = TG_MEL_PATTERN,
         .pattern = {4, TG_REST, TG_REST, TG_REST, TG_REST, TG_REST, 4, TG_REST, 2, TG_REST, TG_REST, TG_REST, 0, TG_REST, TG_REST, TG_REST}, .pattern_len = 16, .pattern_chord = false,
         .mel_min_ticks = 2,
-        .orch = {{TI_808, TI_SINEKEY, TI_SINEKEY}, {TI_808, TI_WHISTLE, TI_SINEKEY}}, .orch_n = 2, .orch_mode = TG_ORCH_RANDOM,
+        .orch = {{TI_808, TI_SINEKEY, TI_SINEKEY}, {TI_808, TI_WHISTLE, TI_SINEKEY}, {TI_808, TI_TOYPIANO, TI_SINEKEY}}, .orch_n = 3, .orch_mode = TG_ORCH_RANDOM,
         .groove = 11,
     },
     [TG_STYLE_G_EMO_POP] = {
@@ -1501,7 +1501,7 @@
         .bass_gate = 1,
         .pad_rhythm = 0x55555555u, .pad_gate = 1,
         .power = true,
-        .orch = {{TI_EBASS, TI_EGUITAR, TI_DISTGUITAR}, {TI_EBASS, TI_VOICE, TI_DISTGUITAR}}, .orch_n = 2, .orch_mode = TG_ORCH_CYCLE,
+        .orch = {{TI_EBASS, TI_EGUITAR, TI_DISTGUITAR}, {TI_EBASS, TI_VIOLIN, TI_DISTGUITAR}, {TI_EBASS, TI_SYNTH, TI_DISTGUITAR}}, .orch_n = 3, .orch_mode = TG_ORCH_CYCLE,
         .groove = 6,
     },
     [TG_STYLE_G_GARAGE_ROCK_REVIVAL] = {
@@ -1528,7 +1528,7 @@
         .bass_gate = 1,
         .pad_rhythm = 0x54445444u, .pad_gate = 1,
         .strum_ms = 6,
-        .orch = {{TI_EBASS, TI_DISTGUITAR, TI_EGUITAR}, {TI_EBASS, TI_EGUITAR, TI_DISTGUITAR}}, .orch_n = 2, .orch_mode = TG_ORCH_RANDOM,
+        .orch = {{TI_EBASS, TI_EGUITAR, TI_DISTGUITAR}, {TI_DISTGUITAR, TI_DISTGUITAR, TI_EGUITAR}, {TI_EBASS, TI_ROCKORGAN, TI_DISTGUITAR}}, .orch_n = 3, .orch_mode = TG_ORCH_RANDOM,
         .groove = 7,
     },
     [TG_STYLE_G_DUBSTEP_UK] = {
@@ -1553,7 +1553,7 @@
         .bass_notes = {0, 0, 1, 12, 0, 0, 1, -2}, .bass_len = 8,
         .bass_semis = true,
         .pad_rhythm = 0x01000100u, .pad_gate = 3,
-        .orch = {{TI_FATBASS, TI_SINEKEY, TI_SHIMMER}, {TI_FATBASS, TI_GLITCH, TI_SINEKEY}}, .orch_n = 2, .orch_mode = TG_ORCH_RANDOM,
+        .orch = {{TI_FATBASS, TI_SINEKEY, TI_WHISPER}, {TI_FATBASS, TI_RINGMOD, TI_GLITCH}, {TI_FATBASS, TI_GLASS, TI_SINEKEY}}, .orch_n = 3, .orch_mode = TG_ORCH_RANDOM,
         .groove = 4,
     },
     [TG_STYLE_G_GRIME] = {
@@ -1579,7 +1579,7 @@
         .bass_semis = true,
         .bass_gate = 2,
         .pad_rhythm = 0x04410041u, .pad_gate = 1,
-        .orch = {{TI_WAVEBASS, TI_CHIP, TI_PIZZ}, {TI_WAVEBASS, TI_CHIP, TI_STRINGS}}, .orch_n = 2, .orch_mode = TG_ORCH_RANDOM,
+        .orch = {{TI_WAVEBASS, TI_CHIP, TI_PIZZ}, {TI_WAVEBASS, TI_STEPLEAD, TI_STRINGS}, {TI_SYNTHBASS, TI_WAVELEAD, TI_BELLS}}, .orch_n = 3, .orch_mode = TG_ORCH_RANDOM,
         .groove = 8,
     },
     [TG_STYLE_G_ELECTROCLASH] = {
@@ -1605,7 +1605,7 @@
         .bass_semis = true,
         .bass_gate = 1,
         .pad_rhythm = 0x24492449u, .pad_gate = 2,
-        .orch = {{TI_SYNTHBASS, TI_SAWLEAD, TI_SYNTH}, {TI_ACID, TI_SYNTH, TI_SINEKEY}}, .orch_n = 2, .orch_mode = TG_ORCH_RANDOM,
+        .orch = {{TI_SYNTHBASS, TI_SAWLEAD, TI_SYNTH}, {TI_ACID, TI_RESOSYNTH, TI_SINEKEY}, {TI_SYNTHBASS, TI_SYNCLEAD, TI_RESOSYNTH}}, .orch_n = 3, .orch_mode = TG_ORCH_RANDOM,
         .groove = 5,
     },
     [TG_STYLE_G_INDIE_POP_00S] = {
@@ -1629,7 +1629,7 @@
         .bass_semis = true,
         .pad_rhythm = 0x45454545u, .pad_gate = 2,
         .strum_ms = 12,
-        .orch = {{TI_EBASS, TI_CELESTA, TI_GUITAR}, {TI_EBASS, TI_VOICE, TI_GUITAR}, {TI_WAVEBASS, TI_PLUCKSYNTH, TI_GUITAR}}, .orch_n = 3, .orch_mode = TG_ORCH_RANDOM,
+        .orch = {{TI_SYNTHBASS, TI_GLOCKEN, TI_ARPLEAD}, {TI_CELLO, TI_FLUGELHORN, TI_GUITAR}, {TI_WAVEBASS, TI_CELESTA, TI_GUITAR}}, .orch_n = 3, .orch_mode = TG_ORCH_RANDOM,
         .groove = 9,
     },
     [TG_STYLE_G_POP_RAP] = {
@@ -1655,7 +1655,7 @@
         .bass_semis = true,
         .bass_gate = 2,
         .pad_rhythm = 0x14244424u, .pad_gate = 1,
-        .orch = {{TI_SYNTHBASS, TI_VOICE, TI_PIANO}, {TI_SYNTHBASS, TI_WHISTLE, TI_PIANO}, {TI_808, TI_SYNCLEAD, TI_PIANO}}, .orch_n = 3, .orch_mode = TG_ORCH_RANDOM,
+        .orch = {{TI_SYNTHBASS, TI_SITAR, TI_STRINGS}, {TI_SYNTHBASS, TI_CLAV, TI_SINEKEY}, {TI_WAVEBASS, TI_TABLA, TI_PIZZ}}, .orch_n = 3, .orch_mode = TG_ORCH_RANDOM,
         .groove = 10,
     },
     [TG_STYLE_G_EDM_BIG_ROOM] = {
@@ -1683,7 +1683,7 @@
         .bass_semis = true,
         .bass_gate = 2,
         .pad_rhythm = 0x54492449u, .pad_gate = 2,
-        .orch = {{TI_WAVEBASS, TI_SAWLEAD, TI_SUPERSAW}, {TI_WAVEBASS, TI_PLUCKSYNTH, TI_SUPERSAW}, {TI_808, TI_SAWLEAD, TI_PLUCKSYNTH}}, .orch_n = 3, .orch_mode = TG_ORCH_ENERGY,
+        .orch = {{TI_WAVEBASS, TI_PLUCKSYNTH, TI_SUPERSAW}, {TI_SYNTHBASS, TI_SAWLEAD, TI_SUPERSAW}, {TI_FATBASS, TI_SYNBRASS, TI_SUPERSAW}, {TI_FATBASS, TI_METALLEAD, TI_SUPERSAW}}, .orch_n = 4, .orch_mode = TG_ORCH_ENERGY,
         .groove = 14,
     },
     [TG_STYLE_G_TRAP_2010S] = {
@@ -1707,7 +1707,7 @@
         .staccato = 0.5f,
         .bass_notes = {0, 0, 12, 0, 7, 0}, .bass_len = 6,
         .bass_semis = true,
-        .orch = {{TI_808, TI_PLUCKSYNTH, TI_PIANO}, {TI_808, TI_BELLS, TI_SINEKEY}, {TI_808, TI_SINEKEY, TI_CHOIR}}, .orch_n = 3, .orch_mode = TG_ORCH_RANDOM,
+        .orch = {{TI_808, TI_BELLS, TI_PIANO}, {TI_808, TI_HORN, TI_STRINGS}, {TI_808, TI_RINGMOD, TI_SINEKEY}}, .orch_n = 3, .orch_mode = TG_ORCH_RANDOM,
         .groove = 22,
     },
     [TG_STYLE_G_SOUNDCLOUD_RAP] = {
@@ -1731,7 +1731,7 @@
         .bass_notes = {0, 0, 0, 7}, .bass_len = 4,
         .bass_semis = true,
         .bass_gate = 6,
-        .orch = {{TI_808, TI_FLUTE, TI_CHIP}, {TI_808, TI_CHIP, TI_SHIMMER}, {TI_808, TI_WHISTLE, TI_KALIMBA}}, .orch_n = 3, .orch_mode = TG_ORCH_RANDOM,
+        .orch = {{TI_808, TI_WAVELEAD, TI_EGUITAR}, {TI_808, TI_MUSICBOX, TI_GUITAR}, {TI_808, TI_CHIP, TI_SINEKEY}}, .orch_n = 3, .orch_mode = TG_ORCH_RANDOM,
         .groove = 21,
     },
     [TG_STYLE_G_CHICAGO_DRILL] = {
@@ -1758,7 +1758,7 @@
         .bass_semis = true,
         .bass_gate = 5,
         .pad_rhythm = 0x14410441u, .pad_gate = 2,
-        .orch = {{TI_808, TI_BELLS, TI_PIZZ}, {TI_808, TI_BRASS, TI_PIZZ}, {TI_808, TI_STRINGS, TI_PIZZ}}, .orch_n = 3, .orch_mode = TG_ORCH_RANDOM,
+        .orch = {{TI_808, TI_SYNBRASS, TI_PIZZ}, {TI_808, TI_GLOCKEN, TI_PIZZ}, {TI_808, TI_STRINGS, TI_TUBULAR}}, .orch_n = 3, .orch_mode = TG_ORCH_RANDOM,
         .groove = 15,
     },
     [TG_STYLE_G_UK_DRILL] = {
@@ -1783,7 +1783,7 @@
         .bass_rhythm = 0x9401u,
         .bass_notes = {0, 12, 0, 10, 0, 3, 13, 0}, .bass_len = 8,
         .bass_semis = true,
-        .orch = {{TI_808, TI_STRINGS, TI_PIANO}, {TI_808, TI_PIANO, TI_CHOIR}, {TI_808, TI_SINEKEY, TI_PIANO}}, .orch_n = 3, .orch_mode = TG_ORCH_RANDOM,
+        .orch = {{TI_808, TI_VIOLIN, TI_SINEKEY}, {TI_808, TI_PANFLUTE, TI_PIANO}, {TI_808, TI_PIANO, TI_STRINGS}}, .orch_n = 3, .orch_mode = TG_ORCH_RANDOM,
         .groove = 23,
     },
     [TG_STYLE_G_LOFI_HIP_HOP] = {
@@ -1810,7 +1810,7 @@
         .bass_rhythm = 0x0401u,
         .bass_notes = {0, 7}, .bass_len = 2,
         .bass_semis = true,
-        .orch = {{TI_CONTRABASS, TI_SINEKEY, TI_EPIANO}, {TI_WAVEBASS, TI_FLUTE, TI_EPIANO}, {TI_CONTRABASS, TI_GUITAR, TI_PIANO}}, .orch_n = 3, .orch_mode = TG_ORCH_RANDOM,
+        .orch = {{TI_UPRIGHT, TI_FLUGELHORN, TI_EPIANO}, {TI_FRETLESS, TI_VIBES, TI_REEDEP}, {TI_UPRIGHT, TI_KALIMBA, TI_EGUITAR}, {TI_EBASS, TI_SHAKUHACHI, TI_REEDEP}}, .orch_n = 4, .orch_mode = TG_ORCH_RANDOM,
         .groove = 19,
     },
     [TG_STYLE_G_VAPORWAVE] = {
@@ -1837,7 +1837,7 @@
         .bass_notes = {0, 7, 12}, .bass_len = 3,
         .bass_semis = true,
         .pad_rhythm = 0x50151415u, .pad_gate = 2,
-        .orch = {{TI_WAVEBASS, TI_SAX, TI_EPIANO}, {TI_FATBASS, TI_SINEKEY, TI_PIANO}, {TI_WAVEBASS, TI_SHIMMER, TI_EPIANO}}, .orch_n = 3, .orch_mode = TG_ORCH_RANDOM,
+        .orch = {{TI_FRETLESS, TI_SAX, TI_EPIANO}, {TI_SLAPBASS, TI_MARIMBA, TI_SYNBRASS}, {TI_WAVEBASS, TI_SINEKEY, TI_FROZEN}}, .orch_n = 3, .orch_mode = TG_ORCH_RANDOM,
         .groove = 24,
     },
     [TG_STYLE_G_AFROBEATS] = {
@@ -1863,7 +1863,7 @@
         .bass_semis = true,
         .bass_gate = 2,
         .pad_rhythm = 0x94A4A4A4u, .pad_gate = 1,
-        .orch = {{TI_WAVEBASS, TI_GUITAR, TI_GUITAR}, {TI_WAVEBASS, TI_FLUTE, TI_GUITAR}, {TI_WAVEBASS, TI_SAWLEAD, TI_MARIMBA}}, .orch_n = 3, .orch_mode = TG_ORCH_RANDOM,
+        .orch = {{TI_EBASS, TI_EGUITAR, TI_MARIMBA}, {TI_WAVEBASS, TI_KALIMBA, TI_GUITAR}, {TI_LOGDRUM, TI_SAX, TI_PLUCKSYNTH}}, .orch_n = 3, .orch_mode = TG_ORCH_RANDOM,
         .groove = 12,
     },
     [TG_STYLE_G_AMAPIANO] = {
@@ -1888,7 +1888,7 @@
         .bass_semis = true,
         .bass_gate = 3,
         .pad_rhythm = 0x51044504u, .pad_gate = 3,
-        .orch = {{TI_LOGDRUM, TI_SINEKEY, TI_PIANO}, {TI_LOGDRUM, TI_FLUTE, TI_EPIANO}, {TI_LOGDRUM, TI_SAX, TI_PIANO}}, .orch_n = 3, .orch_mode = TG_ORCH_RANDOM,
+        .orch = {{TI_LOGDRUM, TI_SAX, TI_PIANO}, {TI_LOGDRUM, TI_FLUTE, TI_EPIANO}, {TI_LOGDRUM, TI_WHISTLE, TI_JAZZORGAN}}, .orch_n = 3, .orch_mode = TG_ORCH_RANDOM,
         .groove = 13,
     },
     [TG_STYLE_G_KPOP_2010S] = {
@@ -1915,7 +1915,7 @@
         .bass_semis = true,
         .bass_gate = 1,
         .pad_rhythm = 0x14495049u, .pad_gate = 2,
-        .orch = {{TI_WAVEBASS, TI_SYNCLEAD, TI_PLUCKSYNTH}, {TI_808, TI_SAWLEAD, TI_SUPERSAW}, {TI_WAVEBASS, TI_CHIP, TI_PIANO}, {TI_SYNTHBASS, TI_PLUCKSYNTH, TI_GUITAR}}, .orch_n = 4, .orch_mode = TG_ORCH_CONTRAST,
+        .orch = {{TI_SYNTHBASS, TI_SYNCLEAD, TI_PLUCKSYNTH}, {TI_FATBASS, TI_SAWLEAD, TI_SUPERSAW}, {TI_SLAPBASS, TI_BRASS, TI_CLAV}, {TI_EBASS, TI_WHISTLE, TI_STRINGS}}, .orch_n = 4, .orch_mode = TG_ORCH_CONTRAST,
         .groove = 17,
     },
     [TG_STYLE_G_HYPERPOP] = {
@@ -1941,7 +1941,7 @@
         .bass_notes = {0, 12, 0, 7}, .bass_len = 4,
         .bass_semis = true,
         .pad_rhythm = 0x554D4D4Du, .pad_gate = 1,
-        .orch = {{TI_808, TI_GLITCH, TI_SUPERSAW}, {TI_808, TI_CHIP, TI_DISTGUITAR}, {TI_808, TI_GLITCH, TI_SHIMMER}}, .orch_n = 3, .orch_mode = TG_ORCH_CYCLE,
+        .orch = {{TI_SYNTHBASS, TI_GLITCH, TI_SUPERSAW}, {TI_WAVEBASS, TI_CHIP, TI_DISTGUITAR}, {TI_FATBASS, TI_RINGMOD, TI_CHIPCHOIR}, {TI_SYNTHBASS, TI_STEPLEAD, TI_SUPERSAW}}, .orch_n = 4, .orch_mode = TG_ORCH_CYCLE,
         .groove = 16,
     },
     [TG_STYLE_G_REGGAETON_2010S] = {
@@ -1968,7 +1968,7 @@
         .bass_semis = true,
         .bass_gate = 2,
         .pad_rhythm = 0x44444444u, .pad_gate = 1,
-        .orch = {{TI_808, TI_PLUCKSYNTH, TI_GUITAR}, {TI_808, TI_SYNCLEAD, TI_GUITAR}, {TI_WAVEBASS, TI_GUITAR, TI_PIANO}}, .orch_n = 3, .orch_mode = TG_ORCH_RANDOM,
+        .orch = {{TI_SYNTHBASS, TI_GUITAR, TI_PLUCKSYNTH}, {TI_WAVEBASS, TI_SYNCLEAD, TI_MARIMBA}, {TI_SYNTHBASS, TI_ACCORDION, TI_STEELDRUM}}, .orch_n = 3, .orch_mode = TG_ORCH_RANDOM,
         .groove = 20,
     },
     [TG_STYLE_G_LATIN_TRAP] = {
@@ -1993,7 +1993,7 @@
         .bass_semis = true,
         .pad_rhythm = 0x41010101u, .pad_gate = 3,
         .strum_ms = 10,
-        .orch = {{TI_808, TI_GUITAR, TI_PAD}, {TI_808, TI_PIANO, TI_STRINGS}, {TI_808, TI_GUITAR, TI_CHOIR}}, .orch_n = 3, .orch_mode = TG_ORCH_RANDOM,
+        .orch = {{TI_808, TI_GUITAR, TI_PAD}, {TI_808, TI_CELLO, TI_CHOIR}, {TI_808, TI_VIOLIN, TI_GUITAR}}, .orch_n = 3, .orch_mode = TG_ORCH_RANDOM,
         .groove = 18,
     },
     [TG_STYLE_G_DRIFT_PHONK] = {
@@ -2014,7 +2014,7 @@
         .mel_mode = TG_MEL_PATTERN,
         .pattern = {0, TG_REST, 7, TG_REST, 0, 7, TG_REST, 5, TG_REST, 4, TG_REST, 2, 1, TG_REST, 0, TG_REST}, .pattern_len = 16, .pattern_chord = false,
         .mel_min_ticks = 2,
-        .orch = {{TI_808, TI_CHIP, TI_CHOIR}, {TI_808, TI_CHIP, TI_PAD}, {TI_808, TI_STEELDRUM, TI_CHOIR}}, .orch_n = 3, .orch_mode = TG_ORCH_CYCLE,
+        .orch = {{TI_808, TI_RINGMOD, TI_SYNTH}, {TI_FATBASS, TI_BELLS, TI_STRMACH}, {TI_808, TI_METALLEAD, TI_RINGMOD}}, .orch_n = 3, .orch_mode = TG_ORCH_CYCLE,
         .groove = 29,
     },
     [TG_STYLE_G_BROOKLYN_DRILL] = {
@@ -2037,7 +2037,7 @@
         .bass_rhythm = 0x4441u,
         .bass_notes = {0, 12, 0, 10, 0, 12, 7, 3}, .bass_len = 8,
         .bass_semis = true,
-        .orch = {{TI_808, TI_PIANO, TI_PAD}, {TI_808, TI_VOICE, TI_STRINGS}, {TI_808, TI_PIANO, TI_SINEKEY}}, .orch_n = 3, .orch_mode = TG_ORCH_RANDOM,
+        .orch = {{TI_808, TI_CHOIR, TI_STRINGS}, {TI_808, TI_BELLS, TI_CELLO}, {TI_808, TI_VOICE, TI_SINEKEY}}, .orch_n = 3, .orch_mode = TG_ORCH_RANDOM,
         .groove = 26,
     },
     [TG_STYLE_G_RAGE_RAP] = {
@@ -2058,7 +2058,7 @@
         .mel_mode = TG_MEL_PATTERN,
         .pattern = {3, TG_HOLD, 2, TG_HOLD, 3, TG_HOLD, 4, TG_HOLD, 3, TG_HOLD, 2, TG_HOLD, 1, TG_HOLD, 2, TG_HOLD}, .pattern_len = 16, .pattern_chord = true,
         .mel_min_ticks = 2,
-        .orch = {{TI_808, TI_SUPERSAW, TI_PLUCKSYNTH}, {TI_808, TI_SAWLEAD, TI_PLUCKSYNTH}}, .orch_n = 2, .orch_mode = TG_ORCH_RANDOM,
+        .orch = {{TI_808, TI_SUPERSAW, TI_SYNTH}, {TI_FATBASS, TI_ARPLEAD, TI_SYNTH}, {TI_808, TI_SAWLEAD, TI_SYNTH}}, .orch_n = 3, .orch_mode = TG_ORCH_RANDOM,
         .groove = 31,
     },
     [TG_STYLE_G_JERSEY_CLUB] = {
@@ -2081,7 +2081,7 @@
         .mel_min_ticks = 2,
         .bass_gate = 3,
         .pad_rhythm = 0x10411041u, .pad_gate = 2,
-        .orch = {{TI_808, TI_VOICE, TI_PLUCKSYNTH}, {TI_808, TI_SYNCLEAD, TI_PLUCKSYNTH}}, .orch_n = 2, .orch_mode = TG_ORCH_RANDOM,
+        .orch = {{TI_SYNTHBASS, TI_VOICE, TI_RESOSYNTH}, {TI_FATBASS, TI_SYNCLEAD, TI_PLUCKSYNTH}, {TI_SYNTHBASS, TI_STEPLEAD, TI_VOICE}}, .orch_n = 3, .orch_mode = TG_ORCH_RANDOM,
         .groove = 28,
     },
     [TG_STYLE_G_SPED_UP] = {
@@ -2105,7 +2105,7 @@
         .bass_notes = {0, 0, 2}, .bass_len = 3,
         .bass_gate = 3,
         .pad_rhythm = 0x55555555u, .pad_gate = 1,
-        .orch = {{TI_WAVEBASS, TI_VOICE, TI_PLUCKSYNTH}, {TI_WAVEBASS, TI_SINEKEY, TI_PIANO}}, .orch_n = 2, .orch_mode = TG_ORCH_RANDOM,
+        .orch = {{TI_WAVEBASS, TI_VOICE, TI_PLUCKSYNTH}, {TI_EBASS, TI_GLOCKEN, TI_SUPERSAW}, {TI_WAVEBASS, TI_WHISTLE, TI_SINEKEY}}, .orch_n = 3, .orch_mode = TG_ORCH_RANDOM,
         .groove = 33,
     },
     [TG_STYLE_G_SLOWED_REVERB] = {
@@ -2128,7 +2128,7 @@
         .mel_mode = TG_MEL_PHRASE,
         .mel_min_ticks = 4,
         .spread = true,
-        .orch = {{TI_808, TI_VOICE, TI_SINEKEY}, {TI_808, TI_SINEKEY, TI_SHIMMER}, {TI_808, TI_FLUTE, TI_CHOIR}}, .orch_n = 3, .orch_mode = TG_ORCH_CYCLE,
+        .orch = {{TI_FRETLESS, TI_SHIMMER, TI_SINEKEY}, {TI_FRETLESS, TI_FROZEN, TI_EPIANO}, {TI_FRETLESS, TI_MUSICBOX, TI_STRMACH}}, .orch_n = 3, .orch_mode = TG_ORCH_CYCLE,
         .groove = 32,
     },
     [TG_STYLE_G_BEDROOM_POP] = {
@@ -2154,7 +2154,7 @@
         .bass_notes = {0, 0, 2}, .bass_len = 3,
         .pad_rhythm = 0x49494949u, .pad_gate = 2,
         .strum_ms = 12,
-        .orch = {{TI_WAVEBASS, TI_SINEKEY, TI_GUITAR}, {TI_EBASS, TI_SYNTH, TI_GUITAR}, {TI_WAVEBASS, TI_VOICE, TI_EGUITAR}}, .orch_n = 3, .orch_mode = TG_ORCH_RANDOM,
+        .orch = {{TI_EBASS, TI_EGUITAR, TI_REEDORGAN}, {TI_EBASS, TI_TOYPIANO, TI_EGUITAR}, {TI_EBASS, TI_SYNTH, TI_REEDEP}}, .orch_n = 3, .orch_mode = TG_ORCH_RANDOM,
         .groove = 25,
     },
     [TG_STYLE_G_COUNTRY_TRAP] = {
@@ -2175,7 +2175,7 @@
         .mel_mode = TG_MEL_PHRASE,
         .mel_min_ticks = 2,
         .pad_figure = {0, -128, 1, -128, 3, -128, 0, -128, 2, -128, 4, -128, 1, -128, 3, -128}, .figure_len = 16,
-        .orch = {{TI_808, TI_EGUITAR, TI_GUITAR}, {TI_808, TI_FLUTE, TI_GUITAR}, {TI_808, TI_EGUITAR, TI_PIZZ}}, .orch_n = 3, .orch_mode = TG_ORCH_RANDOM,
+        .orch = {{TI_808, TI_BANJO, TI_GUITAR}, {TI_808, TI_EGUITAR, TI_BANJO}, {TI_808, TI_HARMONICA, TI_GUITAR}}, .orch_n = 3, .orch_mode = TG_ORCH_RANDOM,
         .groove = 27,
     },
     [TG_STYLE_G_POP_PUNK_REVIVAL] = {
@@ -2197,7 +2197,7 @@
         .mel_min_ticks = 2,
         .pad_rhythm = 0x55555555u, .pad_gate = 1,
         .power = true,
-        .orch = {{TI_WAVEBASS, TI_EGUITAR, TI_DISTGUITAR}, {TI_808, TI_SYNTH, TI_DISTGUITAR}}, .orch_n = 2, .orch_mode = TG_ORCH_RANDOM,
+        .orch = {{TI_EBASS, TI_EGUITAR, TI_DISTGUITAR}, {TI_EBASS, TI_SYNTH, TI_DISTGUITAR}, {TI_EBASS, TI_SYNCLEAD, TI_DISTGUITAR}}, .orch_n = 3, .orch_mode = TG_ORCH_RANDOM,
         .groove = 30,
     },
     [TG_STYLE_G_Y2K_POP_REVIVAL] = {
@@ -2221,7 +2221,7 @@
         .bass_rhythm = 0x2441u,
         .bass_notes = {0, 0, 3, 2}, .bass_len = 4,
         .bass_gate = 3,
-        .orch = {{TI_SYNTHBASS, TI_VOICE, TI_PLUCKSYNTH}, {TI_WAVEBASS, TI_SINEKEY, TI_PLUCKSYNTH}, {TI_WAVEBASS, TI_VOICE, TI_MARIMBA}}, .orch_n = 3, .orch_mode = TG_ORCH_RANDOM,
+        .orch = {{TI_SYNTHBASS, TI_WHISPER, TI_PLUCKSYNTH}, {TI_FATBASS, TI_CHIPCHOIR, TI_EPIANO}, {TI_WAVEBASS, TI_CELESTA, TI_ARPLEAD}}, .orch_n = 3, .orch_mode = TG_ORCH_RANDOM,
         .groove = 34,
     },
 #elif defined(TUNA_GENRE_GROOVES)

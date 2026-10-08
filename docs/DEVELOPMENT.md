@@ -94,6 +94,15 @@ touched only where Tuna hooks in (`felucca.c`, `main.c`, `audio.c`, `tools/build
   on Felucca's DRUM engine; bass can be a riff in semitones or an 808 sliding from kick to kick; the third part
   can strike chords on a rhythm (skanks, stabs) or play power chords. Freezing a genre loops its pitched parts
   (whole bars if a period has more notes than a pattern holds) while its groove plays on.
+- **Instruments are Felucca's sounds, some set Tuna's way.** A family (TI_*) is a Felucca engine and factory preset
+  (`tuna_sounds.h`), or a sound of Tuna's own on an engine (`tuna_sounds_own.inc`, Felucca's preset layout), or an
+  FM6 patch of Tuna's own (`tools/tuna_fm6.py` writes `tuna_fm6.inc`). Each has a level trim, so a pluck and a held
+  string come out alike. Popular genres take the plucked UPRIGHT for a double bass, the composers the bowed
+  CONTRABASS. `tests/tuna_audition.sh` plays every family on the same phrase (WAVs to listen to), measures
+  them against each other (sound-alikes), counts their instructions (CPU=1) and re-derives the trims. The 175
+  composers and genres were orchestrated for variety: each its own signature colour, no family everywhere (the
+  most used, STRINGS, in a quarter of them). The heavy ones (long ringing modal or FM tails) go in the melody, at
+  most one per set, never in a third part striking chords on every beat.
 - **The resonator in fixed point** at half rate: about 0.12× of Felucca's reference mix.
 
 ## Building and testing
@@ -105,6 +114,7 @@ sh tests/tuna_tests.sh            # everything: theory, generator, sequencer, pr
 sh tests/tuna_ui_test.sh          # the screen: every page as PNG, GIFs of HOME (build/tuna_ui)
 sh tests/tuna_felucca.sh out 60   # every composer through Felucca's engines to WAV
 sh tests/tuna_cpu.sh 30           # instruction counts against Felucca's reference mix (valgrind)
+sh tests/tuna_audition.sh out     # every instrument on the same phrase: WAVs, sound-alikes; CPU=1 its cost
 sh web/emu/tuna_build.sh          # Tuna in the browser (emcc, or clang with WASI_SYSROOT)
 node web/emu/tuna_emu_test.mjs build/tuna_emu/tuna.wasm
 ```
@@ -119,7 +129,7 @@ maths 6, screen 150 checks, the browser test, and every composer over 10 seeds o
 
 | Risk | What happens | Check |
 | --- | --- | --- |
-| CPU on the chip | dropouts at the loudest moments; choir-heavy composers peak at 1.06–1.15× the reference mix | measure on the FM-1; organ or pad in place of the choir |
+| CPU on the chip | dropouts at the loudest moments; all 175 styles measured (instruction counts, 30 s each): mean at most 1.03×, the worst half second 1.30× the reference mix (JAZZ 50S), most below 1.1× | measure on the FM-1; organ or pad in place of the choir |
 | The JieLi compiler wants doubles or a maths function the host build never showed | link errors, or slow software floats | the first build's errors name the function; add it to `tuna_libm.c` |
 | Flash space | the image may not fit the ~568 KB program area | the first build says; the Marbles tables (74 KB) can shrink |
 | Chip and clock unconfirmed | estimates off | read the board on delivery |

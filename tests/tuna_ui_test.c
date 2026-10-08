@@ -311,6 +311,9 @@ static void test_reset(void)
     ta_set_chaos(&app, 0.7f, 0.5f, 0.5f, 0.5f);
     ta_select(&app, ta_lib_first(2) + 1);
     ta_select(&app, ta_lib_first(2));
+    own = app.g.style->bpm;                       /* (its own in the manner the new seed brought) */
+    own_root = app.g.style->root;
+    own_perc = app.g.style->perc_mode;
     CHECK(app.g.bpm == own && app.g.root == own_root && app.g.perc_mode == own_perc && !app.g.evolve,
           "the piece's own again (bpm %.0f/%.0f, root %d/%d)", app.g.bpm, own, app.g.root, own_root);
     CHECK(app.g.chaos_rhythm > 0.69f, "the chaos knobs stay (%.2f)", app.g.chaos_rhythm);
@@ -584,10 +587,13 @@ static void test_reverb_page(void)
     ta_select(&app, it);
     CHECK(app.rev_type == TG_REV_SPRING && app.rev_size == 71 && app.reverb == 44, "%s: SPRING, the send kept (%d %d)",
           ta_lib_name(it), app.rev_type, app.reverb);
-    ta_select(&app, ren);
-    CHECK(app.rev_type == TG_REV_CATHEDRAL, "%s: CATHEDRAL (%d)", ta_lib_name(ren), app.rev_type);
+    ta_select(&app, ren);                         /* (a manner may bring a reverb of its own) */
+    ta_set_manner(&app, 0);
+    CHECK(app.rev_type == TG_REV_CATHEDRAL || app.g.style->reverb, "%s: CATHEDRAL (%d)", ta_lib_name(ren), app.rev_type);
     ta_select(&app, rom);
-    CHECK(app.rev_type == TG_REV_HALL, "%s: HALL (%d)", ta_lib_name(rom), app.rev_type);
+    ta_set_manner(&app, 0);
+    CHECK(app.rev_type == TG_REV_HALL || app.g.style->reverb, "%s: HALL (%d)", ta_lib_name(rom), app.rev_type);
+    ta_set_manner(&app, -1);
     app.reverb = 30;
     ta_set_reverb_type(&app, TG_REV_ROOM);
     tu_goto_page(&ui, TU_PG_HOME);
@@ -704,6 +710,22 @@ static void test_every_composer(void)
         tu_goto_page(&ui, TU_PG_MIX);
         tu_draw_all(&ui);
         press(TU_B_PLAY);
+        /* each of its other manners: HOME (the footer names it) and LIBRARY (its card) */
+        int st = ta_lib_style(i);
+        for (int m = 1; m < tg_manner_count(st); ++m) {
+            ta_set_manner(&app, m);
+            CHECK(app.g.manner == m, "%s: manner %d plays (%d)", ta_lib_name(i), m, app.g.manner);
+            snprintf(w, sizeof w, "manner:%s %s", ta_lib_name(i), tg_manner_name(st, m));
+            lint_where = w;
+            press(TU_B_PLAY);
+            run_ms(600);
+            tu_goto_page(&ui, TU_PG_HOME);
+            tu_draw_all(&ui);
+            tu_goto_page(&ui, TU_PG_LIB);
+            tu_draw_all(&ui);
+            press(TU_B_PLAY);
+        }
+        ta_set_manner(&app, -1);
     }
 }
 

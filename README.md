@@ -24,6 +24,10 @@ preset and let it drift, from still and ambient to driving and rhythmic.
   own harmony, melody, rhythm, form and instrumentation: chant on a drone, Bach's counterpoint,
   Satie's parallel chords, Debussy's whole tones, Gershwin's jazz chords, Reich's phasing, Pärt's
   tintinnabuli, Messiaen's octatonic modes and birdsong.
+- **285 manners**: most composers wrote in several ways, and Tuna plays them all: Bach's fugues, chorales and
+  gigues, Chopin's nocturnes, mazurkas, polonaises and études, Mozart's sonatas, arias, serenades and masses,
+  Verdi's arias, choruses and Requiem. The seed picks the manner (each seed its own); LIBRARY's fourth knob fixes
+  one.
 - **93 instruments** on Felucca's engines, each composer and genre with sets of its own: besides the orchestra,
   piano and band, a pipe organ and harmonium, harpsichord and lute, cimbalom and koto, sitar and oud, erhu and
   shakuhachi, pan flute and harmonica, accordion and bandoneon, vibraphone, glockenspiel and tubular bells, music box

@@ -593,6 +593,32 @@ static void test_reverb_page(void)
     tu_goto_page(&ui, TU_PG_HOME);
 }
 
+/* KEY, K2: the scales in a player's order, MAJ and MIN side by side, every scale once in a full turn */
+static void test_scale_order(void)
+{
+    ta_play(&app, false);
+    tu_goto_page(&ui, TU_PG_KEY);
+    ta_edit e;
+    ta_edit_get(&app, &e);
+    e.scale = TS_IONIAN;
+    ta_edit_set(&app, &e);
+    tu_knob(&ui, TU_K2, 1);
+    ta_edit_get(&app, &e);
+    CHECK(e.scale == TS_AEOLIAN, "MAJ, one click: MIN (%d)", e.scale);
+    unsigned seen = 0;
+    for (int i = 0; i < TS_COUNT; ++i) {
+        tu_knob(&ui, TU_K2, 1);
+        ta_edit_get(&app, &e);
+        seen |= 1u << e.scale;
+    }
+    CHECK(seen == (1u << TS_COUNT) - 1 && e.scale == TS_AEOLIAN, "a full turn: every scale once, back to MIN (%x)", seen);
+    tu_knob(&ui, TU_K2, -2);
+    ta_edit_get(&app, &e);
+    CHECK(e.scale == TS_MESSIAEN3, "MAJ, one click back: the last, MESS3 (%d)", e.scale);
+    tu_knob(&ui, TU_K2, 1);
+    tu_goto_page(&ui, TU_PG_HOME);
+}
+
 /* every composer drawn on HOME and LIBRARY without a lint finding (names, chords, keys) */
 static void test_every_composer(void)
 {
@@ -664,6 +690,7 @@ int main(int argc, char **argv)
     test_reset();
     test_chaos_page();
     test_reverb_page();
+    test_scale_order();
     test_every_composer();
     for (int i = 0; i < ta_lib_count(); ++i) {
         if (ta_lib_style(i) == TG_STYLE_DEBUSSY) anim(i, "debussy");

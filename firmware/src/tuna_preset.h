@@ -69,7 +69,9 @@ int tp_group_free(const tp_store *s, int group);                            /* b
 
 /* the composer library, by era */
 enum { TP_ERA_RENAISSANCE, TP_ERA_BAROQUE, TP_ERA_CLASSICAL, TP_ERA_EARLY_ROMANTIC, TP_ERA_ROMANTIC,
-       TP_ERA_LATE_ROMANTIC, TP_ERA_MODERN, TP_ERA_MINIMAL, TP_ERA_FILM, TP_ERA_COUNT };
+       TP_ERA_LATE_ROMANTIC, TP_ERA_MODERN, TP_ERA_MINIMAL, TP_ERA_FILM,
+       TP_ERA_1950S, TP_ERA_1960S, TP_ERA_1970S, TP_ERA_1980S, TP_ERA_1990S, TP_ERA_2000S, TP_ERA_2010S, TP_ERA_2020S,
+       TP_ERA_COUNT };
 const char *tp_era_name(int era);
 int tp_era_count(int era);                /* composers in the era */
 int tp_era_style(int era, int i);         /* TG_STYLE_* of the i-th composer, by year of birth */

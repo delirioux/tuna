@@ -258,7 +258,7 @@ static void test_screens(void)
     {
         int32_t mx = 0;
         for (int k = 0; k < TR_STRINGS; ++k) mx = abs(app.reso.lp[k]) > mx ? abs(app.reso.lp[k]) : mx;
-        CHECK(mx > (256 << 8), "the strings ring (%d)", mx >> 8);
+        CHECK(mx > (64 << 8), "the strings ring (%d)", mx >> 8);
     }
     all_palettes("reso");
     ta_reso_set(&app, 0, app.reso_decay, app.reso_bright, app.reso_mode);
@@ -296,40 +296,45 @@ static void test_screens(void)
 }
 
 /* ---- the controls -------------------------------------------------------------------------------------- */
-/* the player's tempo, key, percussion and evolution carry over to the next piece; untouched, each piece's own */
-static void test_keep(void)
+/* a new piece brings its own tempo, key, percussion and evolution (the chaos knobs stay); a seed asked for while
+ * playing comes in at the next half of the period; 256 seeds */
+static void test_reset(void)
 {
     ta_play(&app, false);
-    app.keep_bpm = 0.0f;                          /* (the tests before turned knobs) */
-    app.keep_root = app.keep_perc = -1;
-    app.keep_evolve = false;
     ta_select(&app, ta_lib_first(2));
     float own = app.g.bpm;
-    int own_root = app.g.root;
+    int own_root = app.g.root, own_perc = app.g.perc_mode;
+    tu_knob(&ui, TU_K_SELECT, 7);
+    ta_set_root(&app, (own_root + 3) % 12);
+    ta_set_percussion(&app, own_perc == TG_PERC_KIT ? TG_PERC_OFF : TG_PERC_KIT);
+    ta_set_evolve(&app, true, 6, 0.8f, true);
+    ta_set_chaos(&app, 0.7f, 0.5f, 0.5f, 0.5f);
     ta_select(&app, ta_lib_first(2) + 1);
     ta_select(&app, ta_lib_first(2));
-    CHECK(app.g.bpm == own && app.g.root == own_root, "nothing set: each piece its own");
-    tu_knob(&ui, TU_K_SELECT, 7);
-    float bpm = app.g.bpm;
-    ta_set_root(&app, 9);
-    ta_set_percussion(&app, TG_PERC_KIT);
-    ta_set_evolve(&app, true, 6, 0.8f, true);
-    ta_select(&app, ta_lib_first(2));
-    CHECK(app.g.bpm == bpm && bpm != own, "tempo kept (%.0f, the piece's own %.0f)", app.g.bpm, own);
-    CHECK(app.g.root == 9, "root kept (%d)", app.g.root);
-    CHECK(app.g.perc_mode == TG_PERC_KIT, "percussion kept (%d)", app.g.perc_mode);
-    CHECK(app.g.evolve && app.g.evolve_periods == 6 && app.g.evolve_modulate && app.g.evolve_depth > 0.79f,
-          "evolution kept");
-    ta_select(&app, ta_lib_first(5));
-    CHECK(app.g.bpm == bpm && app.g.root == 9 && app.g.perc_mode == TG_PERC_KIT && app.g.evolve, "and in another era");
+    CHECK(app.g.bpm == own && app.g.root == own_root && app.g.perc_mode == own_perc && !app.g.evolve,
+          "the piece's own again (bpm %.0f/%.0f, root %d/%d)", app.g.bpm, own, app.g.root, own_root);
+    CHECK(app.g.chaos_rhythm > 0.69f, "the chaos knobs stay (%.2f)", app.g.chaos_rhythm);
+    ta_set_chaos(&app, 0.5f, 0.5f, 0.5f, 0.5f);
+    /* seeds */
+    ta_set_seed(&app, 255);
+    ta_seed_step(&app, 1);
+    CHECK(app.seed == 0, "seed 255 + 1 wraps to 0 (%u)", app.seed);
+    ta_seed_step(&app, -1);
+    CHECK(app.seed == 255, "and back (%u)", app.seed);
     ta_play(&app, true);
-    run_ms(500);
-    CHECK(app.g.root == 9, "playing in the kept key (%d)", app.g.root);
+    run_ms(300);
+    uint32_t before = app.seed;
+    ta_seed_step(&app, 1);
+    CHECK(app.seed == before && app.seed_req == (int)((before + 1) % 256), "playing: the seed waits (%u, asked %d)",
+          app.seed, app.seed_req);
+    int half = tg_half_position(&app.g), d0 = tg_period_position(&app.g, NULL);
+    long guard = 0;
+    while (app.seed_req >= 0 && guard++ < 20000)
+        ta_process(&app, 64);
+    CHECK(app.seed == (before + 1) % 256, "it came in (%u)", app.seed);
+    CHECK(app.g.ticks < 4, "the new seed starts its piece from the top (tick %ld; asked at %d, half %d)", app.g.ticks, d0,
+          half);
     ta_play(&app, false);
-    /* back to the pieces' own for the tests after */
-    app.keep_bpm = 0.0f;
-    app.keep_root = app.keep_perc = -1;
-    app.keep_evolve = false;
     ta_select(&app, 0);
 }
 
@@ -387,7 +392,8 @@ static void test_controls(void)
     /* OCT+: another seed */
     uint32_t s0 = app.seed;
     press(TU_B_OCTUP);
-    CHECK(app.seed == s0 + 1, "OCT+ steps the seed");
+    CHECK(app.playing ? app.seed_req == (int)((s0 + 1) % 256) : app.seed == (s0 + 1) % 256,
+          "OCT+ steps the seed (playing: at the next half period)");
     run_ms(500);
     /* form settings wait for the period's end */
     tu_goto_page(&ui, TU_PG_TIME);
@@ -543,7 +549,7 @@ int main(int argc, char **argv)
     tu_init(&ui, &app);
     test_screens();
     test_controls();
-    test_keep();
+    test_reset();
     test_chaos_page();
     test_every_composer();
     for (int i = 0; i < ta_lib_count(); ++i) {

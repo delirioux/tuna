@@ -585,7 +585,7 @@ int tp_group_free(const tp_store *s, int group)
 /* ---- the composer library by era ------------------------------------------------------------------------ */
 static const char *const era_names[TP_ERA_COUNT] = {
     "RENAISSANCE", "BAROQUE", "CLASSICAL", "EARLY ROMANTIC", "ROMANTIC", "LATE ROMANTIC", "MODERN", "MINIMAL",
-    "FILM & STAGE",
+    "FILM & STAGE", "1950s", "1960s", "1970s", "1980s", "1990s", "2000s", "2010s", "2020s",
 };
 
 /* composers by era, in order of birth (year) */
@@ -627,10 +627,17 @@ static const tp_composer era9[] = {
     {TG_STYLE_MORRICONE, 1928}, {TG_STYLE_JOHN_WILLIAMS, 1932}, {TG_STYLE_HOWARD_SHORE, 1946},
     {TG_STYLE_LLOYD_WEBBER, 1948}, {TG_STYLE_PREISNER, 1955}};
 
+/* the popular genres by decade, in order of their year (tools/tuna_genres.py) */
+#define TUNA_GENRE_ERAS
+#include "tuna_genres.inc"
+#undef TUNA_GENRE_ERAS
+
 #define N_OF(a) ((int)(sizeof a / sizeof a[0]))
 static const struct { const tp_composer *c; int n; } eras[TP_ERA_COUNT] = {
     {era1, N_OF(era1)}, {era2, N_OF(era2)}, {era3, N_OF(era3)}, {era4, N_OF(era4)}, {era5, N_OF(era5)},
     {era6, N_OF(era6)}, {era7, N_OF(era7)}, {era8, N_OF(era8)}, {era9, N_OF(era9)},
+    {era_1950, ERA_1950_N}, {era_1960, ERA_1960_N}, {era_1970, ERA_1970_N}, {era_1980, ERA_1980_N},
+    {era_1990, ERA_1990_N}, {era_2000, ERA_2000_N}, {era_2010, ERA_2010_N}, {era_2020, ERA_2020_N},
 };
 
 const char *tp_era_name(int era) { return era >= 0 && era < TP_ERA_COUNT ? era_names[era] : "?"; }

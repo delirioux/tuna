@@ -79,40 +79,8 @@ enum { E_ANALOG = 0, E_PHASE = 2, E_LOFI = 3, E_SAMPLE = 4, E_VOICE = 5, E_TRIO 
 #define FM_PAD SND(E_FM6, 4)
 #define HARPSICHORD SND(E_FM6, 7)
 
-/* Tuna's instrument families on Felucca's sounds (the firmware will hold the same table) */
-static const sound_t FAMILY[TI_COUNT] = {
-    [TI_DEFAULT]    = SND(E_ANALOG, 1),
-    [TI_PIANO]      = SND(E_SAMPLE, 0),
-    [TI_HARPSICHORD]= SND(E_FM6, 7),
-    [TI_ORGAN]      = SND(E_WHEEL, 0),
-    [TI_STRINGS]    = SND(E_ANALOG, 11),
-    [TI_VIOLIN]     = SND(E_PHASE, 2),
-    [TI_CELLO]      = SND(E_PHASE, 2),
-    [TI_CONTRABASS] = SND(E_ANALOG, 7),
-    [TI_PIZZ]       = SND(E_PHYS, 2),
-    [TI_FLUTE]      = SND(E_SAMPLE, 2),
-    [TI_OBOE]       = SND(E_ANALOG, 10),
-    [TI_CLARINET]   = SND(E_WHEEL, 3),
-    [TI_BASSOON]    = SND(E_LOFI, 1),
-    [TI_HORN]       = SND(E_PHASE, 0),
-    [TI_TRUMPET]    = SND(E_ANALOG, 9),
-    [TI_BRASS]      = SND(E_FM6, 3),
-    [TI_TUBA]       = SND(E_FM6, 2),
-    [TI_HARP]       = SND(E_PHYS, 8),
-    [TI_GUITAR]     = SND(E_PHYS, 2),
-    [TI_CHOIR]      = SND(E_VOICE, 0),
-    [TI_VOICE]      = SND(E_VOICE, 1),
-    [TI_BELLS]      = SND(E_FM6, 1),
-    [TI_CELESTA]    = SND(E_PHASE, 4),
-    [TI_MARIMBA]    = SND(E_FM6, 5),
-    [TI_BANDONEON]  = SND(E_WHEEL, 2),
-    [TI_SAX]        = SND(E_SAMPLE, 3),
-    [TI_SYNTH]      = SND(E_ANALOG, 0),
-    [TI_PAD]        = SND(E_ANALOG, 1),
-    [TI_WHISTLE]    = SND(E_WHEEL, 3),
-    [TI_DRONE]      = SND(E_PHYS, 7),
-    [TI_EPIANO]     = SND(E_FM6, 0),
-};
+/* Tuna's instrument families on Felucca's sounds: firmware/src/tuna_sounds.h, as the firmware has them */
+#include "tuna_sounds.h"
 
 static const piece_t pieces[] = {
     {.name = "garden", .style = -1, .seed = 1, .s = {SUB_BASS, FM_BELL, CLOUD}, .level = {96, 104, 92, 96}, .rev = 40,
@@ -201,6 +169,15 @@ static void part_settings(uint32_t k)
         if (trk[0].p[P_REL] > 40)
             trk[0].p[P_REL] = 40;
     }
+    if (k == 2u && gen.pad_mode == TG_PAD_RHYTHM && trk[2].p[P_REL] > 30)
+        trk[2].p[P_REL] = 30;
+    int fam = cur_family[k];
+    if (fam > TI_DEFAULT && fam < TI_COUNT) {          /* what the family's preset does not hold */
+        const tsn_family *f = &TSN_FAMILY[fam];
+        if (f->dist != TSN_KEEP) trk[k].p[P_DIST] = f->dist;
+        if (f->glide != TSN_KEEP) trk[k].p[P_GLIDE] = f->glide;
+        if (f->voice != TSN_KEEP) trk[k].p[P_VOICE] = f->voice;
+    }
 }
 
 static int lk_param(int lk);
@@ -218,9 +195,9 @@ static void apply_family(uint32_t k, int fam, bool now)
         return;
     cur_family[k] = fam;
     if (now)
-        host_preset(&trk[k], FAMILY[fam].engine, FAMILY[fam].preset);
+        host_preset(&trk[k], TSN_FAMILY[fam].engine, TSN_FAMILY[fam].preset);
     else
-        host_preset_req(&trk[k], FAMILY[fam].engine, FAMILY[fam].preset);
+        host_preset_req(&trk[k], TSN_FAMILY[fam].engine, TSN_FAMILY[fam].preset);
     part_settings(k);
     snapshot_base(k);
 }
@@ -336,6 +313,12 @@ static void setup(const piece_t *p)
     host_drums(&trk[3]);
     trk[3].p[P_LEVEL] = p->level[3] ? p->level[3] : 96;
     tune_timpani(&trk[3], gen.root);
+    if (gen.perc_mode == TG_PERC_GROOVE && gen.style && gen.style->groove) {   /* the groove's own kit */
+        int16_t e[8];
+        tsn_kit(tg_groove_get(gen.style->groove - 1), e);
+        for (int k = 0; k < 8; ++k)
+            trk[3].p[P_E0 + k] = e[k];
+    }
     for (uint32_t t = 0; t < 4u; ++t)
         snapshot_base(t);
     if (p->demo == 1)

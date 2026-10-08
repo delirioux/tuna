@@ -418,7 +418,7 @@ static void test_eras(void)
             total++;
             CHECK(tp_style_era(st) == e, "%s: era", tg_style_get(st)->name);
             int born = tp_style_born(st);
-            CHECK(born >= prev && born > 1000 && born < 2000, "%s: born %d after %d", tg_style_get(st)->name, born, prev);
+            CHECK(born >= prev && born > 1000 && born < 2100, "%s: born %d after %d", tg_style_get(st)->name, born, prev);
             prev = born;
         }
         CHECK(tp_era_style(e, tp_era_count(e)) == -1, "era %d: past the end", e);

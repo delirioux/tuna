@@ -35,6 +35,7 @@ enum {
     TG_BASS_TOLL,      /* the root struck low every two bars and left to ring (bells) */
     TG_BASS_BEAT,      /* every beat, root and fifth in turn (pizzicato) */
     TG_BASS_NONE,      /* no bass */
+    TG_BASS_808,       /* long notes on the groove's kick (or bass_rhythm), sliding into the next (legato) */
 };
 enum {
     TG_PAD_BLOCK,      /* held chords, voice-led */
@@ -55,6 +56,7 @@ enum {
     TG_PAD_ADDITIVE,   /* the figure growing and shrinking by one note (Glass) */
     TG_PAD_PHASE,      /* the melody's pattern, drifting a step ahead every phase_reps loops (Reich) */
     TG_PAD_NONE,       /* no third part */
+    TG_PAD_RHYTHM,     /* the chord struck on a rhythm (pad_rhythm, over the groove's two bars): skanks, stabs, chops */
 };
 enum {
     TG_MEL_PHRASE,     /* periods of question and answer (the default) */
@@ -64,17 +66,22 @@ enum {
     TG_MEL_BIRDSONG,   /* bursts of quick high notes, leaps and repeated notes, then silence */
 };
 enum { TG_HARM_PLANNED, TG_HARM_CYCLE, TG_HARM_DRONE };
-enum { TG_VOC_CLASSIC, TG_VOC_ROMANTIC, TG_VOC_JAZZ, TG_VOC_MODAL, TG_VOC_MODERN, TG_VOC_POP, TG_VOC_COUNT };
+enum { TG_VOC_CLASSIC, TG_VOC_ROMANTIC, TG_VOC_JAZZ, TG_VOC_MODAL, TG_VOC_MODERN, TG_VOC_POP, TG_VOC_BLUES, TG_VOC_COUNT };
 /* instrument families: the host maps them to its sounds (Felucca presets) */
 enum {
     TI_DEFAULT, TI_PIANO, TI_HARPSICHORD, TI_ORGAN, TI_STRINGS, TI_VIOLIN, TI_CELLO, TI_CONTRABASS, TI_PIZZ,
     TI_FLUTE, TI_OBOE, TI_CLARINET, TI_BASSOON, TI_HORN, TI_TRUMPET, TI_BRASS, TI_TUBA, TI_HARP, TI_GUITAR,
     TI_CHOIR, TI_VOICE, TI_BELLS, TI_CELESTA, TI_MARIMBA, TI_BANDONEON, TI_SAX, TI_SYNTH, TI_PAD, TI_WHISTLE,
-    TI_DRONE, TI_EPIANO, TI_COUNT
+    TI_DRONE, TI_EPIANO,
+    /* the popular genres' */
+    TI_EGUITAR, TI_DISTGUITAR, TI_EBASS, TI_SYNTHBASS, TI_808, TI_ACID, TI_SUPERSAW, TI_FATBASS, TI_SYNCLEAD,
+    TI_CHIP, TI_CLAV, TI_ROCKORGAN, TI_GOSPEL, TI_TALKBASS, TI_GLITCH, TI_SINEKEY, TI_SHIMMER, TI_KALIMBA,
+    TI_LOGDRUM, TI_PLUCKSYNTH, TI_SAWLEAD, TI_WAVEBASS, TI_STEELDRUM, TI_COUNT
 };
 enum { TG_ORCH_FIXED, TG_ORCH_CYCLE, TG_ORCH_RANDOM, TG_ORCH_ENERGY, TG_ORCH_CONTRAST };
 enum { TG_MOD_RELATED, TG_MOD_UP_SEMITONE, TG_MOD_UP_TONE, TG_MOD_MEDIANT };
 #define TG_REST (-128)
+#define TG_HOLD (-127)                      /* TG_MEL_PATTERN: the note before rings on */
 /* General MIDI percussion notes used by the drum part */
 #define TG_GM_BASS_DRUM 35
 #define TG_GM_KICK 36
@@ -90,7 +97,7 @@ enum { TG_MOD_RELATED, TG_MOD_UP_SEMITONE, TG_MOD_UP_TONE, TG_MOD_MEDIANT };
 #define TG_GM_RIDE 51
 #define TG_GM_CASTANETS 85
 
-enum { TG_PERC_OFF, TG_PERC_PERIOD, TG_PERC_KIT, TG_PERC_PATTERN };
+enum { TG_PERC_OFF, TG_PERC_PERIOD, TG_PERC_KIT, TG_PERC_PATTERN, TG_PERC_GROOVE };
 /* period percussion instruments, the order of tg_style.perc */
 enum { TG_PI_TIMPANI, TG_PI_SNARE, TG_PI_BASS_DRUM, TG_PI_CYMBAL, TG_PI_TRIANGLE, TG_PI_TAMBOURINE, TG_PI_COUNT };
 enum {
@@ -122,6 +129,10 @@ enum {
     TG_STYLE_VASKS, TG_STYLE_WHITACRE, TG_STYLE_RUTTER,
     /* 9: film and musical */
     TG_STYLE_MORRICONE, TG_STYLE_JOHN_WILLIAMS, TG_STYLE_HOWARD_SHORE, TG_STYLE_PREISNER, TG_STYLE_LLOYD_WEBBER,
+    /* 10..17: the popular genres, 1950s to now (tools/tuna_genres.py) */
+#define TUNA_GENRE_IDS
+#include "tuna_genres.inc"
+#undef TUNA_GENRE_IDS
     TG_STYLE_COUNT
 };
 
@@ -181,7 +192,7 @@ typedef struct {
     /* harmony */
     uint8_t vocab;                   /* TG_VOC_*: the chord vocabulary the weights refer to */
     uint8_t harmony;                 /* TG_HARM_*: planned periods, a fixed cycle, or a drone */
-    int8_t cycle[8], cycle2[8];      /* TG_HARM_CYCLE: vocabulary indices; a second cycle for contrast */
+    int8_t cycle[16], cycle2[8];     /* TG_HARM_CYCLE: vocabulary indices (16: a twelve-bar blues); a second cycle */
     uint8_t cycle_len, cycle2_len, cycle_switch;   /* cycle_switch: periods per cycle before the other */
     float open;                      /* chance a period ends away from the tonic (deceptive, open, on V) */
     uint8_t color_scale;             /* TS_*: the colour of coloured periods (0: whole-tone, as whole_tone) */
@@ -203,7 +214,7 @@ typedef struct {
     float turn;                      /* chance of a turn (upper, main, lower, main) on a downbeat */
     float octave;                    /* chance a free leap is an octave */
     /* bass and third part */
-    uint16_t bass_rhythm;            /* TG_BASS_OSTINATO: ticks of the bar that sound */
+    uint32_t bass_rhythm;            /* TG_BASS_OSTINATO, 808: ticks of the bar that sound (bars up to 32 ticks) */
     int8_t bass_notes[8];            /* OSTINATO: chord-ladder steps in turn; LINE: semitones per chord step */
     uint8_t bass_len;
     int8_t pad_figure[16];           /* TG_PAD_FIGURE / ADDITIVE: chord-ladder steps */
@@ -232,7 +243,34 @@ typedef struct {
     uint8_t orch_n, orch_mode;       /* TG_ORCH_*: how the sets change between periods */
     /* percussion pattern (TG_PERC_PATTERN): up to three instruments, ticks of the bar */
     struct { uint8_t note, vel; uint16_t ticks; } drum_pat[3];
+
+    /* ---- the popular genres: all zero gives the behaviour above ---- */
+    uint8_t groove;                  /* TG_PERC_GROOVE: a drum groove (tg_groove_get), index + 1; 0 none */
+    bool swing16;                    /* swing the off sixteenths (hip hop, house) rather than the off eighths */
+    bool bass_semis;                 /* OSTINATO: bass_notes are semitones above the chord's root (boogie, riffs) */
+    uint8_t bass_gate;               /* OSTINATO, 808: ticks a bass note holds (0: to the next note) */
+    uint32_t pad_rhythm;             /* TG_PAD_RHYTHM: ticks of the groove's loop where the chord is struck */
+    uint8_t pad_gate;                /* RHYTHM: ticks the chord holds (0: to the next strike) */
+    bool power;                      /* the third part plays power chords: root, fifth, octave */
 } tg_style;
+
+/* a drum groove: up to eight instruments on the ticks of a loop of up to 32 ticks (two bars of sixteenths), a
+ * kit for Felucca's DRUM engine, hat rolls */
+typedef struct {
+    uint8_t note, vel;               /* GM drum note, velocity */
+    uint32_t hits, accent, ghost;    /* ticks of the loop: struck, louder (+20), softer (-30) */
+} tg_lane;
+typedef struct {
+    const char *name;
+    uint8_t len;                     /* ticks in the loop (0: two bars) */
+    uint8_t kit, kick, tune, tone, decay, snap, drive;   /* the DRUM engine: KIT (0 STD, 4 '80', 5 '10', 6 '66',
+                                        7 '55', 8 '77'), KICK (0 PUNCH, 1 ROUND), TUNE TONE DECY SNAP DRV 0..127 */
+    uint8_t roll;                    /* 0..10: chance of a hat roll (two to four quick hits) on a hat's tick */
+    uint8_t fill;                    /* 1: a snare fill and a crash into each period's arrival */
+    tg_lane lane[8];
+} tg_groove;
+const tg_groove *tg_groove_get(int index);        /* index (the style's groove - 1), or 0 */
+int tg_groove_count(void);
 
 const tg_style *tg_style_get(int id);
 int tg_style_index(const tg_style *st);           /* TG_STYLE_* of a library style, or -1 */

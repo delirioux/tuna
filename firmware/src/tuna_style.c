@@ -156,6 +156,30 @@ static const tg_chord_def pop_minor[TG_VOCAB] = {
     {0, TQ_MAJ, TF_T, -1, "I"},           {1, TQ_MAJ, TF_S, -1, "bII"},         {10, TQ_DOM7, TF_S, -1, "VII7"},
 };
 
+/* blues, rock, soul and funk: dominant sevenths on I IV V (the twelve-bar), the flat VII, III and VI of rock,
+ * power chords (bare fifths), ninths for soul and funk, minor sevenths for minor grooves (19, 20: the whole-tone
+ * pair every vocabulary has in place) */
+static const tg_chord_def blues_major[TG_VOCAB] = {
+    {0, TQ_MAJ, TF_T, -1, "I"},           {0, TQ_DOM7, TF_T, -1, "I7"},         {5, TQ_MAJ, TF_S, -1, "IV"},
+    {5, TQ_DOM7, TF_S, -1, "IV7"},        {7, TQ_MAJ, TF_D, -1, "V"},           {7, TQ_DOM7, TF_D, -1, "V7"},
+    {9, TQ_MIN, TF_T, -1, "vi"},          {2, TQ_MIN, TF_S, -1, "ii"},          {10, TQ_MAJ, TF_S, -1, "bVII"},
+    {3, TQ_MAJ, TF_T, -1, "bIII"},        {8, TQ_MAJ, TF_S, -1, "bVI"},         {0, TQ_FIFTH, TF_T, -1, "I5"},
+    {5, TQ_FIFTH, TF_S, -1, "IV5"},       {7, TQ_FIFTH, TF_D, -1, "V5"},        {10, TQ_FIFTH, TF_S, -1, "bVII5"},
+    {8, TQ_FIFTH, TF_S, -1, "bVI5"},      {3, TQ_FIFTH, TF_T, -1, "bIII5"},     {0, TQ_DOM9, TF_T, -1, "I9"},
+    {5, TQ_DOM9, TF_S, -1, "IV9"},        {0, TQ_AUG, TF_T, -1, "I+"},          {10, TQ_AUG, TF_T, -1, "bVII+"},
+    {7, TQ_SUS4, TF_D, -1, "Vsus4"},      {0, TQ_MAJ6, TF_T, -1, "I6"},         {7, TQ_DOM9, TF_D, -1, "V9"},
+};
+static const tg_chord_def blues_minor[TG_VOCAB] = {
+    {0, TQ_MIN, TF_T, -1, "i"},           {0, TQ_MIN7, TF_T, -1, "i7"},         {5, TQ_MIN, TF_S, -1, "iv"},
+    {5, TQ_MIN7, TF_S, -1, "iv7"},        {7, TQ_MIN, TF_D, -1, "v"},           {7, TQ_DOM7, TF_D, -1, "V7"},
+    {8, TQ_MAJ, TF_S, -1, "VI"},          {10, TQ_MAJ, TF_D, -1, "VII"},        {3, TQ_MAJ, TF_T, -1, "III"},
+    {0, TQ_FIFTH, TF_T, -1, "i5"},        {5, TQ_FIFTH, TF_S, -1, "iv5"},       {7, TQ_FIFTH, TF_D, -1, "v5"},
+    {8, TQ_FIFTH, TF_S, -1, "VI5"},       {10, TQ_FIFTH, TF_D, -1, "VII5"},     {3, TQ_FIFTH, TF_T, -1, "III5"},
+    {1, TQ_MAJ, TF_S, -1, "bII"},         {1, TQ_FIFTH, TF_S, -1, "bII5"},      {0, TQ_MIN9, TF_T, -1, "i9"},
+    {5, TQ_MIN9, TF_S, -1, "iv9"},        {0, TQ_AUG, TF_T, -1, "I+"},          {10, TQ_AUG, TF_T, -1, "bVII+"},
+    {2, TQ_HDIM7, TF_S, -1, "iiø7"},      {0, TQ_MIN11, TF_T, -1, "i11"},       {10, TQ_DOM7, TF_D, -1, "VII7"},
+};
+
 const tg_chord_def *tg_vocab(bool minor) { return minor ? vocab_minor : vocab_major; }
 
 const tg_chord_def *tg_vocab_of(int vocab, bool minor)
@@ -166,6 +190,7 @@ const tg_chord_def *tg_vocab_of(int vocab, bool minor)
     case TG_VOC_MODAL:    return modal_both;
     case TG_VOC_MODERN:   return modern_both;
     case TG_VOC_POP:      return minor ? pop_minor : pop_major;
+    case TG_VOC_BLUES:    return minor ? blues_minor : blues_major;
     default:              return minor ? vocab_minor : vocab_major;
     }
 }
@@ -1834,13 +1859,27 @@ static const tg_style styles[TG_STYLE_COUNT] = {
         .orch = {{TI_SYNTH, TI_VOICE, TI_PIANO}, {TI_SYNTH, TI_VOICE, TI_ORGAN}, {TI_CONTRABASS, TI_STRINGS, TI_STRINGS}},
         .orch_n = 3, .orch_mode = TG_ORCH_ENERGY,
     },
+    /* the popular genres (tools/genres, written out by tools/tuna_genres.py) */
+#define TUNA_GENRE_STYLES
+#include "tuna_genres.inc"
+#undef TUNA_GENRE_STYLES
 };
+
+/* their grooves */
+#define TUNA_GENRE_GROOVES
+#include "tuna_genres.inc"
+#undef TUNA_GENRE_GROOVES
+const tg_groove *tg_groove_get(int i) { return i >= 0 && i < (int)(sizeof grooves / sizeof grooves[0]) ? &grooves[i] : 0; }
+int tg_groove_count(void) { return (int)(sizeof grooves / sizeof grooves[0]); }
 
 static const char *const family_names[TI_COUNT] = {
     "DEFAULT", "PIANO", "HARPSICH", "ORGAN", "STRINGS", "VIOLIN", "CELLO", "CONTRABS", "PIZZ",
     "FLUTE", "OBOE", "CLARINET", "BASSOON", "HORN", "TRUMPET", "BRASS", "TUBA", "HARP", "GUITAR",
     "CHOIR", "VOICE", "BELLS", "CELESTA", "MARIMBA", "BANDONEO", "SAX", "SYNTH", "PAD", "WHISTLE",
     "DRONE", "E.PIANO",
+    "E.GUITAR", "DISTGTR", "E.BASS", "SYNBASS", "808", "ACID", "SUPERSAW", "FATBASS", "SYNCLEAD",
+    "CHIP", "CLAV", "ROCKORG", "GOSPEL", "TALKBOX", "GLITCH", "SINE KEY", "SHIMMER", "KALIMBA",
+    "LOG DRUM", "PLUCK", "SAW LEAD", "WAVEBASS", "STEELPAN",
 };
 
 const char *tg_family_name(int f) { return f >= 0 && f < TI_COUNT ? family_names[f] : "?"; }

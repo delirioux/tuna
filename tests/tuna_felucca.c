@@ -200,6 +200,8 @@ static void apply_family(uint32_t k, int fam, bool now)
         host_preset_req(&trk[k], TSN_FAMILY[fam].engine, TSN_FAMILY[fam].preset);
     if (TSN_FAMILY[fam].own)
         tsn_apply_own(trk[k].p, TSN_FAMILY[fam].own);
+    if (TSN_FAMILY[fam].fm6)
+        tsn_fm6_load(&trk[k], TSN_FAMILY[fam].fm6);
     part_settings(k);
     snapshot_base(k);
 }

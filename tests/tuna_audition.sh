@@ -3,6 +3,8 @@
 # Every instrument family on Felucca's engines, one by one (tests/tuna_audition.c), then measured against each
 # other (tools/tuna_audition.py): which sound alike.
 #   tests/tuna_audition.sh OUTDIR        ONLY=NAME renders one
+#   NOTRIM=1 tests/tuna_audition.sh OUTDIR && python3 tools/tuna_audition.py OUTDIR --trims
+#                                        evens the families' levels out again (tuna_sounds.h TSN_TRIM)
 set -eu
 OUT=${1:?usage: tests/tuna_audition.sh OUTDIR}
 mkdir -p build/host "$OUT"

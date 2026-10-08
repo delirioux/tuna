@@ -102,7 +102,40 @@ def cpu(out):
         print(f"  {n:<10} {v:8.0f}  {v / ref:5.2f}x")
 
 
+def write_trims(out):
+    """each family's level trim (tuna_sounds.h TSN_TRIM): half-dB steps that bring the peak of its held C4 to
+    -12 dB, between -8 and +18. The renders must be made without trims (NOTRIM=1)"""
+    import re
+    root = pathlib.Path(__file__).resolve().parent.parent
+    h = (root / "firmware/src/tuna_style.h").read_text()
+    body = re.sub(r"/\*.*?\*/", "", h[h.index("TI_DEFAULT"): h.index("TI_COUNT")], flags=re.S)
+    ids = re.findall(r"TI_[A-Z0-9_]+", body)
+    trim = {}
+    for line in (out / "families.txt").read_text().splitlines():
+        i = int(line[:2])
+        x, sr = load(sorted((out / "dry").glob(f"{i:02d}_*.wav"))[0])
+        e, _ = env_db(x, sr)
+        trim[ids[i]] = max(-8, min(18, round((-12 - e[:120].max()) * 2)))
+    lines, cur = [], "    "
+    for k in ids[1:]:
+        item = f"[{k}] = {trim.get(k, 0)}, "
+        if len(cur) + len(item) > 118:
+            lines.append(cur.rstrip())
+            cur = "    "
+        cur += item
+    lines.append(cur.rstrip())
+    f = root / "firmware/src/tuna_sounds.h"
+    s = f.read_text()
+    head = "static const int8_t TSN_TRIM[TI_COUNT] = {\n"
+    i = s.index(head) + len(head)
+    f.write_text(s[:i] + "\n".join(lines) + "\n" + s[s.index("};", i):])
+    print(f"trims for {len(trim)} families -> firmware/src/tuna_sounds.h")
+
+
 def main():
+    if "--trims" in sys.argv:
+        write_trims(pathlib.Path(sys.argv[1]))
+        return
     if "--cpu" in sys.argv:
         cpu(pathlib.Path(sys.argv[1]))
         return

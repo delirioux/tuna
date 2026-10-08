@@ -30,6 +30,7 @@ typedef struct {
     int pad_tones;
     bool pad_restrike;
     int style;                /* TG_STYLE_*, -1 = the settings above */
+    int manner;               /* the composer's manner (tg_manner_count) */
     bool keys;                /* sketch synth: a keyboard sound for the third part (figures) */
     int drums;                /* 0: the style's default, 1: off, 2: period, 3: kit */
     bool evolve;              /* the evolution timer: 8-period cycles, full depth, with modulation */
@@ -221,7 +222,7 @@ static void run(const preset *p, int seconds, evlog *l)
     g.pad_restrike = p->pad_restrike;
 styled:
     if (p->style >= 0) {
-        tg_apply_style(&g, p->style);
+        tg_apply_manner(&g, p->style, p->manner);
         tg_reseed(&g, p->seed);
     }
     if (p->drums)
@@ -550,6 +551,16 @@ static bool voices_identical(const evlog *a, const evlog *b)
     }
 }
 
+/* the preset's style as it plays: the composer's profile with its manner's changes */
+static const tg_style *style_of(const preset *p)
+{
+    static tg_style buf;
+    if (p->style < 0)
+        return NULL;
+    tg_style_manner(&buf, p->style, p->manner);
+    return &buf;
+}
+
 static int check(const preset *p, const evlog *pa, bool same, bool verbose)
 {
     const evlog a = *pa;
@@ -582,13 +593,13 @@ static int check(const preset *p, const evlog *pa, bool same, bool verbose)
             printf("         percussion: %ld drum strokes, %ld timpani strokes (%ld off tonic/dominant)\n",
                    a.drum_hits, a.timp_hits, a.timp_bad);
         {
-            const tg_style *st = p->style >= 0 ? tg_style_get(p->style) : NULL;
+            const tg_style *st = style_of(p);
             bool no_bass = st && st->bass_mode == TG_BASS_NONE, no_pad = st && st->pad_mode == TG_PAD_NONE;
             fails += !same || a.off_key || (!count[0] && !no_bass) || !count[1] || (!count[2] && !no_pad) || a.timp_bad;
         }
         fails += a.mel_downbeat_chord != a.mel_downbeats;
         {
-            const tg_style *st = p->style >= 0 ? tg_style_get(p->style) : NULL;
+            const tg_style *st = style_of(p);
             bool phrase = !st || st->mel_mode == TG_MEL_PHRASE || st->mel_mode == TG_MEL_CHANT;
             if (phrase) {
                 fails += (!a.arrivals && !(st && st->alt.mel_mode)) || a.arrivals_tonic != a.arrivals_tonic_chord ||
@@ -608,9 +619,10 @@ static int check(const preset *p, const evlog *pa, bool same, bool verbose)
     return fails;
 }
 
-/* STYLES=a-b (or one id): every composer in the range as a preset, instead of the list above */
-static preset style_presets[TG_STYLE_COUNT];
-static char style_names[TG_STYLE_COUNT][24];
+/* STYLES=a-b (or one id): every composer in the range as a preset, instead of the list above; each of its
+ * manners a preset of its own (bach, bach-chorale, bach-gigue) */
+static preset style_presets[TG_STYLE_COUNT * 4];
+static char style_names[TG_STYLE_COUNT * 4][36];
 
 int main(int argc, char **argv)
 {
@@ -623,14 +635,21 @@ int main(int argc, char **argv)
         int a = 0, b = TG_STYLE_COUNT - 1;
         if (sscanf(getenv("STYLES"), "%d-%d", &a, &b) == 1) b = a;
         nlist = 0;
-        for (int i = a; i <= b && i < TG_STYLE_COUNT; ++i) {
-            const char *n = tg_style_get(i)->name;
-            int k = 0;
-            for (; n[k] && k < 23; ++k) style_names[i][k] = (char)(n[k] >= 'A' && n[k] <= 'Z' ? n[k] + 32 : n[k] == ' ' ? '-' : n[k]);
-            style_names[i][k] = 0;
-            preset q = {.name = style_names[i], .seed = 1, .style = i, .keys = true};
-            style_presets[nlist++] = q;
-        }
+        for (int i = a; i <= b && i < TG_STYLE_COUNT; ++i)
+            for (int m = 0; m < tg_manner_count(i) && m < 4; ++m) {
+                char *o = style_names[nlist];
+                const char *n = tg_style_get(i)->name;
+                int k = 0;
+                for (; n[k] && k < 23; ++k) o[k] = (char)(n[k] >= 'A' && n[k] <= 'Z' ? n[k] + 32 : n[k] == ' ' ? '-' : n[k]);
+                if (m) {                                  /* the first manner keeps the plain name */
+                    o[k++] = '-';
+                    for (const char *t = tg_manner_name(i, m); *t && k < 35; ++t)
+                        o[k++] = (char)(*t >= 'A' && *t <= 'Z' ? *t + 32 : *t == ' ' ? '-' : *t);
+                }
+                o[k] = 0;
+                preset q = {.name = o, .seed = 1, .style = i, .manner = m, .keys = true};
+                style_presets[nlist++] = q;
+            }
         list = style_presets;
     }
     const char *only = getenv("ONLY");

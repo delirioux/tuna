@@ -9,6 +9,7 @@ SECS=${2:-240}
 mkdir -p build/host
 python3 tools/tuna_genres.py --check      # the genres' C is what tools/genres holds
 python3 tools/tuna_fm6.py --check      # the FM6 patches' C is what tools/tuna_fm6.py holds
+python3 tools/tuna_manners.py --check   # the manners' C is what tools/manners holds
 SRC="firmware/src/tuna_gen.c firmware/src/tuna_style.c firmware/src/tuna_marbles.c firmware/src/tuna_marbles_tables.c firmware/src/tuna_theory.c"
 for t in tuna_theory_test tuna_mech_test tuna_seq_test tuna_gen_render; do
     cc -O2 -Wall -Ifirmware/src -o build/host/$t tests/$t.c $SRC -lm

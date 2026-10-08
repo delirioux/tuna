@@ -47,6 +47,7 @@ typedef struct { uint8_t engine, preset; } sound_t;
 typedef struct {
     const char *name;
     int style;                  /* TG_STYLE_*, -1: the generative settings below */
+    int manner;                 /* the composer's manner */
     uint32_t seed;
     int drums;                  /* 0: the style's default, 1: off, 2: period, 3: kit */
     sound_t s[3];               /* bass, melody, third */
@@ -283,7 +284,7 @@ static void setup(const piece_t *p)
     host_tracks_init();
     tg_init(&gen, p->seed, (float)FS / (float)tuna_div);
     if (p->style >= 0) {
-        tg_apply_style(&gen, p->style);
+        tg_apply_manner(&gen, p->style, p->manner);
         tg_reseed(&gen, p->seed);
     } else {
         gen.bpm = p->bpm;
@@ -529,23 +530,30 @@ int main(int argc, char **argv)
            "worst", "tuna ns", "clips");
     int fails = 0;
     /* STYLES=a-b: each composer in the range as a piece of its own (its instruments, seed 1) */
-    static piece_t gen_pieces[TG_STYLE_COUNT];
-    static char gen_names[TG_STYLE_COUNT][24];
+    static piece_t gen_pieces[TG_STYLE_COUNT * 4];  /* (each manner a piece of its own: bach, bach-chorale) */
+    static char gen_names[TG_STYLE_COUNT * 4][36];
     const piece_t *list = pieces;
     size_t nlist = sizeof pieces / sizeof pieces[0];
     if (getenv("STYLES")) {
         int a = 0, b = TG_STYLE_COUNT - 1;
         if (sscanf(getenv("STYLES"), "%d-%d", &a, &b) == 1) b = a;
         nlist = 0;
-        for (int i = a; i <= b && i < TG_STYLE_COUNT; ++i) {
-            const char *n = tg_style_get(i)->name;
-            int k = 0;
-            for (; n[k] && k < 23; ++k) gen_names[i][k] = (char)(n[k] >= 'A' && n[k] <= 'Z' ? n[k] + 32 : n[k] == ' ' ? '-' : n[k]);
-            gen_names[i][k] = 0;
-            piece_t q = {.name = gen_names[i], .style = i, .seed = getenv("SEED") ? (uint32_t)atoi(getenv("SEED")) : 1,
-                         .s = {SOFT_PAD, PIANO, STRINGS}, .rev = 36};
-            gen_pieces[nlist++] = q;
-        }
+        for (int i = a; i <= b && i < TG_STYLE_COUNT; ++i)
+            for (int m = 0; m < tg_manner_count(i) && m < 4; ++m) {
+                char *o = gen_names[nlist];
+                const char *n = tg_style_get(i)->name;
+                int k = 0;
+                for (; n[k] && k < 23; ++k) o[k] = (char)(n[k] >= 'A' && n[k] <= 'Z' ? n[k] + 32 : n[k] == ' ' ? '-' : n[k]);
+                if (m) {
+                    o[k++] = '-';
+                    for (const char *t = tg_manner_name(i, m); *t && k < 35; ++t)
+                        o[k++] = (char)(*t >= 'A' && *t <= 'Z' ? *t + 32 : *t == ' ' ? '-' : *t);
+                }
+                o[k] = 0;
+                piece_t q = {.name = o, .style = i, .manner = m,
+                             .seed = getenv("SEED") ? (uint32_t)atoi(getenv("SEED")) : 1, .s = {SOFT_PAD, PIANO, STRINGS}, .rev = 36};
+                gen_pieces[nlist++] = q;
+            }
         list = gen_pieces;
     }
     for (size_t i = 0; i < nlist; ++i) {

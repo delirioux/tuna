@@ -1,5 +1,6 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 /* TUNA composer signatures (see tuna_style.h). */
+#include <stddef.h>
 #include "tuna_style.h"
 #include "tuna_theory.h"
 
@@ -1978,6 +1979,66 @@ static const char *const family_names[TI_COUNT] = {
 };
 
 const char *tg_family_name(int f) { return f >= 0 && f < TI_COUNT ? family_names[f] : "?"; }
+
+/* ---- manners ---- */
+#include "tuna_style_fields.inc"
+#include "tuna_manners.inc"
+
+int tg_manner_count(int id)
+{
+    return id >= 0 && id < TG_STYLE_COUNT && TG_MANNER_N[id] ? TG_MANNER_N[id] : 1;
+}
+
+static const tg_manner *manner_of(int id, int k)
+{
+    if (id < 0 || id >= TG_STYLE_COUNT || k < 0 || k >= TG_MANNER_N[id])
+        return 0;
+    return &TG_MANNER[TG_MANNER_FIRST[id] + k];
+}
+
+const char *tg_manner_name(int id, int k)
+{
+    const tg_manner *m = manner_of(id, k);
+    return m ? m->name : "";
+}
+
+void tg_style_manner(tg_style *out, int id, int k)
+{
+    const tg_style *st = tg_style_get(id);
+    if (!st)
+        return;
+    *out = *st;
+    const tg_manner *m = manner_of(id, k);
+    if (!m)
+        return;
+    for (int i = 0; i < m->n; ++i) {
+        const tg_delta *d = &m->delta[i];
+        const tg_field *f = &TG_FIELDS[d->field];
+        uint8_t *p = (uint8_t *)out + f->off;
+        int ix = d->index < f->count || f->kind == TGK_U32 ? d->index : 0;
+        switch (f->kind) {
+        case TGK_F32: ((float *)p)[ix] = (float)d->value / 100.0f; break;
+        case TGK_I32: ((int *)p)[ix] = d->value; break;
+        case TGK_U8: p[ix] = (uint8_t)d->value; break;
+        case TGK_I8: ((int8_t *)p)[ix] = (int8_t)d->value; break;
+        case TGK_BOOL: ((bool *)p)[ix] = d->value != 0; break;
+        case TGK_U16: ((uint16_t *)p)[ix] = (uint16_t)d->value; break;
+        case TGK_I16: ((int16_t *)p)[ix] = d->value; break;
+        case TGK_U32: {                                  /* index 0: the low half, 1: the high */
+            uint32_t *q = (uint32_t *)p, sh = ix ? 16u : 0u;
+            *q = (*q & ~(0xFFFFu << sh)) | ((uint32_t)(uint16_t)d->value << sh);
+            break;
+        }
+        }
+    }
+    if (m->orch_n) {
+        for (int s = 0; s < 4; ++s)
+            for (int r = 0; r < 3; ++r)
+                out->orch[s][r] = m->orch[s][r];
+        out->orch_n = m->orch_n;
+        out->orch_mode = m->orch_mode;
+    }
+}
 
 const tg_style *tg_style_get(int id) { return id >= 0 && id < TG_STYLE_COUNT ? &styles[id] : 0; }
 

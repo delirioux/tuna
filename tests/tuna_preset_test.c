@@ -187,13 +187,25 @@ static void test_roundtrip(void)
     tp_host h2;
     CHECK(tp_decode(&gb, &h2, rec, n) == TP_OK && !memcmp(&h2, &h, sizeof h), "edited: host part back");
     CHECK(gb.bpm == 63.0f && gb.root == 3 && gb.mel_mode == TG_MEL_CHANT && gb.tuning == TT_TUNE_MEANTONE &&
-              gb.x.spread == 0.8f && gb.t.bias == 0.3f && gb.style == tg_style_get(TG_STYLE_DEBUSSY),
+              gb.x.spread == 0.8f && gb.t.bias == 0.3f && gb.style_id == TG_STYLE_DEBUSSY,
           "edited: settings back");
     hasher a = play(&ga, 60.0f), b = play(&gb, 60.0f);
     CHECK(a.h == b.h && a.notes > 0, "edited: music after loading differs");
     char name[TP_NAME + 1];
     CHECK(tp_peek_name(rec, n, name) == TP_OK && !strcmp(name, "MY DEBUSSY"), "peek name");
     CHECK(tp_encode(&ga, &h, rec, 100) == TP_ERR_SPACE, "small buffer refused");
+
+    /* a composer's manner: saved and restored (record version 4) */
+    if (tg_manner_count(TG_STYLE_BACH) > 1) {
+        fresh(&ga, TG_STYLE_BACH, 9);
+        tg_apply_manner(&ga, TG_STYLE_BACH, 1);
+        tg_reseed(&ga, 9);
+        n = tp_encode(&ga, NULL, rec, sizeof rec);
+        CHECK(tp_decode(&gb, NULL, rec, n) == TP_OK && gb.manner == 1 && gb.style_id == TG_STYLE_BACH &&
+                  gb.bpm == ga.bpm && gb.division == ga.division, "manner: back (%d, bpm %.0f)", gb.manner, gb.bpm);
+        hasher x = play(&ga, 60.0f), y = play(&gb, 60.0f);
+        CHECK(x.h == y.h && x.notes > 0, "manner: the same music after loading");
+    }
 
     /* evolution on, from the start: saved and restored */
     fresh(&ga, -1, 5);

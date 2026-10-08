@@ -199,6 +199,8 @@ static void defaults(tg_gen *g)
     g->perc_w[TG_PI_TIMPANI] = 6;
     g->perc_w[TG_PI_CYMBAL] = 3;
     g->style = 0;
+    g->style_id = -1;
+    g->manner = 0;
     g->clock_source = TM_CLOCK_T1_T2_T3;
     tm_group x = {TM_CONTROL_IDENTICAL, TM_RANGE_NARROW, 0.5f, 0.5f, 0.75f, 0.0f, 8, {1, 1}};
     tm_group y = {TM_CONTROL_IDENTICAL, TM_RANGE_POSITIVE, 0.5f, 0.5f, 0.0f, 0.0f, 8, {1, 4}};
@@ -759,11 +761,27 @@ static void apply_modes(tg_gen *g, bool alt)
         g->melody_density = st->melody_density * (alt && st->alt.density > 0.0f ? st->alt.density : 1.0f);
 }
 
-void tg_apply_style(tg_gen *g, int id) { tg_apply_style_def(g, tg_style_get(id)); }
+void tg_apply_style(tg_gen *g, int id) { tg_apply_manner(g, id, 0); }
+
+void tg_apply_manner(tg_gen *g, int id, int manner)
+{
+    if (!tg_style_get(id)) {
+        tg_apply_style_def(g, 0);
+        return;
+    }
+    if (manner < 0 || manner >= tg_manner_count(id))
+        manner = 0;
+    tg_style_manner(&g->style_buf, id, manner);
+    tg_apply_style_def(g, &g->style_buf);
+    g->style_id = id;
+    g->manner = manner;
+}
 
 void tg_apply_style_def(tg_gen *g, const tg_style *st)
 {
     g->style = st;
+    g->style_id = -1;
+    g->manner = 0;
     if (!st)
         return;
     g->root = st->root;
@@ -2281,7 +2299,7 @@ static void perc_period(tg_gen *g, beat_pos b, int velocity, int offset, tg_even
     /* cymbal: a crash at the arrival, soft strokes for the colourists */
     if (w[TG_PI_CYMBAL]) {
         float wc = (float)w[TG_PI_CYMBAL] / 10.0f;
-        bool soft = g->whole_tone > 0.0f || g->style == tg_style_get(TG_STYLE_SATIE);
+        bool soft = g->whole_tone > 0.0f || g->style_id == TG_STYLE_SATIE;
         if (arrival && prand(g) < wc * 1.4f)
             drum_hit(g, TG_GM_CRASH, soft ? velocity - 30 : velocity + 14, offset, fn, ctx);
         else if (soft && b.downbeat && chord_change && prand(g) < wc * 0.4f)

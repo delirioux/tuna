@@ -315,6 +315,28 @@ static void test_reset(void)
           "the piece's own again (bpm %.0f/%.0f, root %d/%d)", app.g.bpm, own, app.g.root, own_root);
     CHECK(app.g.chaos_rhythm > 0.69f, "the chaos knobs stay (%.2f)", app.g.chaos_rhythm);
     ta_set_chaos(&app, 0.5f, 0.5f, 0.5f, 0.5f);
+    /* a new piece, a new seed: stopped at once; playing with the piece; turning back cancels both */
+    {
+        unsigned seen = 0;
+        int differ = 0;
+        for (int i = 0; i < 12; ++i) {
+            uint32_t s0 = app.seed;
+            ta_select(&app, ta_lib_first(2) + (i & 1));
+            differ += app.seed != s0;
+            seen |= 1u << (app.seed % 32);
+        }
+        CHECK(differ >= 10 && __builtin_popcount(seen) >= 6, "a new piece draws a new seed (%d of 12 new)", differ);
+        ta_play(&app, true);
+        run_ms(100);
+        int it = app.item;
+        ta_select(&app, it + 1);
+        CHECK(app.pending == it + 1 && app.seed_req >= 0, "playing: the piece and its seed wait (%d, %d)", app.pending,
+              app.seed_req);
+        ta_select(&app, it);
+        CHECK(app.pending < 0 && app.seed_req < 0, "turned back: nothing waits (%d, %d)", app.pending, app.seed_req);
+        ta_play(&app, false);
+        ta_select(&app, ta_lib_first(2));
+    }
     /* seeds */
     ta_set_seed(&app, 255);
     ta_seed_step(&app, 1);

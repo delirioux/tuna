@@ -162,7 +162,7 @@ static void fl_plain_window_init(void) {}
 #include "../../firmware/src/storage.c"
 #include "../../firmware/src/upreset.c"
 #include "../../firmware/src/project.c"
-static uint32_t web_master_adc = 700;   /* (before tuna_fw.c: its seed reads it) MASTER, 0..1023 as the ADC reads it */
+static uint32_t web_master_adc = 512;   /* (before tuna_fw.c: its seed reads it) MASTER, 0..1023 as the ADC reads it */
 enum { FM1_ADC_BATT = 3, FM1_ADC_MASTER = 4 };
 static int32_t fm1_adc_read(uint32_t ch) { return ch == FM1_ADC_MASTER ? (int32_t)web_master_adc : 620; }
 #include "../../firmware/src/tuna_fw.c"

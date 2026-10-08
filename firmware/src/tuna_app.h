@@ -56,6 +56,7 @@ typedef struct {
     tp_store store;
     long blocks;
     int seed_req;                         /* a seed asked for while playing (the next half period), -1 none */
+    uint32_t rnd;                         /* draws a new piece's seed (ta_stir: the host's entropy) */
 } tuna_app;
 
 /* the reverb types: each a size and damping (0..100) on Felucca's ROOM or SPRING; ROOM and SPRING as designed */
@@ -66,6 +67,7 @@ int ta_piece_reverb(int style);           /* TG_REV_*: the style's own, else its
 void ta_set_reverb_type(tuna_app *a, int type);   /* the type with its size and damping */
 
 void ta_init(tuna_app *a, float sample_rate, uint32_t seed);
+void ta_stir(tuna_app *a, uint32_t v);    /* entropy for the next piece's seed (the host: a timer at each touch) */
 void ta_set_sound(tuna_app *a, void (*fn)(void *ctx, const tg_event *e), void *ctx);
 void ta_set_store(tuna_app *a, const tp_store *s);
 

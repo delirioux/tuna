@@ -103,11 +103,14 @@ static bool balanced(long from, long *bad_at)
 
 /* note-ons of one loop, frozen or not, as (pos, part, note, velocity) */
 typedef struct { int pos, part, note, vel; } on_t;
+static int ons_until = 1 << 30;                    /* only notes before this tick of the period */
 static int ons_of(bool frozen, uint32_t loop, on_t *out, int max)
 {
     int n = 0;
+    bool groove = g.perc_mode == TG_PERC_GROOVE;    /* (a groove's drums play on live: not part of the loop) */
     for (long i = 0; i < nlg && n < max; ++i)
-        if (lg[i].e.type == TG_EV_NOTE && lg[i].e.on && lg[i].frozen == frozen && lg[i].loop == loop)
+        if (lg[i].e.type == TG_EV_NOTE && lg[i].e.on && lg[i].frozen == frozen && lg[i].loop == loop &&
+            !(groove && lg[i].e.part == TG_PART_DRUMS) && lg[i].pos < ons_until)
             out[n++] = (on_t){lg[i].pos, lg[i].e.part, lg[i].e.note, lg[i].e.velocity};
     return n;
 }
@@ -123,6 +126,7 @@ static int cmp_on(const void *a, const void *b)
 /* ---- freeze keeps what was heard, loop after loop; unfreeze hands back cleanly ---------------------- */
 static void test_freeze(int style, uint32_t seed)
 {
+    ons_until = 1 << 30;
     start(style, seed);
     int P = period_ticks();
     run_ticks(2L * P + P / 3);                      /* a third into period 2 */
@@ -130,7 +134,11 @@ static void test_freeze(int style, uint32_t seed)
     CHECK(tg_freeze(&g), "freeze refused");
     run_ticks(P - P / 3 + 4L * P + 1);              /* to the boundary, then 4 loops (and a tick: late notes) */
     CHECK(g.frozen, "%s: not frozen after the boundary", tg_style_get(style)->name);
-    CHECK(g.pat.len == P, "pattern length %d, period %d", g.pat.len, P);
+    /* the whole period, or (a busy genre past TG_PAT_MAX notes) its whole bars that fitted */
+    int bar = g.division * g.beats_per_bar;
+    CHECK(g.pat.len == P || (g.pat.n > 0 && g.pat.len < P && g.pat.len % bar == 0), "pattern length %d, period %d",
+          g.pat.len, P);
+    ons_until = g.pat.len;
 
     static on_t a[4096], b[4096];
     int na = ons_of(false, heard, a, 4096);

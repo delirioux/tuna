@@ -15,6 +15,10 @@ preset and let it drift, from still and ambient to driving and rhythmic.
 
 ## What is in it
 
+- **86 popular genres in 8 decades**, the 1950s to now: rock & roll and doo-wop, Motown, ska and funk, disco,
+  reggae, punk and Bronx block parties, house, techno and new jack swing, grunge, jungle and trance, dubstep and
+  grime, trap, drill, amapiano and hyperpop, phonk and Jersey club. Each has its own drum groove and kit, bass line,
+  chord loop, comping and instruments; vocal genres play as their beat, bass, chords and a lead line.
 - **89 composers in 9 eras**, from Hildegard von Bingen to Eric Whitacre: Renaissance, Baroque,
   Classical, Early Romantic, Romantic, Late Romantic, Modern, Minimal, Film & Stage. Each has its
   own harmony, melody, rhythm, form and instrumentation: chant on a drone, Bach's counterpoint,
@@ -38,10 +42,10 @@ preset and let it drift, from still and ambient to driving and rhythmic.
 | --- | --- |
 | PLAY | start / stop; always from the top (the same seed plays the same music) |
 | SELECT / MASTER | tempo / volume |
-| PRESETS / ALGORITHM | the library: piece by piece, or a whole era at a time; playing, the new piece comes in at the end of the period. A tempo, root, percussion or evolution you set stays for the next pieces |
+| PRESETS / ALGORITHM | the library: piece by piece, or a whole era (or decade) at a time; playing, the new piece comes in at the next half of the period. Each piece brings its own tempo, key, percussion and evolution |
 | KNOB 1–4 | the page's four cards; on HOME the chaos knobs: RHYTHM, PITCH, DENSITY and MACRO (0 is the composer exactly), on melody, bass and pad, each in its own way |
 | keys | tap one: the root (from the next chord); hold several: that chord, while held; on SAVE / LOAD the 16 white keys are the slots |
-| OCT− / OCT+ | the seed: another piece in the same manner; on SAVE, LOAD and SEQ: back / do it |
+| OCT− / OCT+ | the seed (256, a new one at every power-on): another piece in the same manner, playing from the next half of the period; on SAVE, LOAD and SEQ: back / do it |
 | REC | memory: the phrase locked (deja vu) / the composer's own |
 | HOME | the falling notes; held: the menu (colour, style) |
 | FX · SCL · EDIT · ARP · SEQ · GLO · SAVE | library · key, scale, tuning, memory · time, then the parts, then which parts follow the chaos knobs · evolution · freeze · mix, then reverb · save, then load |

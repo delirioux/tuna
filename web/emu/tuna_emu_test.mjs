@@ -75,7 +75,7 @@ check("a slot saved while stopped reaches the flash", w.web_flash_writes_count()
 
 // switch-on: the page's random seed takes over; the first PLAY keeps a seed that was chosen
 w.web_tuna_seed(123456);
-check("the page's seed at switch-on", w.web_tuna_seed_now() === 123456);
+check("the page's seed at switch-on (one of 256)", w.web_tuna_seed_now() === 123456 % 256);
 
 console.log(fails ? `tuna emu: ${fails} FAILED` : "tuna emu: all passed");
 process.exit(fails ? 1 : 0);

@@ -218,6 +218,10 @@ typedef struct {
     int add_len, add_rep, add_dir, add_pos;   /* ADDITIVE: active figure length, loops, growing or not */
     int phase_off, phase_rep;     /* PHASE: the drift and its loop count */
     long oompah_off;              /* OOMPAH: the tick the short chord ends */
+    long rhythm_off;              /* PAD RHYTHM: the tick the struck chord ends (-1 none) */
+    long b808_off;                /* BASS 808 / OSTINATO gate: the tick the bass note ends (-1 none) */
+    struct { uint8_t note, vel; int32_t due; } rat[8];   /* drum roll hits still to come (samples) */
+    uint8_t rat_n;
     /* form */
     long gp_from, gp_until;       /* a general pause */
     int echo_vel;                 /* an echo period's velocity offset */
@@ -273,6 +277,7 @@ typedef struct {
     tg_pattern rec[2];            /* recording and the last complete period, swapped at each boundary */
     int rec_cur;
     bool rec_valid;               /* rec[!rec_cur] holds a complete period */
+    int rec_full;                 /* the tick of the recording's first note past TG_PAT_MAX (-1: it fitted) */
     int16_t rec_open[TG_EVENT_PARTS][128];   /* index of a recorded note still sounding, -1 none */
     tg_pattern pat;               /* the frozen pattern */
     bool frozen, freeze_req, unfreeze_req;

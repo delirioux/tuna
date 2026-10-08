@@ -279,6 +279,7 @@ void tg_reseed(tg_gen *g, uint32_t seed)
     g->tick_delay = 0;
     /* sequencer: recording from the start; the overlay's steps and FILL are settings and stay */
     g->rec_cur = 0;
+    g->rec_full = -1;
     g->rec_valid = false;
     g->rec[0].n = g->rec[1].n = 0;
     g->rec[0].len = g->rec[1].len = 0;
@@ -331,6 +332,8 @@ void tg_reseed(tg_gen *g, uint32_t seed)
     g->add_dir = 1;
     g->phase_off = g->phase_rep = 0;
     g->oompah_off = -1;
+    g->rhythm_off = g->b808_off = -1;
+    g->rat_n = 0;
     g->gp_from = g->gp_until = -1;
     g->echo_vel = 0;
     for (int p = 0; p < TG_PARTS; ++p)
@@ -959,6 +962,7 @@ void tg_all_off(tg_gen *g, tg_event_fn fn, void *ctx)
         for (int n = 0; n < 128; ++n)
             g->hdue[p][n] = 0;
     g->humanize = hum;
+    g->rat_n = 0;
     cx_release(g, fn, ctx);
 }
 
@@ -1037,7 +1041,16 @@ static void pad_voice(tg_gen *g, int offset, int velocity, bool restrike, bool s
     int n = c.n;
     int lo = g->base_note[TG_PART_PAD] + g->root;
     int best[TG_PAD_VOICES], best_cost = 1 << 30;
-    if (g->spread && n >= 3) {
+    if (g->style && g->style->power) {
+        /* a power chord: root, fifth, octave, the root in the part's lowest octave */
+        int r = g->root + c.root;
+        while (r < lo) r += 12;
+        while (r >= lo + 12) r -= 12;
+        best[0] = r;
+        best[1] = r + 7;
+        best[2] = r + 12;
+        n = c.n = 3;
+    } else if (g->spread && n >= 3) {
         /* open position: root, fifth, third an octave up, then the rest, each at least a third apart */
         static const uint8_t order4[4] = {0, 2, 1, 3};
         int prev = -1;
@@ -1904,7 +1917,7 @@ static int pattern_note(const tg_gen *g, int idx, int lo)
     if (len <= 0)
         return -1;
     int e = st->pattern[((idx % len) + len) % len];
-    if (e == TG_REST)
+    if (e == TG_REST || e == TG_HOLD)
         return -1;
     if (st->pattern_chord)
         return ladder_note(g, lo, e);
@@ -1915,6 +1928,11 @@ static int pattern_note(const tg_gen *g, int idx, int lo)
 
 static void melody_pattern(tg_gen *g, beat_pos b, int velocity, int offset, tg_event_fn fn, void *ctx)
 {
+    const tg_style *st = g->style;
+    if (st && st->pattern_len && st->pattern[g->pat_i % st->pattern_len] == TG_HOLD) {
+        g->pat_i++;                                 /* held: the note before rings on */
+        return;
+    }
     int note = pattern_note(g, g->pat_i, g->base_note[TG_PART_MELODY] + g->root);
     g->pat_i++;
     if (note < 0) {
@@ -1961,6 +1979,7 @@ static void melody_bird(tg_gen *g, beat_pos b, int velocity, int offset, tg_even
 }
 
 /* ---- bass modes ---------------------------------------------------------------------------------------- */
+static int riff_in_key(const tg_gen *g, int note);
 static void bass_mode_tick(tg_gen *g, beat_pos b, int velocity, int offset, tg_event_fn fn, void *ctx)
 {
     const tg_style *st = g->style;
@@ -1976,7 +1995,7 @@ static void bass_mode_tick(tg_gen *g, beat_pos b, int velocity, int offset, tg_e
     case TG_BASS_OSTINATO: {
         if (b.downbeat)
             g->bass_hit = 0;
-        uint16_t r = st ? st->bass_rhythm : 0;
+        uint32_t r = st ? st->bass_rhythm : 0;
         bool hit = r ? ((r >> b.m.bar_pos) & 1) : b.on_beat;
         if (!hit)
             break;
@@ -1985,7 +2004,17 @@ static void bass_mode_tick(tg_gen *g, beat_pos b, int velocity, int offset, tg_e
         tt_chord c;
         tg_chord_at(g, g->chord_step, 3, &c);
         int root = bass_root_note(g, c.root);
-        note = ladder_note(g, root, k);
+        if (st && st->bass_semis) {
+            /* a riff in semitones over the chord's root (boogie), the root in the bass's lowest octave */
+            note = g->base_note[TG_PART_BASS] + g->root + pmod12(c.root) + k;
+            if (note > g->base_note[TG_PART_BASS] + g->root + 24)
+                note -= 12;
+            note = riff_in_key(g, note);
+        } else {
+            note = ladder_note(g, root, k);
+        }
+        if (st && st->bass_gate)
+            g->b808_off = b.q + st->bass_gate;
         break;
     }
     case TG_BASS_LINE:
@@ -2337,6 +2366,145 @@ static void perc_pattern(tg_gen *g, beat_pos b, int velocity, int offset, tg_eve
     }
 }
 
+/* ---- the popular genres: a groove, the 808, struck chords -------------------------------------------- */
+/* a riff's note (semitones over the chord's root) kept in the key: the scale, the chord and the genre's blue notes;
+ * a note outside them moves to the nearest that is in */
+static int riff_in_key(const tg_gen *g, int note)
+{
+    uint16_t ok = (uint16_t)(g->allowed_pcs | g->chord_scale | g->mel_add);
+    if (!ok || in_mask(ok, note, g->root))
+        return note;
+    return mask_nearest(ok, g->root, note);
+}
+
+static const tg_groove *groove_of(const tg_gen *g)
+{
+    return g->style && g->style->groove ? tg_groove_get(g->style->groove - 1) : 0;
+}
+
+/* where the tick is in the groove's loop (two bars, or its own length) */
+static int loop_pos(const tg_gen *g, beat_pos b)
+{
+    const tg_groove *gr = groove_of(g);
+    int len = gr && gr->len ? gr->len : 2 * b.bar_ticks;
+    len = len < 1 ? 1 : len > 32 ? 32 : len;
+    return b.q % len;
+}
+
+/* a drum roll: the hit again two to four times before the next tick (32nds, triplets: trap's hats) */
+static void roll_add(tg_gen *g, int note, int vel)
+{
+    float tickp = g->sample_rate / g->t.rate_hz;
+    int k = 2 + (int)(prand(g) * 3.0f);              /* 2, 3 or 4 strokes in the tick */
+    for (int i = 1; i < k && g->rat_n < 8; ++i) {
+        g->rat[g->rat_n].note = (uint8_t)note;
+        g->rat[g->rat_n].vel = (uint8_t)clampi(vel - 6 + 4 * i, 1, 127);
+        g->rat[g->rat_n].due = (int32_t)(tickp * (float)i / (float)k);
+        g->rat_n++;
+    }
+}
+
+/* the roll's strokes, sample by sample */
+static void roll_run(tg_gen *g, int offset, tg_event_fn fn, void *ctx)
+{
+    for (int i = 0; i < g->rat_n;) {
+        if (--g->rat[i].due <= 0) {
+            emit(fn, ctx, TG_PART_DRUMS, g->rat[i].note, g->rat[i].vel, true, offset);
+            emit(fn, ctx, TG_PART_DRUMS, g->rat[i].note, 0, false, offset);   /* (a drum rings on its own) */
+            g->rat[i] = g->rat[--g->rat_n];
+        } else {
+            ++i;
+        }
+    }
+}
+
+/* a style's groove: its instruments on the ticks of the loop, accents and ghost notes, hat rolls, a fill and a
+ * crash into each arrival */
+static void perc_groove(tg_gen *g, beat_pos b, int velocity, int offset, tg_event_fn fn, void *ctx)
+{
+    const tg_groove *gr = groove_of(g);
+    if (!gr)
+        return;
+    int period, d = tg_period_position(g, &period);
+    int to_arrival = period - d;
+    bool arrival = d == 0 && b.q > 0;
+    int pos = loop_pos(g, b), dv = (velocity - 85) / 4;
+    if (gr->fill && arrival)
+        drum_hit(g, TG_GM_CRASH, 110 + dv, offset, fn, ctx);
+    if (gr->fill && to_arrival <= g->division && to_arrival > 0) {
+        drum_hit(g, TG_GM_SNARE, 70 + dv + 40 * (g->division - to_arrival) / g->division, offset, fn, ctx);
+        for (int k = 0; k < 8; ++k)                 /* the kick goes on under the fill */
+            if ((gr->lane[k].note == TG_GM_KICK || gr->lane[k].note == TG_GM_BASS_DRUM) && ((gr->lane[k].hits >> pos) & 1u))
+                drum_hit(g, gr->lane[k].note, gr->lane[k].vel + dv, offset, fn, ctx);
+        return;
+    }
+    for (int k = 0; k < 8; ++k) {
+        const tg_lane *l = &gr->lane[k];
+        if (!l->note || !((l->hits >> pos) & 1u))
+            continue;
+        int v = l->vel + dv + ((l->accent >> pos) & 1u ? 20 : 0) - ((l->ghost >> pos) & 1u ? 30 : 0);
+        drum_hit(g, l->note, v, offset, fn, ctx);
+        if (gr->roll && (l->note == TG_GM_HAT_CLOSED || l->note == 44) && !((l->accent >> pos) & 1u) &&
+            prand(g) * 20.0f < (float)gr->roll)
+            roll_add(g, l->note, v);
+    }
+}
+
+/* bass, 808: a long low note on each kick of the groove (or bass_rhythm), the chord's root (or the riff's
+ * notes), struck before the last one ends so that a gliding synth slides; the chord change always strikes */
+static void bass_808(tg_gen *g, beat_pos b, int velocity, int offset, tg_event_fn fn, void *ctx)
+{
+    const tg_style *st = g->style;
+    const tg_groove *gr = groove_of(g);
+    bool hit = g->chord_fresh;
+    if (st && st->bass_rhythm) {
+        hit |= (st->bass_rhythm >> b.m.bar_pos) & 1u;
+    } else if (gr) {
+        int pos = loop_pos(g, b);
+        for (int k = 0; k < 8; ++k)
+            if ((gr->lane[k].note == TG_GM_KICK || gr->lane[k].note == TG_GM_BASS_DRUM) && ((gr->lane[k].hits >> pos) & 1u))
+                hit = true;
+    } else {
+        hit |= b.downbeat;
+    }
+    if (!hit)
+        return;
+    if (g->chord_fresh)
+        g->bass_hit = 0;
+    int root = g->base_note[TG_PART_BASS] + g->root + pmod12(g->chord.root), note = root;   /* (low: an 808) */
+    if (st && st->bass_len) {
+        int k = st->bass_notes[g->bass_hit % st->bass_len];
+        note = st->bass_semis ? riff_in_key(g, root + k) : ladder_note(g, root, k);
+    }
+    g->bass_hit++;
+    g->chord_fresh = false;
+    int old = g->sounding[TG_PART_BASS];
+    if (old == note)                                 /* the same note again: struck anew */
+        emit(fn, ctx, TG_PART_BASS, old, 0, false, offset);
+    emit(fn, ctx, TG_PART_BASS, note, accent_plain(velocity, b) + 4, true, offset);   /* on, then the old off */
+    if (old >= 0 && old != note)
+        emit(fn, ctx, TG_PART_BASS, old, 0, false, offset);
+    g->sounding[TG_PART_BASS] = note;
+    g->since_note[TG_PART_BASS] = 0;
+    g->bass_note = note;
+    g->b808_off = st && st->bass_gate ? b.q + st->bass_gate : -1;
+}
+
+/* third part, struck chords: the chord on the rhythm's ticks, held pad_gate ticks */
+static void pad_rhythm(tg_gen *g, beat_pos b, int velocity, int offset, tg_event_fn fn, void *ctx)
+{
+    const tg_style *st = g->style;
+    if (g->rhythm_off >= 0 && b.q >= g->rhythm_off) {
+        pad_off(g, offset, fn, ctx);
+        g->rhythm_off = -1;
+    }
+    if (!st || !((st->pad_rhythm >> loop_pos(g, b)) & 1u))
+        return;
+    pad_voice(g, offset, accent_plain(velocity, b) - 16, true, false, fn, ctx);
+    if (st->pad_gate)
+        g->rhythm_off = b.q + st->pad_gate;
+}
+
 /* ---- humanization ---------------------------------------------------------------------------------- */
 /* Every event can come a little late, as from a player: up to a few milliseconds per part (each note
  * of a chord on its own, which spreads it slightly), and velocities vary a little. A note's release
@@ -2637,8 +2805,18 @@ static void loff_tick(tg_gen *g, int offset)
 static void rec_sink(void *ctx, const tg_event *e)
 {
     tg_gen *g = ctx;
-    if (g->frozen)
+    /* a groove's drums are a loop already: never recorded, they play on live under a frozen pattern */
+    bool groove_drums = e->part == TG_PART_DRUMS && g->perc_mode == TG_PERC_GROOVE;
+    if (g->frozen) {
+        if (groove_drums)
+            overlay_in(g, e);
         return;                                     /* the generator runs on silently */
+    }
+    if (groove_drums) {
+        if (!(e->on && e->type == TG_EV_NOTE && g->gp_from >= 0 && g->ticks - 1 >= g->gp_from && g->ticks - 1 < g->gp_until))
+            overlay_in(g, e);
+        return;
+    }
     if (e->on && e->type == TG_EV_NOTE && g->gp_from >= 0 && g->ticks - 1 >= g->gp_from && g->ticks - 1 < g->gp_until)
         return;                                     /* a general pause: everything is silent */
     if (e->type == TG_EV_NOTE && e->part < TG_EVENT_PARTS) {
@@ -2650,6 +2828,8 @@ static void rec_sink(void *ctx, const tg_event *e)
             r->ev[open].len = (uint16_t)(l > 0 ? l : 1);
             g->rec_open[e->part][e->note] = -1;
         }
+        if (e->on && r->n >= TG_PAT_MAX && g->rec_full < 0)
+            g->rec_full = d;                        /* full: the loop will end before this bar */
         if (e->on && r->n < TG_PAT_MAX) {
             tg_pnote *x = &r->ev[r->n];
             x->tick = (uint16_t)d;
@@ -2887,6 +3067,26 @@ static void seq_tick(tg_gen *g, int offset)
     if (d == 0 && g->ticks > 1) {
         /* the period just heard is complete */
         tg_pattern *r = &g->rec[g->rec_cur];
+        if (g->rec_full >= 0) {
+            /* more notes than a pattern holds (a busy genre): the loop keeps the whole bars that fitted, in twos */
+            int bar = bar_ticks_of(g), keep = g->rec_full / (2 * bar) * 2 * bar;
+            if (keep < bar) keep = g->rec_full / bar * bar;
+            if (keep < bar) keep = bar;
+            int m = 0;
+            for (int i = 0; i < r->n; ++i)
+                if (r->ev[i].tick < keep)
+                    r->ev[m++] = r->ev[i];
+            for (int p = 0; p < TG_EVENT_PARTS; ++p)
+                for (int n = 0; n < 128; ++n)
+                    if (g->rec_open[p][n] >= m)
+                        g->rec_open[p][n] = -1;
+            r->n = (uint16_t)m;
+            r->len = (uint16_t)keep;
+            for (int i = 0; i < m; ++i)
+                if (r->ev[i].tick + r->ev[i].len > keep)
+                    r->ev[i].len = (uint16_t)(keep - r->ev[i].tick);
+            g->rec_full = -1;
+        }
         for (int p = 0; p < TG_EVENT_PARTS; ++p)
             for (int n = 0; n < 128; ++n)
                 if (g->rec_open[p][n] >= 0) {
@@ -2921,6 +3121,7 @@ static void seq_tick(tg_gen *g, int offset)
         r = &g->rec[g->rec_cur];
         r->n = 0;
         r->len = (uint16_t)period;
+        g->rec_full = -1;
         r->root = (int8_t)(g->key_pending ? g->next_root : g->root);
         r->scale = (int8_t)(g->key_pending ? g->next_scale : g->scale);
     } else if (g->ticks == 1) {
@@ -3357,8 +3558,12 @@ static void process_block(tg_gen *g, int size, tg_event_fn fn, void *ctx)
                 tg_meter_pos m;
                 tg_meter_at(g, g->ticks - 1, &m);
                 float d = 0.0f;
-                if (g->swing > 0.0f && g->division % 2 == 0 && m.sub == g->division / 2)
+                if (g->swing > 0.0f && g->style && g->style->swing16 && g->division == 4) {
+                    if (m.sub % 2 == 1)
+                        d += g->swing * tickp / 3.0f;   /* the off sixteenths late: 1 = triplet sixteenths */
+                } else if (g->swing > 0.0f && g->division % 2 == 0 && m.sub == g->division / 2) {
                     d += g->swing * tickp * (float)g->division / 6.0f;
+                }
                 if (g->lilt > 0.0f && g->beats_per_bar == 3)
                     d += g->lilt * tickp * (float)g->division * (m.beat == 0 ? 0.15f : m.beat == 2 ? 0.07f : 0.0f);
                 g->tick_delay = (int)d;
@@ -3400,6 +3605,7 @@ static void process_block(tg_gen *g, int size, tg_event_fn fn, void *ctx)
             case TG_PAD_BROKEN:    pad_broken(g, b, velocity, i, fn, ctx); break;
             case TG_PAD_AFTERBEAT: pad_afterbeat(g, b, velocity, i, fn, ctx); break;
             case TG_PAD_ARPEGGIO:  pad_arpeggio(g, b, velocity, i, fn, ctx); break;
+            case TG_PAD_RHYTHM:    pad_rhythm(g, b, velocity, i, fn, ctx); break;
             case TG_PAD_REPEAT:
                 if (b.q % (g->division >= 2 ? g->division / 2 : 1) == 0)
                     pad_voice(g, i, accent(velocity, b) - 24, true, false, fn, ctx);
@@ -3414,6 +3620,7 @@ static void process_block(tg_gen *g, int size, tg_event_fn fn, void *ctx)
             case TG_BASS_BAR:     if (b.downbeat || g->chord_fresh) bass_bar(g, b, velocity, i, fn, ctx); break;
             case TG_BASS_MARCH:   if (b.on_beat) bass_march(g, b, velocity, i, fn, ctx); break;
             case TG_BASS_PEDAL:   bass_pedal(g, b, velocity, i, fn, ctx); break;
+            case TG_BASS_808:     bass_808(g, b, velocity, i, fn, ctx); break;
             case TG_BASS_DRONE: case TG_BASS_OSTINATO: case TG_BASS_LINE: case TG_BASS_REPEAT:
             case TG_BASS_TOLL: case TG_BASS_BEAT: case TG_BASS_NONE:
                 bass_mode_tick(g, b, velocity, i, fn, ctx);
@@ -3422,6 +3629,10 @@ static void process_block(tg_gen *g, int size, tg_event_fn fn, void *ctx)
                 if (g->chord_fresh && g->since_note[TG_PART_BASS] >= min_gap)
                     bass_play(g, b, unit(g, TG_PART_BASS, o[0]), velocity, i, fn, ctx);
                 break;
+            }
+            if (g->b808_off >= 0 && b.q >= g->b808_off) {   /* a gated bass note ends (808, OSTINATO) */
+                note_off(g, TG_PART_BASS, i, fn, ctx);
+                g->b808_off = -1;
             }
             cx_add(g, b, velocity, i, fn, ctx);
             int before = g->sounding[TG_PART_MELODY];
@@ -3455,9 +3666,13 @@ static void process_block(tg_gen *g, int size, tg_event_fn fn, void *ctx)
                 perc_kit(g, b, velocity, gate[i * 2] && !g->kit_g1_prev, gate[i * 2 + 1] && !g->kit_g3_prev, i, fn, ctx);
             else if (g->perc_mode == TG_PERC_PATTERN)
                 perc_pattern(g, b, velocity, i, fn, ctx);
+            else if (g->perc_mode == TG_PERC_GROOVE)
+                perc_groove(g, b, velocity, i, fn, ctx);
         }
         g->kit_g1_prev = gate[i * 2];
         g->kit_g3_prev = gate[i * 2 + 1];
+        if (g->rat_n)
+            roll_run(g, i, fn, ctx);
         if (g->roll_countdown > 0.0f) {
             g->roll_countdown -= 1.0f;
             if (g->roll_countdown <= 0.0f && g->roll_note >= 0 && g->ticks - 1 < g->roll_until)

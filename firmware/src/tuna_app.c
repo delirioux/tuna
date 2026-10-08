@@ -106,21 +106,8 @@ static float deja_value(const tuna_app *a)
     return a->g.style ? a->g.style->motif : 0.0f;
 }
 
-/* the player's own settings over the piece's: tempo, key, percussion, evolution */
-static void keep_apply(tuna_app *a)
-{
-    tg_gen *g = &a->g;
-    if (a->keep_bpm > 0.0f)
-        g->bpm = a->keep_bpm;
-    if (a->keep_root >= 0)
-        tg_set_root(g, a->keep_root);           /* (before the first tick: at once) */
-    if (a->keep_perc >= 0)
-        tg_set_percussion(g, a->keep_perc);
-    if (a->keep_evolve)
-        tg_evolve(g, a->kv_on, a->kv_periods, a->kv_depth, a->kv_mod);
-}
-
-/* a fresh generator for the item; the player's chaos knobs, memory and own settings stay as they were */
+/* a fresh generator for the item: the piece's own tempo, key, percussion and evolution; the player's chaos
+ * knobs (and the parts they move) and memory stay as they were */
 static void load_item(tuna_app *a, int item)
 {
     tg_gen *g = &a->g;
@@ -137,7 +124,6 @@ static void load_item(tuna_app *a, int item)
     tg_set_chaos_parts(g, parts);
     g->x.deja_vu = deja_value(a);
     tg_reseed(g, a->seed);
-    keep_apply(a);
     a->item = item;
     a->req_on = false;
     a->req.meter = a->req.mel = a->req.bass = a->req.pad = a->req.harm = a->req.scale = -1;
@@ -147,11 +133,11 @@ void ta_init(tuna_app *a, float sample_rate, uint32_t seed)
 {
     memset(a, 0, sizeof *a);
     a->sample_rate = sample_rate;
-    a->seed = seed;
+    a->seed = seed % TA_SEEDS;
     a->pending = -1;
+    a->seed_req = -1;
     a->req.meter = a->req.mel = a->req.bass = a->req.pad = a->req.harm = a->req.scale = -1;
     a->deja = TA_DV_STYLE;
-    a->keep_root = a->keep_perc = -1;
     for (int t = 0; t < TP_TRACKS; ++t)
         a->level[t] = 80;
     a->reverb = 30;
@@ -197,31 +183,11 @@ void ta_select(tuna_app *a, int item)
 
 void ta_set_chaos_parts(tuna_app *a, unsigned mask) { tg_set_chaos_parts(&a->g, mask); }
 
-void ta_set_tempo(tuna_app *a, float bpm)
-{
-    a->g.bpm = a->keep_bpm = bpm;
-}
-
-void ta_set_root(tuna_app *a, int pc)
-{
-    pc = ((pc % 12) + 12) % 12;
-    a->keep_root = (int8_t)pc;
-    tg_set_root(&a->g, pc);
-}
-
-void ta_set_percussion(tuna_app *a, int mode)
-{
-    a->keep_perc = (int8_t)mode;
-    tg_set_percussion(&a->g, mode);
-}
-
+void ta_set_tempo(tuna_app *a, float bpm) { a->g.bpm = bpm; }
+void ta_set_root(tuna_app *a, int pc) { tg_set_root(&a->g, ((pc % 12) + 12) % 12); }
+void ta_set_percussion(tuna_app *a, int mode) { tg_set_percussion(&a->g, mode); }
 void ta_set_evolve(tuna_app *a, bool on, int periods, float depth, bool modulate)
 {
-    a->keep_evolve = true;
-    a->kv_on = on;
-    a->kv_periods = (uint8_t)periods;
-    a->kv_depth = depth;
-    a->kv_mod = modulate;
     tg_evolve(&a->g, on, periods, depth, modulate);
 }
 
@@ -253,17 +219,23 @@ void ta_play(tuna_app *a, bool on)
     a->playing = on;
 }
 
+/* 256 seeds (a full turn of steps); stopped: at once; playing: at the next half of the period */
 void ta_seed_step(tuna_app *a, int delta)
 {
-    a->seed = (uint32_t)((int64_t)a->seed + delta);
-    if (a->playing)
-        all_off(a);
-    tg_reseed(&a->g, a->seed);
+    uint32_t from = a->seed_req >= 0 ? (uint32_t)a->seed_req : a->seed;
+    ta_set_seed(a, (from + (uint32_t)(delta % TA_SEEDS) + TA_SEEDS) % TA_SEEDS);
 }
 
 void ta_set_seed(tuna_app *a, uint32_t seed)
 {
-    ta_seed_step(a, (int)(seed - a->seed));
+    seed %= TA_SEEDS;
+    if (a->playing) {
+        a->seed_req = seed == a->seed ? -1 : (int)seed;
+        return;
+    }
+    a->seed_req = -1;
+    a->seed = seed;
+    tg_reseed(&a->g, a->seed);
 }
 
 void ta_set_deja(tuna_app *a, int mode)
@@ -404,14 +376,22 @@ void ta_process(tuna_app *a, int frames)
 {
     while (a->playing && frames > 0) {
         int n = frames > TG_MAX_BLOCK ? TG_MAX_BLOCK : frames;
-        /* a piece chosen while playing comes in where the period ends, on the cadence */
-        if ((a->pending >= 0 || a->req_on) && a->g.ticks > 0 && tg_period_position(&a->g, NULL) == 0) {
+        /* a piece, a seed or a form chosen while playing comes in at the next half of the period: where it
+         * begins (on the cadence) or halfway (on the half cadence) */
+        int d = a->g.ticks > 0 ? tg_period_position(&a->g, NULL) : -1;
+        if ((a->pending >= 0 || a->req_on || a->seed_req >= 0) && (d == 0 || (d > 0 && d == tg_half_position(&a->g)))) {
             all_off(a);
+            if (a->seed_req >= 0) {
+                a->seed = (uint32_t)a->seed_req;
+                a->seed_req = -1;
+                if (a->pending < 0 && !a->req_on)
+                    tg_reseed(&a->g, a->seed);    /* (with a new piece: its seed too) */
+            }
             if (a->pending >= 0) {
                 load_item(a, a->pending);         /* (a new piece: the form settings asked for go) */
                 a->pending = -1;
                 a->req_on = false;
-            } else {
+            } else if (a->req_on) {
                 apply_req(a);
             }
         }

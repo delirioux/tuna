@@ -122,16 +122,16 @@ static int32_t tu_icon_mid(int32_t x, int32_t cy, uint32_t size, uint32_t id, ui
 static const char *const TU_MEL_NAMES[] = {"PHRASE", "CHANT", "TINTI", "PATTERN", "BIRDS"};
 /* (a card's value fits 49 px: in M, or in S; the long names shortened as Felucca's are) */
 static const char *const TU_BASS_NAMES[] = {"FREE", "ROOT", "WALK", "BAR", "MARCH", "PEDAL", "DRONE", "OSTIN",
-                                         "LINE", "REPEAT", "TOLL", "BEAT", "NONE"};
+                                         "LINE", "REPEAT", "TOLL", "BEAT", "NONE", "808"};
 static const char *const TU_PAD_NAMES[] = {"BLOCK", "ALBERTI", "CNTR", "BROKEN", "AFTER", "PARAL", "DOUBLE",
                                         "REPEAT", "ARP", "OOMPAH", "TREM", "ORGNM", "TINTI", "CANON",
-                                        "FIGURE", "ADDIT", "PHASE", "NONE"};
+                                        "FIGURE", "ADDIT", "PHASE", "NONE", "RHYTHM"};
 static const char *const TU_HARM_NAMES[] = {"PLAN", "CYCLE", "DRONE"};
 static const char *const TU_TUNE_NAMES[TT_TUNE_COUNT] = {"EQUAL", "MEAN", "WERCK", "PYTH", "JUST", "USER"};
 static const char *const TU_SCALE_SHORT[TS_COUNT] = {"MAJ", "DOR", "PHRY", "LYD", "MIX", "MIN", "LOC", "HARM", "MEL",
                                                   "PEN", "MPEN", "BLUES", "WHOLE", "DIMHW", "DIMWH", "MESS3",
                                                   "ACOUS", "HUNG", "DHARM", "PDOM"};
-static const char *const TU_PERC_NAMES[] = {"OFF", "PERIOD", "KIT", "PATTERN"};
+static const char *const TU_PERC_NAMES[] = {"OFF", "PERIOD", "KIT", "PATTERN", "GROOVE"};
 static const char *const TU_DEJA_NAMES[TA_DV_COUNT] = {"OFF", "OWN", "LOCK"};
 static const char *const TU_PAGE_NAMES[TU_PAGES] = {"HOME", "LIBRARY", "KEY", "TIME", "PARTS", "EVOLVE", "FREEZE",
                                                  "MIX", "REVERB", "SAVE", "LOAD", "MENU", "MIDI", "RESONATOR",
@@ -149,8 +149,10 @@ static bool tu_mode_ok(const tg_gen *g, int kind, int m)
     switch (kind) {
     case 0: return m == TG_MEL_PATTERN ? st->mel_mode == m : m >= 0 && m < TU_NAMES_N(TU_MEL_NAMES);
     case 1: return m == TG_BASS_MARBLES ? false : m == TG_BASS_OSTINATO || m == TG_BASS_LINE ? st->bass_mode == m
+                 : m == TG_BASS_808 ? st->groove || st->bass_rhythm
                                                                                              : m >= 0 && m < TU_NAMES_N(TU_BASS_NAMES);
-    case 2: return m >= TG_PAD_CANON && m <= TG_PAD_PHASE ? st->pad_mode == m : m >= 0 && m < TU_NAMES_N(TU_PAD_NAMES);
+    case 2: return (m >= TG_PAD_CANON && m <= TG_PAD_PHASE) || m == TG_PAD_RHYTHM ? st->pad_mode == m
+                                                                     : m >= 0 && m < TU_NAMES_N(TU_PAD_NAMES);
     case 3: return m == TG_HARM_CYCLE ? st->cycle_len > 0 : m >= 0 && m < TU_NAMES_N(TU_HARM_NAMES);
     }
     return false;
@@ -254,7 +256,7 @@ static void tu_page_cards(tuna_ui *u, tu_card *c)
         tu_card_text(&c[0], "ERA", gr == 0 ? "TUNA" : t, gr * 1000 / (TA_GROUPS - 1));
         tu_card_text(&c[1], "PIECE", item >= 0 ? ta_lib_name(item) : "SLOT", -1);
         c[1].name = true;
-        tu_card_int(&c[2], "SEED", (int)(a->seed % 100000u), 0, -1);
+        tu_card_int(&c[2], "SEED", a->seed_req >= 0 ? a->seed_req : (int)(a->seed % TA_SEEDS), 0, -1);
         c[2].ratio = -1;
         c[3].off = true;
         break;
@@ -271,7 +273,7 @@ static void tu_page_cards(tuna_ui *u, tu_card *c)
         tu_card_text(&c[0], "METER", ta_meter_name(e.meter), e.meter < 0 ? -1 : e.meter * 1000 / (TA_M_COUNT - 1));
         tu_card_int(&c[1], "SWING", (int)(g->swing * 100.0f + 0.5f), 0, 100);
         tu_card_int(&c[2], "HUMAN", (int)(g->humanize * 100.0f + 0.5f), 0, 100);
-        tu_card_text(&c[3], "PERC", TU_PERC_NAMES[tu_clampi(g->perc_mode, 0, 3)], g->perc_mode * 333);
+        tu_card_text(&c[3], "PERC", TU_PERC_NAMES[tu_clampi(g->perc_mode, 0, 4)], g->perc_mode * 250);
         break;
     case TU_PG_PARTS:
         if (!g->style) {                          /* a character preset: Marbles' own parts */
@@ -646,7 +648,7 @@ static void tu_panel_parts(tuna_ui *u)
         int32_t y = 8 + i * 24;
         cv_rrect(10, y + 4, 8, 8, 4, tu_part_color(part[i]), T_SURF);
         cv_text_on(24, y + CAP_IN(S, 16), &AF_S, P[i], T_MID, T_SURF);
-        const char *fam = i < TG_PARTS && g->orch_cur[part[i]] >= 0 ? tg_family_name(g->orch_cur[part[i]]) : i == 3 ? TU_PERC_NAMES[tu_clampi(g->perc_mode, 0, 3)] : "";
+        const char *fam = i < TG_PARTS && g->orch_cur[part[i]] >= 0 ? tg_family_name(g->orch_cur[part[i]]) : i == 3 ? TU_PERC_NAMES[tu_clampi(g->perc_mode, 0, 4)] : "";
         cv_free_text(90, y + CAP_IN(M, 16), &AF_M, fam, T_TEXT, T_SURF, 140);
     }
     if (a->req_on)
@@ -1037,7 +1039,21 @@ void tu_knob(tuna_ui *u, int k, int d)
         if (c == 0) tu_set_edit(u, 0, d);
         else if (c == 1) g->swing = (float)tu_clampi((int)(g->swing * 100.0f + 0.5f) + 2 * d, 0, 100) / 100.0f;
         else if (c == 2) g->humanize = (float)tu_clampi((int)(g->humanize * 100.0f + 0.5f) + 2 * d, 0, 100) / 100.0f;
-        else ta_set_percussion(a, tu_clampi(g->perc_mode + d, TG_PERC_OFF, TG_PERC_KIT));
+        else {
+            /* OFF, PERIOD, KIT, and the style's own PATTERN or GROOVE where it has one */
+            int m = g->perc_mode;
+            for (int i = 0; i < 5; ++i) {
+                m = tu_clampi(m + (d > 0 ? 1 : -1), TG_PERC_OFF, TG_PERC_GROOVE);
+                bool ok = m <= TG_PERC_KIT || (m == TG_PERC_PATTERN && g->style && g->style->drum_pat[0].note) ||
+                          (m == TG_PERC_GROOVE && g->style && g->style->groove);
+                if (ok)
+                    break;
+            }
+            bool ok = m <= TG_PERC_KIT || (m == TG_PERC_PATTERN && g->style && g->style->drum_pat[0].note) ||
+                      (m == TG_PERC_GROOVE && g->style && g->style->groove);
+            if (ok)
+                ta_set_percussion(a, m);
+        }
         break;
     case TU_PG_PARTS:
         if (g->style)
@@ -1183,7 +1199,7 @@ void tu_button(tuna_ui *u, int b, bool down)
             char m[24];
             ta_seed_step(a, d);
             tu_cpy(m, "SEED ", sizeof m);
-            tu_fmt_int(m + 5, (int)(a->seed % 100000u));
+            tu_fmt_int(m + 5, a->seed_req >= 0 ? a->seed_req : (int)(a->seed % TA_SEEDS));
             tu_msg(u, m);
         }
         break;

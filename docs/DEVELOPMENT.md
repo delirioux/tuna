@@ -71,9 +71,18 @@ touched only where Tuna hooks in (`felucca.c`, `main.c`, `audio.c`, `tools/build
   every chord change). The filter has its own random numbers, and added notes go out beside the parts, so the
   harmony and everything else stays the composer's. At 0 nothing changes: the composer byte for byte.
   The CHAOS page (EDIT a third time) chooses which parts follow; slots keep it (record version 2).
-- **The player's settings carry over.** A new composer brings its own key, tempo, scale, meter and sounds,
-  except what the player set: the tempo (SELECT), the root (a key tapped, or KEY's knob), percussion, and
-  evolution stay for the next pieces. Chaos, memory, mix, reverb, resonator and MIDI always stay.
+- **Each piece brings its own settings.** A new composer or genre loads its own tempo, key, scale, meter,
+  percussion, evolution and sounds: keeping the player's would lose what makes it itself. The chaos knobs (and
+  the parts they move), memory, mix, reverb, resonator and MIDI stay.
+- **Changes land on half periods.** A piece, a seed (OCT) or a form setting chosen while playing comes in at the
+  next half of the period: its start (on the cadence) or its middle (on the half cadence). Seeds run 0..255.
+- **Genres are data.** The 86 popular genres live in `tools/genres/d1950.py` .. `d2020.py` (readable: grooves as
+  tick strings, chords by name); `python3 tools/tuna_genres.py` writes `firmware/src/tuna_genres.inc` and checks
+  them (chord names against the vocabularies, lengths, names); `tuna_tests.sh` fails if the two differ. A
+  genre's drums are a groove (up to 8 instruments over two bars, accents, ghosts, hat rolls) with its own kit
+  on Felucca's DRUM engine; bass can be a riff in semitones or an 808 sliding from kick to kick; the third part
+  can strike chords on a rhythm (skanks, stabs) or play power chords. Freezing a genre loops its pitched parts
+  (whole bars if a period has more notes than a pattern holds) while its groove plays on.
 - **The resonator in fixed point** at half rate: about 0.12× of Felucca's reference mix.
 
 ## Building and testing

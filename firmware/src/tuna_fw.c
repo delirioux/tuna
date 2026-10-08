@@ -24,22 +24,8 @@
 static tuna_app tf_app;
 static tuna_ui tf_ui;
 
-/* ---- Tuna's instrument families on Felucca's sounds (engine, preset), as tests/tuna_felucca.c ---------- */
-enum { TF_ANALOG = 0, TF_PHASE = 2, TF_LOFI = 3, TF_SAMPLE = 4, TF_VOICE = 5, TF_WHEEL = 7, TF_GRAIN = 8, TF_PHYS = 9,
-       TF_FM6 = 12 };
-static const uint8_t TF_FAMILY[TI_COUNT][2] = {
-    [TI_DEFAULT] = {TF_ANALOG, 1},  [TI_PIANO] = {TF_SAMPLE, 0},   [TI_HARPSICHORD] = {TF_FM6, 7},
-    [TI_ORGAN] = {TF_WHEEL, 0},     [TI_STRINGS] = {TF_ANALOG, 11}, [TI_VIOLIN] = {TF_PHASE, 2},
-    [TI_CELLO] = {TF_PHASE, 2},     [TI_CONTRABASS] = {TF_ANALOG, 7}, [TI_PIZZ] = {TF_PHYS, 2},
-    [TI_FLUTE] = {TF_SAMPLE, 2},    [TI_OBOE] = {TF_ANALOG, 10},   [TI_CLARINET] = {TF_WHEEL, 3},
-    [TI_BASSOON] = {TF_LOFI, 1},    [TI_HORN] = {TF_PHASE, 0},     [TI_TRUMPET] = {TF_ANALOG, 9},
-    [TI_BRASS] = {TF_FM6, 3},       [TI_TUBA] = {TF_FM6, 2},       [TI_HARP] = {TF_PHYS, 8},
-    [TI_GUITAR] = {TF_PHYS, 2},     [TI_CHOIR] = {TF_VOICE, 0},    [TI_VOICE] = {TF_VOICE, 1},
-    [TI_BELLS] = {TF_FM6, 1},       [TI_CELESTA] = {TF_PHASE, 4},  [TI_MARIMBA] = {TF_FM6, 5},
-    [TI_BANDONEON] = {TF_WHEEL, 2}, [TI_SAX] = {TF_SAMPLE, 3},     [TI_SYNTH] = {TF_ANALOG, 0},
-    [TI_PAD] = {TF_ANALOG, 1},      [TI_WHISTLE] = {TF_WHEEL, 3},  [TI_DRONE] = {TF_PHYS, 7},
-    [TI_EPIANO] = {TF_FM6, 0},
-};
+/* ---- Tuna's instrument families on Felucca's sounds: tuna_sounds.h (shared with tests/tuna_felucca.c) ---- */
+#include "tuna_sounds.h"
 
 /* asked for by the ISR, done by the main loop */
 static volatile int8_t tf_family_req[3] = {-1, -1, -1};
@@ -86,6 +72,16 @@ static void tf_part_settings(uint32_t k)
     if (k == 0u && (g->bass_mode == TG_BASS_REPEAT || g->bass_mode == TG_BASS_OSTINATO || g->bass_mode == TG_BASS_BEAT) &&
         trk[0].p[P_REL] > 40)
         trk[0].p[P_REL] = 40;
+    if (k == 2u && g->pad_mode == TG_PAD_RHYTHM && trk[2].p[P_REL] > 30)
+        trk[2].p[P_REL] = 30;                      /* struck chords: short */
+    /* what the family's preset does not hold: distortion, glide, the voice mode */
+    int fam = tf_family_cur[k];
+    if (k < 3u && fam > TI_DEFAULT && fam < TI_COUNT) {
+        const tsn_family *f = &TSN_FAMILY[fam];
+        if (f->dist != TSN_KEEP) trk[k].p[P_DIST] = f->dist;
+        if (f->glide != TSN_KEEP) trk[k].p[P_GLIDE] = f->glide;
+        if (f->voice != TSN_KEEP) trk[k].p[P_VOICE] = f->voice;
+    }
 }
 
 /* the main loop: a family the ISR asked for becomes the track's Felucca sound (the engine fades over, as a
@@ -96,8 +92,8 @@ static void tf_load_family(uint32_t k, int fam)
         return;
     tf_family_cur[k] = (int8_t)fam;
     undo_depth++;                                  /* (no undo copy of Tuna's loads) */
-    set_engine_of(&trk[k], TF_FAMILY[fam][0]);
-    apply_preset_to(&trk[k], TF_FAMILY[fam][1]);
+    set_engine_of(&trk[k], TSN_FAMILY[fam].engine);
+    apply_preset_to(&trk[k], TSN_FAMILY[fam].preset);
     undo_depth--;
     fm1_irq_off();
     tf_part_settings(k);
@@ -172,7 +168,9 @@ static void tf_midi_out(void)
 /* before Felucca's mix: Tuna for this block */
 static void tf_audio_pre(uint32_t n)
 {
-    if (tf_app.g.root != tf_timp_root) {
+    /* the drum kit: a groove's own, or Felucca's with the toms tuned as timpani (the main loop sets the kit:
+     * tf_kit) */
+    if (tf_app.g.perc_mode != TG_PERC_GROOVE && tf_app.g.root != tf_timp_root) {
         tf_tune_timpani(tf_app.g.root);
         tf_timp_root = tf_app.g.root;
     }
@@ -241,7 +239,7 @@ static void tf_init(void)
     for (i = 0; i < NTRK; i++) {
         track_t *t = &trk[i];
         track_defaults(t);
-        set_engine_of(t, i == 3u ? ENGI_DRUM : TF_ANALOG);   /* the drums on track 4, the rest Tuna's */
+        set_engine_of(t, i == 3u ? ENGI_DRUM : TSN_ANALOG);   /* the drums on track 4, the rest Tuna's */
         apply_preset_to(t, i == 3u ? 0u : 1u);
         t->engine = t->eng_req;
         track_defaults_steps(t);                   /* (Felucca's sequencer stays empty) */
@@ -249,7 +247,7 @@ static void tf_init(void)
     undo_depth--;
     song.sel = 0;
     song.master_q12 = 2048;
-    tf_seed_boot = tf_entropy();                   /* another piece at every power-on */
+    tf_seed_boot = tf_entropy() % TA_SEEDS;        /* another piece at every power-on */
     ta_init(&tf_app, (float)FS / (float)TF_DIV, tf_seed_boot);
     tr_init(&tf_app.reso, (float)FS);              /* (the resonator runs at the audio rate) */
     ta_reso_set(&tf_app, tf_app.reso_amount, tf_app.reso_decay, tf_app.reso_bright, tf_app.reso_mode);
@@ -334,6 +332,21 @@ static void tf_service(void)
             tf_level_set[k] = tf_app.level[k];
         }
     tf_rev_set = tf_app.reverb;
+    /* the drum kit follows the style: a groove's own kit, else Felucca's (its toms tuned as timpani) */
+    static const tg_groove *kit_for = (const tg_groove *)1;
+    const tg_groove *gr = tf_app.g.perc_mode == TG_PERC_GROOVE && tf_app.g.style && tf_app.g.style->groove
+                              ? tg_groove_get(tf_app.g.style->groove - 1) : 0;
+    if (gr != kit_for) {
+        int16_t e[8];
+        tsn_kit(gr, e);
+        fm1_irq_off();
+        for (k = 0; k < 8u; k++)
+            trk[3].p[P_E0 + k] = e[k];
+        tf_timp_root = -1;                         /* (Felucca's kit: retuned as timpani again) */
+        tf_snapshot(3);
+        fm1_irq_on();
+        kit_for = gr;
+    }
     song.playing = tf_app.playing;                 /* (PLAY's green LED, Felucca's meters) */
 }
 
@@ -344,7 +357,8 @@ static void tf_leds(void)
     static const uint8_t PAGE_BTN[TU_PAGES] = {
         [TU_PG_HOME] = B_HOME, [TU_PG_LIB] = B_FX, [TU_PG_KEY] = B_SCL, [TU_PG_TIME] = B_EDIT, [TU_PG_PARTS] = B_EDIT,
         [TU_PG_EVOLVE] = B_ARP, [TU_PG_SEQ] = B_SEQ, [TU_PG_MIX] = B_GLO, [TU_PG_FX] = B_GLO, [TU_PG_SAVE] = B_SAVE,
-        [TU_PG_LOAD] = B_SAVE, [TU_PG_MENU] = B_HOME, [TU_PG_MIDI] = B_ENV, [TU_PG_RESO] = B_LFO};
+        [TU_PG_LOAD] = B_SAVE, [TU_PG_MENU] = B_HOME, [TU_PG_MIDI] = B_ENV, [TU_PG_RESO] = B_LFO,
+        [TU_PG_CHAOS] = B_EDIT};
     static uint8_t ready;
     uint8_t nl[FM1_NCOL] = {0}, nd[FM1_NCOL] = {0};
     uint32_t k, c;

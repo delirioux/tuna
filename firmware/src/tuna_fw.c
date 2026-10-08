@@ -62,7 +62,7 @@ static void tf_part_settings(uint32_t k)
     const tg_gen *g = &tf_app.g;
     if (k != 1u)
         trk[k].p[P_VOICE] = V_POLY;
-    trk[k].p[P_LEVEL] = (int16_t)(tf_app.level[k] * 127 / 100);
+    trk[k].p[P_LEVEL] = tsn_level(tf_app.level[k] * 127 / 100, k < 3u ? tf_family_cur[k] : TI_DEFAULT);
     trk[k].p[P_REV] = (int16_t)(tf_app.reverb * 127 / 100);
     if (k == 2u && (g->pad_mode == TG_PAD_ALBERTI || g->pad_mode == TG_PAD_BROKEN || g->pad_mode == TG_PAD_ARPEGGIO ||
                     g->pad_mode == TG_PAD_REPEAT || g->pad_mode == TG_PAD_COUNTER || g->pad_mode == TG_PAD_TREMOLO ||
@@ -96,6 +96,8 @@ static void tf_load_family(uint32_t k, int fam)
     apply_preset_to(&trk[k], TSN_FAMILY[fam].preset);
     undo_depth--;
     fm1_irq_off();
+    if (TSN_FAMILY[fam].own)
+        tsn_apply_own(trk[k].p, TSN_FAMILY[fam].own);
     tf_part_settings(k);
     tf_snapshot(k);
     fm1_irq_on();
@@ -326,7 +328,7 @@ static void tf_service(void)
     for (k = 0; k < NTRK; k++)
         if (tf_app.level[k] != tf_level_set[k] || tf_app.reverb != tf_rev_set) {
             fm1_irq_off();
-            trk[k].p[P_LEVEL] = (int16_t)(tf_app.level[k] * 127 / 100);
+            trk[k].p[P_LEVEL] = tsn_level(tf_app.level[k] * 127 / 100, k < 3u ? tf_family_cur[k] : TI_DEFAULT);
             if (k < 3u)
                 trk[k].p[P_REV] = (int16_t)(tf_app.reverb * 127 / 100);
             tf_snapshot(k);

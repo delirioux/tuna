@@ -1880,6 +1880,9 @@ static const char *const family_names[TI_COUNT] = {
     "E.GUITAR", "DISTGTR", "E.BASS", "SYNBASS", "808", "ACID", "SUPERSAW", "FATBASS", "SYNCLEAD",
     "CHIP", "CLAV", "ROCKORG", "GOSPEL", "TALKBOX", "GLITCH", "SINE KEY", "SHIMMER", "KALIMBA",
     "LOG DRUM", "PLUCK", "SAW LEAD", "WAVEBASS", "STEELPAN",
+    "STR.MACH", "JAZZ ORG", "ACCORDN", "RESO SYN", "METAL LD", "WAVE LD", "STEP LD", "WHISPER",
+    "ARP LEAD", "RING MOD", "CHIP CHR", "FROZEN", "BELLTREE", "GLASS", "REED ORG", "KOTO", "SITAR",
+    "OUD", "BANJO", "DULCIMER", "VIBES", "XYLO", "GLOCK", "TUBULAR", "MUSICBOX", "TABLA",
 };
 
 const char *tg_family_name(int f) { return f >= 0 && f < TI_COUNT ? family_names[f] : "?"; }

@@ -41,12 +41,14 @@ PAD = ["BLOCK", "ALBERTI", "COUNTER", "BROKEN", "AFTERBEAT", "PARALLEL", "DOUBLE
 MEL = ["PHRASE", "CHANT", "TINTI", "PATTERN", "BIRDSONG"]
 HARM = ["PLANNED", "CYCLE", "DRONE"]
 ORCH_MODES = ["FIXED", "CYCLE", "RANDOM", "ENERGY", "CONTRAST"]
-INSTRUMENTS = ["DEFAULT", "PIANO", "HARPSICHORD", "ORGAN", "STRINGS", "VIOLIN", "CELLO", "CONTRABASS", "PIZZ", "FLUTE",
-               "OBOE", "CLARINET", "BASSOON", "HORN", "TRUMPET", "BRASS", "TUBA", "HARP", "GUITAR", "CHOIR", "VOICE",
-               "BELLS", "CELESTA", "MARIMBA", "BANDONEON", "SAX", "SYNTH", "PAD", "WHISTLE", "DRONE", "EPIANO",
-               "EGUITAR", "DISTGUITAR", "EBASS", "SYNTHBASS", "808", "ACID", "SUPERSAW", "FATBASS", "SYNCLEAD",
-               "CHIP", "CLAV", "ROCKORGAN", "GOSPEL", "TALKBASS", "GLITCH", "SINEKEY", "SHIMMER", "KALIMBA",
-               "LOGDRUM", "PLUCKSYNTH", "SAWLEAD", "WAVEBASS", "STEELDRUM"]
+def _instruments():
+    """the instrument families (TI_*), read from firmware/src/tuna_style.h: the enum is the list"""
+    h = (SRC / "tuna_style.h").read_text()
+    body = h[h.index("TI_DEFAULT"): h.index("TI_COUNT")]
+    return [n[3:] for n in re.findall(r"TI_[A-Z0-9_]+", re.sub(r"/\*.*?\*/", "", body, flags=re.S))]
+
+
+INSTRUMENTS = _instruments()
 DRUMS = {"KICK": 36, "BDRUM": 35, "SNARE": 38, "SNARE2": 40, "RIM": 37, "CLAP": 39, "HAT": 42, "PHAT": 44, "OHAT": 46,
          "CRASH": 49, "RIDE": 51, "BELL": 53, "TAMB": 54, "COWBELL": 56, "CONGA_HI": 63, "CONGA_LO": 64,
          "BONGO_HI": 60, "BONGO_LO": 61, "TIMBALE": 65, "CLAVE": 75, "SHAKER": 70, "WOODBLOCK": 76, "TOM_LO": 45,

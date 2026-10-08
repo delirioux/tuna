@@ -155,7 +155,7 @@ static void part_settings(uint32_t k)
     const piece_t *p = cur_piece;
     if (k != 1u)
         trk[k].p[P_VOICE] = V_POLY;               /* the melody keeps its preset's mode */
-    trk[k].p[P_LEVEL] = p->level[k] ? p->level[k] : 100;
+    trk[k].p[P_LEVEL] = tsn_level(p->level[k] ? p->level[k] : 100, k < 3u ? cur_family[k] : TI_DEFAULT);
     if (trk[k].p[P_REV] < p->rev)
         trk[k].p[P_REV] = p->rev;
     if (k == 2u && (gen.pad_mode == TG_PAD_ALBERTI || gen.pad_mode == TG_PAD_BROKEN || gen.pad_mode == TG_PAD_ARPEGGIO ||
@@ -198,6 +198,8 @@ static void apply_family(uint32_t k, int fam, bool now)
         host_preset(&trk[k], TSN_FAMILY[fam].engine, TSN_FAMILY[fam].preset);
     else
         host_preset_req(&trk[k], TSN_FAMILY[fam].engine, TSN_FAMILY[fam].preset);
+    if (TSN_FAMILY[fam].own)
+        tsn_apply_own(trk[k].p, TSN_FAMILY[fam].own);
     part_settings(k);
     snapshot_base(k);
 }

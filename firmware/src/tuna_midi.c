@@ -57,6 +57,11 @@ int tmi_gm_program(int f)
         [TI_SUPERSAW] = 81, [TI_FATBASS] = 39, [TI_SYNCLEAD] = 84, [TI_CHIP] = 80, [TI_CLAV] = 7, [TI_ROCKORGAN] = 18,
         [TI_GOSPEL] = 16, [TI_TALKBASS] = 85, [TI_GLITCH] = 98, [TI_SINEKEY] = 4, [TI_SHIMMER] = 91, [TI_KALIMBA] = 108,
         [TI_LOGDRUM] = 117, [TI_PLUCKSYNTH] = 84, [TI_SAWLEAD] = 81, [TI_WAVEBASS] = 38, [TI_STEELDRUM] = 114,
+        [TI_STRMACH] = 50, [TI_JAZZORGAN] = 17, [TI_ACCORDION] = 21, [TI_RESOSYNTH] = 81, [TI_METALLEAD] = 84,
+        [TI_WAVELEAD] = 80, [TI_STEPLEAD] = 80, [TI_WHISPER] = 91, [TI_ARPLEAD] = 81, [TI_RINGMOD] = 98,
+        [TI_CHIPCHOIR] = 91, [TI_FROZEN] = 94, [TI_BELLTREE] = 112, [TI_GLASS] = 92, [TI_REEDORGAN] = 20,
+        [TI_KOTO] = 107, [TI_SITAR] = 104, [TI_OUD] = 25, [TI_BANJO] = 105, [TI_DULCIMER] = 15, [TI_VIBES] = 11,
+        [TI_XYLOPHONE] = 13, [TI_GLOCKEN] = 9, [TI_TUBULAR] = 14, [TI_MUSICBOX] = 10, [TI_TABLA] = 116,
     };
     return f >= 0 && f < TI_COUNT ? GM[f] : 0;
 }

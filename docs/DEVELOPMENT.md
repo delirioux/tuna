@@ -146,6 +146,26 @@ maths 6, screen 150 checks, the browser test, and every composer over 10 seeds o
 
 None of these is measured yet; they wait for the hardware.
 
+## Next
+
+What the composers' manners could not say (the agents who wrote them met these again and again). Gaps in the
+generator's design, not the hardware's; in order of value:
+
+1. **Rhythm figures.** A melody's rhythm is Marbles' pulse shaped by density and syncopation; a fixed figure per
+   bar (dotted, long-short-short, the mazurka's, the polonaise's, the sicilienne's lilt) cannot be set.
+2. **Beat stress.** Accents follow a general rule plus random sforzandi; an accent table per beat is needed (the
+   mazurka on 2 or 3, the sarabande on 2).
+3. **A drum pattern per manner.** `drum_pat` was left out of the manner tool (a shortcut); add it (the Boléro
+   snare, the Mars side drum, castanets).
+4. **Glides into notes.** Felucca's tracks glide in mono only and the generator never asks for a slide per note
+   (Gershwin's clarinet, Bartók, Khachaturian).
+5. **A shape across the whole piece.** The generator thinks one period at a time; a single crescendo
+   (Zarathustra, the Mountain King's speed-up) or a march that turns once into its trio needs a piece timeline.
+6. **A melody in the bass.** Every bass mode follows the chord roots; a cantus firmus in the bass under running
+   upper voices needs a bass mode of its own.
+7. **A lighter, lower choir.** CHOIR is heavy and mid-register, so a choir cannot sing all three parts
+   (a cappella motets, Rachmaninoff's basses).
+
 ## When the FM-1 arrives
 
 1. Check the stock firmware works, and that the M-VAVE updater can put it back.

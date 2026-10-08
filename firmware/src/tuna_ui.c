@@ -318,9 +318,10 @@ static void tu_page_cards(tuna_ui *u, tu_card *c)
         break;
     }
     case TU_PG_FX:
-        tu_card_int(&c[0], "REVERB", a->reverb, 0, 100);
-        tu_card_int(&c[1], "VOL", u->master, 0, 100);
-        c[2].off = c[3].off = true;
+        tu_card_int(&c[0], "SEND", a->reverb, 0, 100);
+        tu_card_int(&c[1], "SIZE", a->rev_size, 0, 100);
+        tu_card_int(&c[2], "DAMP", a->rev_damp, 0, 100);
+        tu_card_text(&c[3], "TYPE", a->rev_type == TA_REV_SPRING ? "SPRING" : "ROOM", -1);
         break;
     case TU_PG_SAVE:
     case TU_PG_LOAD: {
@@ -745,19 +746,20 @@ static void tu_panel_mix(tuna_ui *u)
     }
 }
 
+/* REVERB: the send, the size, the damping as bars; the model below (Felucca's shared reverb bus) */
 static void tu_panel_fx(tuna_ui *u)
 {
     tuna_app *a = u->app;
-    int32_t w = 200 * a->reverb / 100;
-    cv_text_on(20, 30, &AF_S, "REVERB SEND", T_MID, T_SURF);
-    cv_rrect(20, 48, 200, 10, 5, T_RAISE, T_SURF);
-    if (w > 0)
-        cv_rrect(20, 48, w < 10 ? 10 : w, 10, 5, T_THEME, T_RAISE);
-    cv_text_on(20, 72, &AF_S, "VOLUME", T_MID, T_SURF);
-    cv_rrect(20, 90, 200, 10, 5, T_RAISE, T_SURF);
-    w = 200 * u->master / 100;
-    if (w > 0)
-        cv_rrect(20, 90, w < 10 ? 10 : w, 10, 5, T_THEME, T_RAISE);
+    static const char *const L[3] = {"SEND", "SIZE", "DAMP"};
+    const int v[3] = {a->reverb, a->rev_size, a->rev_damp};
+    for (int i = 0; i < 3; ++i) {
+        int32_t y = 6 + i * 28, w = 200 * v[i] / 100;
+        cv_text_on(20, y, &AF_S, L[i], T_MID, T_SURF);
+        cv_rrect(20, y + 14, 200, 8, 4, T_RAISE, T_SURF);
+        if (w > 0)
+            cv_rrect(20, y + 14, w < 8 ? 8 : w, 8, 4, T_THEME, T_RAISE);
+    }
+    cv_text_on(20, 92, &AF_M, a->rev_type == TA_REV_SPRING ? "SPRING" : "ROOM", T_THEME, T_SURF);
 }
 
 /* SAVE and LOAD: the 16 slots as the 16 white keys, in 4 rows */
@@ -953,7 +955,6 @@ void tu_init(tuna_ui *u, tuna_app *a)
     u->app = a;
     u->page = TU_PG_HOME;
     u->hot = -1;
-    u->master = 80;
     u->palette = 1;                               /* GREEN, as Felucca starts */
     u->rnd = 0x7475u;
     u->batt = 3;
@@ -1011,7 +1012,7 @@ void tu_knob(tuna_ui *u, int k, int d)
     u->hot = k - TU_K1;
     u->hot_ms = TU_HOT_MS;
     switch (k) {
-    case TU_K_MASTER: u->master = (uint8_t)tu_clampi(u->master + 2 * d, 0, 100); u->hot = -1; return;
+    case TU_K_MASTER: u->hot = -1; return;      /* (the MASTER knob is Felucca's: the output level, main.c) */
     case TU_K_SELECT: ta_set_tempo(a, (float)tu_clampi((int)(g->bpm + 0.5f) + d, 20, 300)); u->hot = TU_K_SELECT; return;
     case TU_K_PRESETS: tu_lib_turn(u, d, false); u->hot = -1; return;
     case TU_K_ALGO: tu_lib_turn(u, d, true); u->hot = -1; return;
@@ -1082,7 +1083,9 @@ void tu_knob(tuna_ui *u, int k, int d)
         break;
     case TU_PG_FX:
         if (c == 0) a->reverb = (uint8_t)tu_clampi(a->reverb + 2 * d, 0, 100);
-        else if (c == 1) u->master = (uint8_t)tu_clampi(u->master + 2 * d, 0, 100);
+        else if (c == 1) a->rev_size = (uint8_t)tu_clampi(a->rev_size + 2 * d, 0, 100);
+        else if (c == 2) a->rev_damp = (uint8_t)tu_clampi(a->rev_damp + 2 * d, 0, 100);
+        else a->rev_type = d > 0 ? TA_REV_SPRING : TA_REV_ROOM;
         break;
     case TU_PG_SAVE: case TU_PG_LOAD:
         if (c == 0) {

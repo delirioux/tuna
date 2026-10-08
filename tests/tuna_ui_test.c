@@ -481,6 +481,38 @@ static void test_chaos_page(void)
     tu_goto_page(&ui, TU_PG_HOME);
 }
 
+/* REVERB (GLO, GLO): the send, Felucca's reverb size, damping and type, kept by a slot */
+static void test_reverb_page(void)
+{
+    ta_play(&app, false);
+    tu_goto_page(&ui, TU_PG_HOME);
+    press(TU_B_GLO);
+    press(TU_B_GLO);
+    CHECK(ui.page == TU_PG_FX, "GLO, GLO: the REVERB page (%d)", ui.page);
+    CHECK(app.rev_size == TA_REV_SIZE && app.rev_damp == TA_REV_DAMP && app.rev_type == TA_REV_ROOM,
+          "Felucca's reverb as designed at first (%d %d %d)", app.rev_size, app.rev_damp, app.rev_type);
+    tu_knob(&ui, TU_K2, 5);
+    tu_knob(&ui, TU_K3, -4);
+    tu_knob(&ui, TU_K4, 1);
+    CHECK(app.rev_size == TA_REV_SIZE + 10 && app.rev_damp == TA_REV_DAMP - 8 && app.rev_type == TA_REV_SPRING,
+          "K2 SIZE, K3 DAMP, K4 SPRING (%d %d %d)", app.rev_size, app.rev_damp, app.rev_type);
+    lint_where = "reverb";
+    all_palettes("reverb");
+    CHECK(ta_slot_save(&app, 6) == TP_OK, "saved slot 7");
+    tu_knob(&ui, TU_K2, -50);
+    tu_knob(&ui, TU_K4, -1);
+    CHECK(app.rev_size == 0 && app.rev_type == TA_REV_ROOM, "SIZE down to 0, ROOM (%d %d)", app.rev_size, app.rev_type);
+    CHECK(ta_slot_load(&app, 6) == TP_OK && app.rev_size == TA_REV_SIZE + 10 && app.rev_damp == TA_REV_DAMP - 8 &&
+              app.rev_type == TA_REV_SPRING,
+          "the slot brings the reverb back (%d %d %d)", app.rev_size, app.rev_damp, app.rev_type);
+    ta_select(&app, ta_lib_first(3));
+    CHECK(app.rev_type == TA_REV_SPRING, "kept for the next piece");
+    app.rev_size = TA_REV_SIZE;                      /* (as designed again, for the tests after) */
+    app.rev_damp = TA_REV_DAMP;
+    app.rev_type = TA_REV_ROOM;
+    tu_goto_page(&ui, TU_PG_HOME);
+}
+
 /* every composer drawn on HOME and LIBRARY without a lint finding (names, chords, keys) */
 static void test_every_composer(void)
 {
@@ -551,6 +583,7 @@ int main(int argc, char **argv)
     test_controls();
     test_reset();
     test_chaos_page();
+    test_reverb_page();
     test_every_composer();
     for (int i = 0; i < ta_lib_count(); ++i) {
         if (ta_lib_style(i) == TG_STYLE_DEBUSSY) anim(i, "debussy");

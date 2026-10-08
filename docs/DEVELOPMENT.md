@@ -74,6 +74,9 @@ touched only where Tuna hooks in (`felucca.c`, `main.c`, `audio.c`, `tools/build
 - **Each piece brings its own settings.** A new composer or genre loads its own tempo, key, scale, meter,
   percussion, evolution and sounds: keeping the player's would lose what makes it itself. The chaos knobs (and
   the parts they move), memory, mix, reverb, resonator and MIDI stay.
+- **The reverb is Felucca's.** The REVERB page (GLO twice) sets the send into Felucca's shared reverb bus, and its
+  SIZE, DAMP and TYPE (ROOM or SPRING) as Felucca's own globals; slots keep them (record version 3; older records
+  load Felucca's defaults). Volume is the MASTER knob alone, read by Felucca.
 - **Changes land on half periods.** A piece, a seed (OCT) or a form setting chosen while playing comes in at the
   next half of the period: its start (on the cadence) or its middle (on the half cadence). Seeds run 0..255.
 - **Genres are data.** The 86 popular genres live in `tools/genres/d1950.py` .. `d2020.py` (readable: grooves as

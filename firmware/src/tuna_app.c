@@ -141,6 +141,9 @@ void ta_init(tuna_app *a, float sample_rate, uint32_t seed)
     for (int t = 0; t < TP_TRACKS; ++t)
         a->level[t] = 80;
     a->reverb = 30;
+    a->rev_size = TA_REV_SIZE;
+    a->rev_damp = TA_REV_DAMP;
+    a->rev_type = TA_REV_ROOM;
     a->local = true;
     tmi_init(&a->midi, sample_rate);
     tr_init(&a->reso, sample_rate);
@@ -432,6 +435,9 @@ int ta_slot_save(tuna_app *a, int slot)
     h.reso[1] = a->reso_decay;
     h.reso[2] = a->reso_bright;
     h.reso[3] = a->reso_mode;
+    h.reverb[0] = a->rev_size;
+    h.reverb[1] = a->rev_damp;
+    h.reverb[2] = a->rev_type;
     int n = tp_encode(&a->g, &h, rec_buf, sizeof rec_buf);
     if (n < 0)
         return n;
@@ -470,6 +476,9 @@ int ta_slot_load(tuna_app *a, int slot)
     for (int t = 0; t < TP_TRACKS; ++t)
         a->level[t] = h.sound[t].level;
     a->reverb = h.sound[0].rev;
+    a->rev_size = h.reverb[0] > 100 ? TA_REV_SIZE : h.reverb[0];
+    a->rev_damp = h.reverb[1] > 100 ? TA_REV_DAMP : h.reverb[1];
+    a->rev_type = h.reverb[2] < TA_REV_TYPES ? h.reverb[2] : TA_REV_ROOM;
     ta_reso_set(a, h.reso[0], h.reso[1], h.reso[2], h.reso[3]);
     a->blocks = 0;
     return TP_OK;

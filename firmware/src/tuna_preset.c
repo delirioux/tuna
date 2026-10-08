@@ -334,6 +334,12 @@ static void host_part(tp_io *io, tp_host *hp)
     }
     for (int i = 0; i < 4; ++i)
         io_byte(io, &hp->reso[i]);
+    for (int i = 0; i < 3; ++i) {
+        if (io->version >= 3)
+            io_byte(io, &hp->reverb[i]);
+        else if (!io->write)
+            hp->reverb[i] = 255;
+    }
 }
 
 /* ---- encode / decode ------------------------------------------------------------------------------------ */

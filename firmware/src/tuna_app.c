@@ -419,27 +419,59 @@ void ta_reso_set(tuna_app *a, int amount, int decay, int bright, int mode)
     retune(a);
 }
 
+/* a piece, a seed or a form chosen while playing: in at the boundary. With keep_clock the clock's phase
+ * carries over, so the new piece's first tick falls where the old one's next tick would have: on the beat */
+static void apply_changes(tuna_app *a, bool keep_clock)
+{
+    float phase = a->g.t.master_phase, prev = a->g.prev_master;
+    all_off(a);
+    if (a->seed_req >= 0) {
+        a->seed = (uint32_t)a->seed_req;
+        a->seed_req = -1;
+        if (a->pending < 0 && !a->req_on)
+            tg_reseed(&a->g, a->seed);            /* (with a new piece: its seed too) */
+    }
+    if (a->pending >= 0) {
+        load_item(a, a->pending);                 /* (a new piece: the form settings asked for go) */
+        a->pending = -1;
+        a->req_on = false;
+    } else if (a->req_on) {
+        apply_req(a);
+    }
+    if (keep_clock && a->g.ticks == 0) {          /* (started over: the old tick's phase) */
+        a->g.t.master_phase = phase;
+        a->g.prev_master = prev;
+    }
+}
+
+/* samples before the generator's next tick (its clock's ramp wraps), or -1 */
+static int samples_to_tick(const tg_gen *g)
+{
+    float f = g->t.rate_hz * g->t.one_hertz * g->t.jitter_multiplier;
+    if (!(f > 0.0f) || g->t.master_phase > 1.0f)
+        return -1;
+    return (int)((1.0f - g->t.master_phase) / f) + 1;   /* the wrap comes on this sample (1 = the next) */
+}
+
 void ta_process(tuna_app *a, int frames)
 {
     while (a->playing && frames > 0) {
         int n = frames > TG_MAX_BLOCK ? TG_MAX_BLOCK : frames;
         /* a piece, a seed or a form chosen while playing comes in at the next half of the period: where it
-         * begins (on the cadence) or halfway (on the half cadence) */
-        int d = a->g.ticks > 0 ? tg_period_position(&a->g, NULL) : -1;
-        if ((a->pending >= 0 || a->req_on || a->seed_req >= 0) && (d == 0 || (d > 0 && d == tg_half_position(&a->g)))) {
-            all_off(a);
-            if (a->seed_req >= 0) {
-                a->seed = (uint32_t)a->seed_req;
-                a->seed_req = -1;
-                if (a->pending < 0 && !a->req_on)
-                    tg_reseed(&a->g, a->seed);    /* (with a new piece: its seed too) */
-            }
-            if (a->pending >= 0) {
-                load_item(a, a->pending);         /* (a new piece: the form settings asked for go) */
-                a->pending = -1;
-                a->req_on = false;
-            } else if (a->req_on) {
-                apply_req(a);
+         * begins (on the cadence) or halfway (on the half cadence). It goes in just before that tick, so
+         * nothing of the old one sounds there and the beat goes on; if the tick came first, just after it */
+        if (a->pending >= 0 || a->req_on || a->seed_req >= 0) {
+            if (a->g.ticks == 0) {
+                apply_changes(a, true);           /* (nothing played yet) */
+            } else {
+                int p, d = tg_period_position(&a->g, &p), h = tg_half_position(&a->g), next = (d + 1) % p;
+                int k = next == 0 || next == h ? samples_to_tick(&a->g) : -1;
+                if (k == 1)
+                    apply_changes(a, true);
+                else if (k > 1 && k <= n)
+                    n = k - 1;                    /* up to the sample before the tick */
+                else if (d == 0 || d == h)
+                    apply_changes(a, false);
             }
         }
         tmi_clock(&a->midi, a->frame, n, a->g.bpm);

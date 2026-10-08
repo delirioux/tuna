@@ -19,6 +19,7 @@ SRC = ROOT / "firmware" / "src"
 OUT = SRC / "tuna_genres.inc"
 GENRE_DIR = ROOT / "tools" / "genres"
 
+REVERBS = ["ROOM", "SPRING", "BATHROOM", "HALL", "CATHEDRAL"]   # TG_REV_* (firmware/src/tuna_style.h)
 DECADES = [1950, 1960, 1970, 1980, 1990, 2000, 2010, 2020]
 
 NOTE = {"C": 0, "C#": 1, "DB": 1, "D": 2, "D#": 3, "EB": 3, "E": 4, "F": 5, "F#": 6, "GB": 6, "G": 7, "G#": 8,
@@ -66,7 +67,8 @@ GENRE_DEFAULTS = dict(comment="", key="C", scale="IONIAN", bpm=120, div=4, beats
                       weights=None, weights_minor=None, arrival_bars=1, fifth_bias=1.0, repeat=0.5, open=0.0,
                       swell=0.0, sforzando=0.0, rubato=0.0, mixture=0.0, modulate=0.0, sideslip=0.0,
                       orch_mode="RANDOM", orch=(), echo=0.0, gp=0.0, evolve_periods=0, evolve_depth=0.0,
-                      evolve_modulate=False, mod_kind="RELATED", groove=None, perc="GROOVE")
+                      evolve_modulate=False, mod_kind="RELATED", groove=None, perc="GROOVE",
+                      reverb=None)
 
 
 def die(msg):
@@ -231,6 +233,10 @@ def emit(genres, grooves):
             d.append(f'.swing = {f(g["swing"])}, .swing16 = {str(g["swing16"]).lower()},')
         perc = g["perc"] if gr else ("OFF" if g["perc"] == "GROOVE" else g["perc"])
         d.append(f'.perc_mode = TG_PERC_{perc},')
+        if g["reverb"]:                            # the genre's own reverb (else ROOM, as its era)
+            if g["reverb"] not in REVERBS:
+                die(f"{where}: reverb {g['reverb']} ({' '.join(REVERBS)})")
+            d.append(f'.reverb = TG_REV_{g["reverb"]} + 1,')
         # chord weights for planned harmony: the named chords, the rest 0 (the tonic at least)
         for wkey, arrname in (("weights", VOCABS[g["vocab"]][0]), ("weights_minor", VOCABS[g["vocab"]][1])):
             w = [0] * 24

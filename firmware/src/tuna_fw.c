@@ -334,11 +334,12 @@ static void tf_service(void)
     tf_rev_set = tf_app.reverb;
     /* the reverb itself: Felucca's shared bus (changing the type fades the old one out, fx.c) */
     int16_t rs = (int16_t)(tf_app.rev_size * 127 / 100), rd = (int16_t)(tf_app.rev_damp * 127 / 100);
-    if (song.g[G_RSIZE] != rs || song.g[G_RDAMP] != rd || song.g[G_RTYPE] != tf_app.rev_type) {
+    int16_t rt = ta_reverb_type(tf_app.rev_type)->spring ? 1 : 0;   /* (G_RTYPE: 0 ROOM, 1 SPRING) */
+    if (song.g[G_RSIZE] != rs || song.g[G_RDAMP] != rd || song.g[G_RTYPE] != rt) {
         fm1_irq_off();
         song.g[G_RSIZE] = rs;
         song.g[G_RDAMP] = rd;
-        song.g[G_RTYPE] = tf_app.rev_type;
+        song.g[G_RTYPE] = rt;
         fm1_irq_on();
     }
     /* the drum kit follows the style: a groove's own kit, else Felucca's (its toms tuned as timpani) */

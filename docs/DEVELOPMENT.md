@@ -72,11 +72,14 @@ touched only where Tuna hooks in (`felucca.c`, `main.c`, `audio.c`, `tools/build
   harmony and everything else stays the composer's. At 0 nothing changes: the composer byte for byte.
   The CHAOS page (EDIT a third time) chooses which parts follow; slots keep it (record version 2).
 - **Each piece brings its own settings.** A new composer or genre loads its own tempo, key, scale, meter,
-  percussion, evolution and sounds: keeping the player's would lose what makes it itself. The chaos knobs (and
+  percussion, evolution, sounds and reverb type: keeping the player's would lose what makes it itself. The chaos knobs (and
   the parts they move), memory, mix, reverb, resonator and MIDI stay.
 - **The reverb is Felucca's.** The REVERB page (GLO twice) sets the send into Felucca's shared reverb bus, and its
-  SIZE, DAMP and TYPE (ROOM or SPRING) as Felucca's own globals; slots keep them (record version 3; older records
-  load Felucca's defaults). Volume is the MASTER knob alone, read by Felucca.
+  SIZE, DAMP and TYPE as Felucca's own globals. The types are a size and damping on Felucca's two models, no new
+  DSP: BATHROOM, ROOM (as designed), HALL, CATHEDRAL on ROOM, and SPRING. Each piece brings its type (a genre's
+  `reverb`, else by era: Renaissance CATHEDRAL, the Romantics and film HALL, the rest ROOM; the surf, ska, reggae
+  and garage genres SPRING); the send stays the player's. Slots keep all four (record version 3; older records take
+  the piece's). Volume is the MASTER knob alone, read by Felucca.
 - **Changes land on half periods.** A piece, a seed (OCT) or a form setting chosen while playing comes in at the
   next half of the period: its start (on the cadence) or its middle (on the half cadence). Seeds run 0..255.
 - **Genres are data.** The 86 popular genres live in `tools/genres/d1950.py` .. `d2020.py` (readable: grooves as

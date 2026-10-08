@@ -45,7 +45,7 @@ typedef struct {
     bool sounds_set;                      /* false: the composer's own instruments */
     tp_sound sound[TP_TRACKS];
     uint8_t reso[4];                      /* the resonator: amount, decay, brightness (0..100), tuning mode */
-    uint8_t reverb[3];                    /* version 3: the reverb's size, damping (0..100), type (0 room, 1 spring);
+    uint8_t reverb[3];                    /* version 3: the reverb's size, damping (0..100), type (TG_REV_*);
                                              older records: 255, the host's defaults */
 } tp_host;
 

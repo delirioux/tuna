@@ -42,7 +42,7 @@ typedef struct {
     int deja;                             /* TA_DV_* */
     uint8_t level[TP_TRACKS];             /* 0..100: bass, melody, pad, drums */
     uint8_t reverb;                       /* 0..100: the reverb send of the mix */
-    uint8_t rev_size, rev_damp, rev_type; /* the reverb itself: size and damping 0..100, TA_REV_ROOM / SPRING */
+    uint8_t rev_size, rev_damp, rev_type; /* the reverb itself: size and damping 0..100, TG_REV_* (the piece's) */
     ta_note feed[TA_FEED];                /* note-ons for the screen (a ring) */
     uint8_t feed_w, feed_r;
     void (*sound)(void *ctx, const tg_event *e);
@@ -58,9 +58,12 @@ typedef struct {
     int seed_req;                         /* a seed asked for while playing (the next half period), -1 none */
 } tuna_app;
 
-enum { TA_REV_ROOM, TA_REV_SPRING, TA_REV_TYPES };
-#define TA_REV_SIZE 71                    /* Felucca's own reverb as designed (SIZE 90, DAMP 60 of 127) */
-#define TA_REV_DAMP 48
+/* the reverb types: each a size and damping (0..100) on Felucca's ROOM or SPRING; ROOM and SPRING as designed */
+typedef struct { const char *name, *card; uint8_t size, damp; bool spring; } ta_reverb;   /* (card: at most 6) */
+const ta_reverb *ta_reverb_type(int type);
+int ta_reverb_step(int type, int d);      /* the next type on the knob, small spaces to large, then SPRING */
+int ta_piece_reverb(int style);           /* TG_REV_*: the style's own, else its era's (-1: a character, ROOM) */
+void ta_set_reverb_type(tuna_app *a, int type);   /* the type with its size and damping */
 
 void ta_init(tuna_app *a, float sample_rate, uint32_t seed);
 void ta_set_sound(tuna_app *a, void (*fn)(void *ctx, const tg_event *e), void *ctx);

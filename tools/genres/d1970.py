@@ -111,7 +111,7 @@ GENRES = [
          bass=dict(mode="OSTINATO", rhythm=B16, notes=(0,), gate=1),
          pad=dict(mode="RHYTHM", rhythm=B16 * 2, gate=1, base=52, tones=3, power=True),
          groove="G70_METAL", orch=[("WAVEBASS", "DISTGUITAR", "DISTGUITAR"), ("EBASS", "EGUITAR", "DISTGUITAR")]),
-    dict(id="PROG_ROCK_70S", name="PROG ROCK", decade=1970, year=1971,
+    dict(id="PROG_ROCK_70S", name="PROG ROCK", decade=1970, year=1971, reverb="HALL",
          comment="Genesis, Yes, Pink Floyd, ELP: 7/4 riffs, a Moog lead over Mellotron and Hammond chords, "
                  "modal harmony wandering through Dorian, an arpeggiated bass riff",
          key="D", scale="DORIAN", bpm=120, div=2, beats=7, chord_beats=7, period_bars=8,
@@ -135,7 +135,7 @@ GENRES = [
          bass=dict(mode="OSTINATO", rhythm=B16, notes=(0, 0, 7, 7, 9, 9, 7, 7), semis=True),
          pad=dict(mode="RHYTHM", rhythm="x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.", gate=1, base=52, tones=3, power=True),
          groove="G70_GLAM", orch=[("EBASS", "SAX", "DISTGUITAR"), ("EBASS", "EGUITAR", "PIANO")]),
-    dict(id="ROOTS_REGGAE", name="REGGAE", decade=1970, year=1972,
+    dict(id="ROOTS_REGGAE", name="REGGAE", decade=1970, year=1972, reverb="SPRING",
          comment="Bob Marley and the Wailers, Burning Spear: the one drop on 3, the guitar and organ skank on "
                  "2 and 4, a deep melodic bass that leaves holes, a melodica-like lead",
          key="A", scale="AEOLIAN", bpm=74, div=4, chord_beats=4, period_bars=8, swing=0.15,
@@ -155,7 +155,7 @@ GENRES = [
          pad=dict(mode="RHYTHM", rhythm="..x.x.xx..x.x.xx..x.x.xx..x.x.xx", gate=1, base=60, tones=3),
          groove="G70_DISCO", orch=[("EBASS", "STRINGS", "GUITAR"), ("EBASS", "FLUTE", "GUITAR"),
                                    ("SYNTHBASS", "STRINGS", "GUITAR")]),
-    dict(id="PUNK_70S", name="PUNK", decade=1970, year=1976,
+    dict(id="PUNK_70S", name="PUNK", decade=1970, year=1976, reverb="BATHROOM",
          comment="the Ramones, Sex Pistols, the Clash: three chords as fast as possible, downstroked power "
                  "chords and bass in eighths, a shouted two-note hook",
          key="E", scale="IONIAN", bpm=180, div=4, chord_beats=4, period_bars=8,

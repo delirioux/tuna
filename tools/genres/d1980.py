@@ -136,7 +136,7 @@ GENRES = [
          bass=dict(mode="REPEAT"),
          pad=dict(mode="RHYTHM", rhythm="x.....x.......x.x.....x.......x.", gate=2, base=57, tones=3),
          groove="G80_POSTPUNK", orch=[("EBASS", "EBASS", "EGUITAR"), ("WAVEBASS", "EBASS", "EGUITAR")]),
-    dict(id="SYNTH_POP_80S", name="SYNTH-POP", decade=1980, year=1980,
+    dict(id="SYNTH_POP_80S", name="SYNTH-POP", decade=1980, year=1980, reverb="HALL",
          comment="Depeche Mode, the Human League, OMD: drum machine, a sequenced octave synth bass, a bright "
                  "arpeggio and a synth hook, minor i VI III VII",
          key="C", scale="AEOLIAN", bpm=122, div=4, chord_beats=4, period_bars=8,
@@ -174,7 +174,7 @@ GENRES = [
          bass=dict(mode="REPEAT"),
          pad=dict(mode="RHYTHM", rhythm=E8 * 2, gate=1, base=52, tones=3, power=True),
          groove="G80_GLAM", orch=[("EBASS", "DISTGUITAR", "DISTGUITAR"), ("EBASS", "DISTGUITAR", "SYNTH")]),
-    dict(id="GOTHIC_ROCK_80S", name="GOTHIC ROCK", decade=1980, year=1981,
+    dict(id="GOTHIC_ROCK_80S", name="GOTHIC ROCK", decade=1980, year=1981, reverb="HALL",
          comment="Sisters of Mercy, Siouxsie, Bauhaus: a machine beat with pounding toms, a deep driving bass, a "
                  "flanged guitar arpeggio circling the minor chord, choir in the background",
          key="D", scale="HARM_MINOR", bpm=132, div=4, chord_beats=8, period_bars=8,

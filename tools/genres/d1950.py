@@ -68,7 +68,7 @@ GENRES = [
          bass=dict(mode="OSTINATO", rhythm="x..x..x..x..", notes=(0, 4, 7, 9), semis=True),
          pad=dict(mode="RHYTHM", rhythm="xxx" * 8, gate=1, base=58, tones=3),
          groove="SHUFFLE_TRIP", orch=[("EBASS", "SAX", "PIANO"), ("CONTRABASS", "TRUMPET", "PIANO")]),
-    dict(id="DOO_WOP", name="DOO-WOP", decade=1950, year=1954,
+    dict(id="DOO_WOP", name="DOO-WOP", decade=1950, year=1954, reverb="HALL",
          comment="the Penguins, the Platters: the I vi IV V of the fifties in a slow 12/8, piano triplets under "
                  "'ooh' harmonies, a bass singer walking",
          key="EB", scale="IONIAN", bpm=68, div=3, chord_beats=4, period_bars=8,
@@ -78,7 +78,7 @@ GENRES = [
          bass=dict(mode="OSTINATO", rhythm="x..x..x..x..", notes=(0, 7, 12, 7), semis=True),
          pad=dict(mode="BLOCK", base=55, tones=3),
          groove="DOOWOP", orch=[("EBASS", "VOICE", "CHOIR"), ("EBASS", "SAX", "CHOIR")]),
-    dict(id="ROCKABILLY", name="ROCKABILLY", decade=1950, year=1955,
+    dict(id="ROCKABILLY", name="ROCKABILLY", decade=1950, year=1955, reverb="SPRING",
          comment="Elvis at Sun, Carl Perkins: slapped upright bass on root and fifth, twangy guitar licks, "
                  "a light shuffle, brushes",
          key="E", scale="MIXOLYDIAN", bpm=176, div=4, chord_beats=4, period_bars=12, swing=0.45,

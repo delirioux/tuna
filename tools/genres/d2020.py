@@ -96,7 +96,7 @@ GENRES = [
          bass=dict(mode="808"),
          pad=dict(mode="BLOCK", base=52, tones=3),
          groove="G20_PHONK", orch_mode="CYCLE",
-         orch=[("808", "CHIP", "CHOIR"), ("808", "CHIP", "PAD"), ("808", "STEELDRUM", "CHOIR")]),
+         orch=[("808", "RINGMOD", "SYNTH"), ("FATBASS", "BELLS", "STRMACH"), ("808", "METALLEAD", "RINGMOD")]),
     dict(id="BROOKLYN_DRILL", name="BROOKLYN DRILL", decade=2020, year=2020,
          comment="Pop Smoke, Fivio Foreign, 808Melo: UK drill brought to New York, faster, the 808 sliding up and "
                  "down an octave, a dark harmonic-minor piano and strings, a vocal-like lead",
@@ -107,7 +107,7 @@ GENRES = [
          bass=dict(mode="808", rhythm="x.....x...x...x.", notes=(0, 12, 0, 10, 0, 12, 7, 3), semis=True),
          pad=dict(mode="BLOCK", base=55, tones=3),
          groove="G20_BKDRILL",
-         orch=[("808", "PIANO", "PAD"), ("808", "VOICE", "STRINGS"), ("808", "PIANO", "SINEKEY")]),
+         orch=[("808", "CHOIR", "STRINGS"), ("808", "BELLS", "CELLO"), ("808", "VOICE", "SINEKEY")]),
     dict(id="RAGE_RAP", name="RAGE", decade=2020, year=2020,
          comment="Playboi Carti's Whole Lotta Red, Trippie Redd's Miss the Rage, Ken Carson: a blaring supersaw riff "
                  "looping over 808s and a distorted kick, at 160",
@@ -118,7 +118,7 @@ GENRES = [
          bass=dict(mode="808"),
          pad=dict(mode="NONE"),
          groove="G20_RAGE",
-         orch=[("808", "SUPERSAW", "PLUCKSYNTH"), ("808", "SAWLEAD", "PLUCKSYNTH")]),
+         orch=[("808", "SUPERSAW", "SYNTH"), ("FATBASS", "ARPLEAD", "SYNTH"), ("808", "SAWLEAD", "SYNTH")]),
     dict(id="JERSEY_CLUB", name="JERSEY CLUB", decade=2020, year=2022,
          comment="the 2020s Jersey club wave (Lil Uzi Vert's Just Wanna Rock, Ice Spice, Bandmanrill): the kick in "
                  "fives, the bed-squeak on the off-beats, a chopped vocal hook at 140",
@@ -129,7 +129,8 @@ GENRES = [
          bass=dict(mode="808", gate=3),
          pad=dict(mode="RHYTHM", rhythm="x.....x.....x...x.....x.....x...", gate=2, base=57, tones=3),
          groove="G20_JERSEY",
-         orch=[("808", "VOICE", "PLUCKSYNTH"), ("808", "SYNCLEAD", "PLUCKSYNTH")]),
+         orch=[("SYNTHBASS", "VOICE", "RESOSYNTH"), ("FATBASS", "SYNCLEAD", "PLUCKSYNTH"),
+               ("SYNTHBASS", "STEPLEAD", "VOICE")]),
     dict(id="SPED_UP", name="SPED UP", decade=2020, year=2021,
          comment="TikTok's sped-up edits: a pop song pitched up and played fast, the chipmunk vocal hook bright and "
                  "high, I V vi IV",
@@ -140,7 +141,8 @@ GENRES = [
          bass=dict(mode="OSTINATO", rhythm="x.....x...x.....", notes=(0, 0, 2), gate=3),
          pad=dict(mode="RHYTHM", rhythm="x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.", gate=1, base=64, tones=3),
          groove="G20_SPEDUP",
-         orch=[("WAVEBASS", "VOICE", "PLUCKSYNTH"), ("WAVEBASS", "SINEKEY", "PIANO")]),
+         orch=[("WAVEBASS", "VOICE", "PLUCKSYNTH"), ("EBASS", "GLOCKEN", "SUPERSAW"),
+               ("WAVEBASS", "WHISTLE", "SINEKEY")]),
     dict(id="SLOWED_REVERB", name="SLOWED+REVERB", decade=2020, year=2020, reverb="CATHEDRAL",
          comment="the slowed + reverb edits of YouTube and TikTok: a song pulled down to a crawl, lower, washed in "
                  "reverb, dreamy major sevenths, the 808 booming",
@@ -151,7 +153,8 @@ GENRES = [
          bass=dict(mode="808"),
          pad=dict(mode="BLOCK", base=52, tones=3, spread=True),
          groove="G20_SLOWED", swing=0.3, swing16=True, orch_mode="CYCLE",
-         orch=[("808", "VOICE", "SINEKEY"), ("808", "SINEKEY", "SHIMMER"), ("808", "FLUTE", "CHOIR")]),
+         orch=[("FRETLESS", "SHIMMER", "SINEKEY"), ("FRETLESS", "FROZEN", "EPIANO"),
+               ("FRETLESS", "MUSICBOX", "STRMACH")]),
     dict(id="BEDROOM_POP", name="BEDROOM POP", decade=2020, year=2020, reverb="BATHROOM",
          comment="Clairo, beabadoobee, Rex Orange County, Steve Lacy: home-made pop, a jangly strummed guitar, "
                  "major sevenths, a soft bass and a cheap drum machine",
@@ -161,7 +164,7 @@ GENRES = [
          bass=dict(mode="OSTINATO", rhythm="x.....x.x.......", notes=(0, 0, 2)),
          pad=dict(mode="RHYTHM", rhythm="x..x..x.x..x..x.x..x..x.x..x..x.", gate=2, base=55, tones=3, strum_ms=12),
          groove="G20_BEDROOM",
-         orch=[("WAVEBASS", "SINEKEY", "GUITAR"), ("EBASS", "SYNTH", "GUITAR"), ("WAVEBASS", "VOICE", "EGUITAR")]),
+         orch=[("EBASS", "EGUITAR", "REEDORGAN"), ("EBASS", "TOYPIANO", "EGUITAR"), ("EBASS", "SYNTH", "REEDEP")]),
     dict(id="COUNTRY_TRAP", name="COUNTRY TRAP", decade=2020, year=2021,
          comment="Lil Nas X's Old Town Road to Morgan Wallen and Jelly Roll: a banjo roll and a twangy guitar over "
                  "trap drums and an 808",
@@ -172,7 +175,7 @@ GENRES = [
          bass=dict(mode="808"),
          pad=dict(mode="FIGURE", figure=(0, X, 1, X, 3, X, 0, X, 2, X, 4, X, 1, X, 3, X), base=55, tones=3),   # a banjo roll
          groove="G20_CTRYTRAP",
-         orch=[("808", "EGUITAR", "GUITAR"), ("808", "FLUTE", "GUITAR"), ("808", "EGUITAR", "PIZZ")]),
+         orch=[("808", "BANJO", "GUITAR"), ("808", "EGUITAR", "BANJO"), ("808", "HARMONICA", "GUITAR")]),
     dict(id="POP_PUNK_REVIVAL", name="POP PUNK 2020S", decade=2020, year=2021,
          comment="Machine Gun Kelly's Tickets to My Downfall, Olivia Rodrigo's good 4 u, Travis Barker's drums: "
                  "pop punk power chords and bass eighths with trap hat rolls",
@@ -183,7 +186,8 @@ GENRES = [
          bass=dict(mode="REPEAT"),
          pad=dict(mode="RHYTHM", rhythm="x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.", gate=1, base=50, tones=3, power=True),
          groove="G20_POPPUNK",
-         orch=[("WAVEBASS", "EGUITAR", "DISTGUITAR"), ("808", "SYNTH", "DISTGUITAR")]),
+         orch=[("EBASS", "EGUITAR", "DISTGUITAR"), ("EBASS", "SYNTH", "DISTGUITAR"),
+               ("EBASS", "SYNCLEAD", "DISTGUITAR")]),
     dict(id="Y2K_POP_REVIVAL", name="Y2K REVIVAL", decade=2020, year=2022,
          comment="PinkPantheress, NewJeans, Charli XCX: the glossy pop of 2000 revisited, a 2-step skip, bright "
                  "plucked arpeggios, a breathy hook over major sevenths",
@@ -194,7 +198,7 @@ GENRES = [
          bass=dict(mode="OSTINATO", rhythm="x.....x...x..x..", notes=(0, 0, 3, 2), gate=3),
          pad=dict(mode="ARPEGGIO", base=60, tones=3),
          groove="G20_Y2K",
-         orch=[("SYNTHBASS", "VOICE", "PLUCKSYNTH"), ("WAVEBASS", "SINEKEY", "PLUCKSYNTH"),
-               ("WAVEBASS", "VOICE", "MARIMBA")]),
+         orch=[("SYNTHBASS", "WHISPER", "PLUCKSYNTH"), ("FATBASS", "CHIPCHOIR", "EPIANO"),
+               ("WAVEBASS", "CELESTA", "ARPLEAD")]),
 ]
 

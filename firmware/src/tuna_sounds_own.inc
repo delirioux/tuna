@@ -11,8 +11,8 @@
  * Measured against each other with tests/tuna_audition.sh. */
 
 /* the sound-alike pairs, apart */
-static const preset_t TSN_CELLO = {"CELLO", {0, 6, 34, 30, 8, 0, 0, 0}, {55, 90, 105, 75}, 0, 0, FX(0, 40, 15, 60)};
-static const preset_t TSN_CONTRABASS = {"CONTRABASS", {0, 0, 26, 25, 5, 0, 30, 0}, {30, 90, 100, 55}, 0, 0,
+static const preset_t TSN_CELLO = {"CELLO", {0, 6, 34, 30, 8, 0, 0, 0}, {55, 90, 105, 55}, 0, 0, FX(0, 40, 15, 60)};
+static const preset_t TSN_CONTRABASS = {"CONTRABASS", {0, 0, 26, 25, 5, 0, 30, 0}, {30, 90, 100, 35}, 0, 0,
                                         FX(0, 20, 10, 40)};
 static const preset_t TSN_TUBA = {"TUBA", {0, 0, 22, 70, 0, 0, 70, 0}, {20, 80, 100, 45}, 0, 0, FX(0, 10, 10, 40)};
 static const preset_t TSN_CLAV = {"CLAV", {1, 40, 120, 70, 8, 115, 0, 30}, {0, 100, 127, 25}, 0, 0, FX(10, 20, 15, 25)};
@@ -25,7 +25,7 @@ static const preset_t TSN_SAWLEAD = {"SAW LEAD", {0, 0, 12, 12, 0, 96, 25, 64}, 
                                      FX(0, 10, 35, 25)};
 static const preset_t TSN_CLARINET = {"CLARINET", {9, 0, 0, 0, 0, 0, 0, 0}, {20, 64, 127, 40}, 0, 0, FX(0, 10, 10, 45)};
 static const preset_t TSN_PIZZ = {"PIZZ", {1, 56, 45, 45, 50, 90, 0, 0}, {0, 100, 127, 30}, 0, 0, FX(0, 10, 10, 45)};
-static const preset_t TSN_EGUITAR = {"E.GUITAR", {1, 36, 85, 90, 20, 100, 0, 10}, {0, 100, 127, 40}, 0, 0,
+static const preset_t TSN_EGUITAR = {"E.GUITAR", {1, 36, 85, 80, 20, 100, 0, 10}, {0, 100, 127, 40}, 0, 0,
                                      FX(0, 40, 25, 30)};
 
 /* new instruments */
@@ -38,12 +38,13 @@ static const preset_t TSN_OUD = {"OUD", {3, 0, 70, 80, 40, 100, 30, 15}, {0, 100
 static const preset_t TSN_BANJO = {"BANJO", {1, 30, 127, 55, 8, 120, 0, 40}, {0, 100, 127, 30}, 0, 0, FX(0, 0, 15, 30)};
 static const preset_t TSN_DULCIMER = {"DULCIMER", {1, 40, 100, 100, 30, 110, 0, 60}, {0, 100, 127, 80}, 0, 0,
                                       FX(0, 60, 20, 50)};
-static const preset_t TSN_VIBES = {"VIBES", {0, 34, 40, 100, 20, 90, 0, 10}, {0, 100, 127, 85}, 0, 0, FX(0, 50, 20, 50)};
+static const preset_t TSN_VIBES = {"VIBES", {0, 34, 40, 90, 20, 90, 0, 10}, {0, 100, 127, 70}, 0, 0, FX(0, 50, 20, 50)};
 static const preset_t TSN_XYLO = {"XYLO", {0, 34, 60, 55, 0, 110, 0, 30}, {0, 100, 127, 40}, 0, 0, FX(0, 0, 15, 40)};
-static const preset_t TSN_GLOCK = {"GLOCK", {0, 36, 90, 90, 10, 110, 0, 20}, {0, 100, 127, 80}, 0, 0, FX(0, 10, 20, 55)};
-static const preset_t TSN_TUBULAR = {"TUBULAR", {0, 90, 70, 122, 20, 100, 0, 10}, {0, 100, 127, 90}, 0, 0,
+static const preset_t TSN_GLOCK = {"GLOCK", {0, 36, 90, 80, 10, 110, 0, 20}, {0, 100, 127, 65}, 0, 0, FX(0, 10, 20, 55)};
+static const preset_t TSN_TUBULAR = {"TUBULAR", {0, 90, 70, 110, 20, 100, 0, 10}, {0, 100, 127, 70}, 0, 0,
                                      FX(0, 10, 15, 60)};
-static const preset_t TSN_MUSICBOX = {"MUSICBOX", {0, 30, 80, 80, 5, 100, 0, 40}, {0, 100, 127, 70}, 0, 0,
+static const preset_t TSN_MUSICBOX = {"MUSICBOX", {0, 30, 80, 80, 5, 100, 0, 40}, {0, 100, 127, 60}, 0, 0,
                                       FX(0, 10, 25, 60)};
 static const preset_t TSN_TABLA = {"TABLA", {2, 110, 80, 60, 40, 100, 30, 30}, {0, 100, 127, 50}, 0, 0, FX(0, 0, 10, 35)};
 static const preset_t TSN_STEELPAN = {"STEELPAN", {0, 33, 85, 70, 12, 110, 0, 25}, {0, 100, 127, 50}, 0, 0, FX(0, 10, 15, 45)};
+static const preset_t TSN_UPRIGHT = {"UPRIGHT", {1, 40, 35, 75, 0, 127, 0, 10}, {0, 100, 127, 40}, 0, 0, FX(0, 0, 10, 35)};

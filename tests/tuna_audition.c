@@ -29,7 +29,7 @@ static int family_shift(int f)
 {
     switch (f) {
     case TI_CONTRABASS: case TI_TUBA: case TI_EBASS: case TI_SYNTHBASS: case TI_808: case TI_FATBASS:
-    case TI_TALKBASS: case TI_WAVEBASS: case TI_ACID: case TI_SLAPBASS: case TI_FRETLESS:
+    case TI_TALKBASS: case TI_WAVEBASS: case TI_ACID: case TI_SLAPBASS: case TI_FRETLESS: case TI_UPRIGHT:
         return -24;
     case TI_CELLO: case TI_BASSOON: case TI_HORN: case TI_DRONE: case TI_LOGDRUM:
         return -12;

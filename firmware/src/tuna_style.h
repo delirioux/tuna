@@ -84,6 +84,7 @@ enum {
     /* on FM6 patches of Tuna's own (tools/tuna_fm6.py) */
     TI_PIPEORGAN, TI_REEDEP, TI_SLAPBASS, TI_SYNBRASS, TI_HARMONICA, TI_PANFLUTE, TI_SHAKUHACHI, TI_ERHU,
     TI_MUTETRUMPET, TI_FLUGELHORN, TI_TOYPIANO, TI_FRETLESS, TI_ENGLISHHORN,
+    TI_UPRIGHT,                     /* the plucked double bass of jazz, blues and rockabilly (CONTRABASS: bowed) */
     TI_COUNT
 };
 enum { TG_ORCH_FIXED, TG_ORCH_CYCLE, TG_ORCH_RANDOM, TG_ORCH_ENERGY, TG_ORCH_CONTRAST };

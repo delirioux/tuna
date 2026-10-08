@@ -24,6 +24,11 @@ preset and let it drift, from still and ambient to driving and rhythmic.
   own harmony, melody, rhythm, form and instrumentation: chant on a drone, Bach's counterpoint,
   Satie's parallel chords, Debussy's whole tones, Gershwin's jazz chords, Reich's phasing, Pärt's
   tintinnabuli, Messiaen's octatonic modes and birdsong.
+- **93 instruments** on Felucca's engines, each composer and genre with sets of its own: besides the orchestra,
+  piano and band, a pipe organ and harmonium, harpsichord and lute, cimbalom and koto, sitar and oud, erhu and
+  shakuhachi, pan flute and harmonica, accordion and bandoneon, vibraphone, glockenspiel and tubular bells, music box
+  and toy piano, upright, slap and fretless bass, string machine, synth brass and a handful of 8-bit leads. Their levels are
+  evened out, so any of them sits right in the mix.
 - **Odd meters and grouped beats**: 3+3+2, 5/4, 7/8 and the like.
 - **Tunings**: equal, meantone, Werckmeister, Pythagorean, just, and user-defined.
 - **8 character presets** without a composer, from STILL to DRIVE.

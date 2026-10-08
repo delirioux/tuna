@@ -131,7 +131,7 @@ GENRES = [
          bass=dict(mode="OSTINATO", rhythm=B16, notes=(0,), semis=True, gate=2),
          pad=dict(mode="RHYTHM", rhythm="x..x..x.x..x..x.x..x..x.x..x..x.", gate=1, base=48, tones=3, power=True),
          groove="G90_GRUNGE", orch_mode="CONTRAST",
-         orch=[("EBASS", "EGUITAR", "EGUITAR"), ("WAVEBASS", "DISTGUITAR", "DISTGUITAR")]),
+         orch=[("EBASS", "EGUITAR", "EGUITAR"), ("EBASS", "DISTGUITAR", "DISTGUITAR"), ("EBASS", "GUITAR", "CELLO")]),
     dict(id="BRITPOP", name="BRITPOP", decade=1990, year=1994,
          comment="Oasis, Blur, Pulp: strummed acoustic sevenths and sus chords (Wonderwall's cycle), a Beatles-ish "
                  "tune, tambourine and a straight mid-tempo beat",
@@ -142,7 +142,7 @@ GENRES = [
          bass=dict(mode="OSTINATO", rhythm="x.x.x.x.x.x.x.x.", notes=(0, 0, 0, 7), semis=True, gate=2),
          pad=dict(mode="RHYTHM", rhythm="x...x.x..xx.x.x.x...x.x..xx.x.x.", gate=2, base=55, tones=3, strum_ms=9),
          groove="G90_BRITPOP",
-         orch=[("EBASS", "EGUITAR", "GUITAR"), ("EBASS", "PIANO", "GUITAR"), ("WAVEBASS", "SAX", "GUITAR")]),
+         orch=[("EBASS", "EGUITAR", "JAZZORGAN"), ("EBASS", "SITAR", "GUITAR"), ("EBASS", "STRINGS", "GUITAR")]),
     dict(id="GANGSTA_RAP", name="GANGSTA RAP", decade=1990, year=1988,
          comment="N.W.A, Mobb Deep, Wu-Tang: a hard dusty boom-bap break, a deep bass on the kicks, a dark looped "
                  "two-note piano hook a minor second apart, menace in Phrygian",
@@ -153,7 +153,7 @@ GENRES = [
          bass=dict(mode="808", gate=6),
          pad=dict(mode="RHYTHM", rhythm="x...........................x...", gate=3, base=52, tones=3),
          groove="G90_GANGSTA",
-         orch=[("808", "PIANO", "STRINGS"), ("808", "BELLS", "PIANO"), ("WAVEBASS", "PIANO", "STRINGS")]),
+         orch=[("808", "PIANO", "STRINGS"), ("808", "TUBULAR", "PIANO"), ("808", "VIOLIN", "PIANO")]),
     dict(id="G_FUNK", name="G-FUNK", decade=1990, year=1992,
          comment="Dr. Dre's The Chronic, Warren G, Snoop: Parliament slowed down, a whining portamento synth lead "
                  "up high, a fat Moog bass line, Rhodes ninths, the laid-back swing",
@@ -164,7 +164,8 @@ GENRES = [
          bass=dict(mode="OSTINATO", rhythm="x......x..x...x.", notes=(0, 12, 10, 7), semis=True, gate=0),
          pad=dict(mode="BLOCK", base=55, tones=3),
          groove="G90_GFUNK",
-         orch=[("WAVEBASS", "SAWLEAD", "EPIANO"), ("WAVEBASS", "TALKBASS", "EPIANO"), ("SYNTHBASS", "SAWLEAD", "SINEKEY")]),
+         orch=[("TALKBASS", "SAWLEAD", "EPIANO"), ("SYNTHBASS", "SINEKEY", "EPIANO"),
+               ("SYNTHBASS", "TALKBASS", "CLAV")]),
     dict(id="RNB_90S", name="R&B 90S", decade=1990, year=1992,
          comment="Jodeci, TLC, Aaliyah, Babyface: lush major sevenths and minor ninths on electric piano, a gliding "
                  "sub bass, a skittering 808 beat, a melismatic lead",
@@ -175,7 +176,7 @@ GENRES = [
          bass=dict(mode="808", gate=0),
          pad=dict(mode="BLOCK", base=57, tones=3),
          groove="G90_RNB",
-         orch=[("808", "SINEKEY", "EPIANO"), ("WAVEBASS", "VOICE", "EPIANO"), ("808", "SAX", "PAD")]),
+         orch=[("808", "VOICE", "EPIANO"), ("FRETLESS", "SAX", "REEDEP"), ("808", "SINEKEY", "STRINGS")]),
     dict(id="TRIP_HOP", name="TRIP HOP", decade=1990, year=1994,
          comment="Portishead's Dummy, Massive Attack, Tricky: a slow heavy break, a deep sub, minor ninths and a "
                  "falling lament, a theremin-like lead, cinematic strings",
@@ -186,7 +187,8 @@ GENRES = [
          bass=dict(mode="OSTINATO", rhythm="x.......x.x.....", notes=(0, 0, 7), semis=True, gate=0),
          pad=dict(mode="BLOCK", base=52, tones=3),
          groove="G90_TRIPHOP",
-         orch=[("WAVEBASS", "SINEKEY", "STRINGS"), ("WAVEBASS", "SAWLEAD", "EPIANO"), ("808", "FLUTE", "PAD")]),
+         orch=[("SYNTHBASS", "WHISTLE", "SINEKEY"), ("UPRIGHT", "TABLA", "STRINGS"),
+               ("WAVEBASS", "VOICE", "HARPSICHORD")]),
     dict(id="JUNGLE", name="JUNGLE", decade=1990, year=1993,
          comment="Goldie, M-Beat, Shy FX: chopped Amen breaks at 165, a booming sub at half speed, ragga skank "
                  "stabs and a dub-siren melody over a minor vamp",
@@ -197,7 +199,7 @@ GENRES = [
          bass=dict(mode="808", rhythm="x.........x.....", notes=(0, 0, 7, 0), semis=True),
          pad=dict(mode="RHYTHM", rhythm="........x...............x.......", gate=2, base=57, tones=3),
          groove="G90_JUNGLE",
-         orch=[("808", "SAWLEAD", "ORGAN"), ("WAVEBASS", "PLUCKSYNTH", "ORGAN"), ("808", "SINEKEY", "PIANO")]),
+         orch=[("808", "SYNCLEAD", "ORGAN"), ("FATBASS", "FLUTE", "PAD"), ("808", "VOICE", "STRINGS")]),
     dict(id="DRUM_AND_BASS", name="DRUM & BASS", decade=1990, year=1996,
          comment="Roni Size, Ed Rush & Optical, Bad Company: the clean two-step at 174, a growling detuned reese bass, "
                  "dark atmospheric pads and a sparse pluck",
@@ -208,7 +210,8 @@ GENRES = [
          bass=dict(mode="OSTINATO", rhythm="x.........x.....", notes=(0, 0, 1, 0), semis=True, gate=0),
          pad=dict(mode="BLOCK", base=53, tones=3),
          groove="G90_DNB",
-         orch=[("FATBASS", "PLUCKSYNTH", "SINEKEY"), ("FATBASS", "SINEKEY", "SHIMMER"), ("FATBASS", "GLITCH", "SINEKEY")]),
+         orch=[("FATBASS", "ERHU", "SINEKEY"), ("UPRIGHT", "FLUGELHORN", "EPIANO"),
+               ("FATBASS", "SHIMMER", "SINEKEY")]),
     dict(id="TRANCE_90S", name="TRANCE", decade=1990, year=1993, reverb="HALL",
          comment="Paul van Dyk, Robert Miles, ATB, Ferry Corsten: 138 four on the floor, the rolling off-beat bass, "
                  "sixteenth arpeggios over i VI III VII, supersaw chords, long builds",
@@ -219,7 +222,8 @@ GENRES = [
          bass=dict(mode="OSTINATO", rhythm=OFF, notes=(0,), semis=True, gate=2),
          pad=dict(mode="BLOCK", base=57, tones=3, spread=True),
          groove="G90_TRANCE", orch_mode="ENERGY",
-         orch=[("WAVEBASS", "PLUCKSYNTH", "PAD"), ("WAVEBASS", "PLUCKSYNTH", "SUPERSAW"), ("WAVEBASS", "CHIP", "SUPERSAW")]),
+         orch=[("WAVEBASS", "PLUCKSYNTH", "STRMACH"), ("ACID", "ARPLEAD", "SYNTH"),
+               ("WAVEBASS", "SUPERSAW", "SUPERSAW")]),
     dict(id="EURODANCE", name="EURODANCE", decade=1990, year=1992,
          comment="2 Unlimited, Haddaway, Culture Beat, Corona: four on the floor at 130, the octave-jumping bass, "
                  "house-piano stabs, a big minor synth hook",
@@ -230,7 +234,8 @@ GENRES = [
          bass=dict(mode="OSTINATO", rhythm=B16, notes=(0, 12), semis=True, gate=1),
          pad=dict(mode="RHYTHM", rhythm="x..x..x...x..x..x..x..x...x..x..", gate=2, base=57, tones=3),
          groove="G90_EURODANCE",
-         orch=[("WAVEBASS", "SYNCLEAD", "PIANO"), ("WAVEBASS", "SAWLEAD", "PIANO"), ("808", "SYNCLEAD", "PLUCKSYNTH")]),
+         orch=[("ORGAN", "SYNCLEAD", "PIANO"), ("WAVEBASS", "VOICE", "PLUCKSYNTH"),
+               ("SYNTHBASS", "SAWLEAD", "PIANO")]),
     dict(id="NU_METAL", name="NU METAL", decade=1990, year=1997,
          comment="Korn, Limp Bizkit, Deftones: drop-tuned chugs on the low string and the flat second, a "
                  "hip-hop-bounce beat, eerie sparse lead notes and scratches",
@@ -241,7 +246,8 @@ GENRES = [
          bass=dict(mode="OSTINATO", rhythm="x.x...x..x.x....", notes=(0, 0, 0, 1), semis=True, gate=2),
          pad=dict(mode="RHYTHM", rhythm="x.x...x..x.x....x.x...x...x.x...", gate=1, base=38, tones=3, power=True),
          groove="G90_NUMETAL",
-         orch=[("EBASS", "GLITCH", "DISTGUITAR"), ("EBASS", "EGUITAR", "DISTGUITAR")]),
+         orch=[("EBASS", "DISTGUITAR", "DISTGUITAR"), ("SLAPBASS", "METALLEAD", "DISTGUITAR"),
+               ("EBASS", "GLITCH", "DISTGUITAR")]),
     dict(id="POP_PUNK_90S", name="POP PUNK", decade=1990, year=1994,
          comment="Green Day's Dookie, the Offspring, Blink-182: downpicked power-chord eighths on I V vi IV at full "
                  "speed, a driving eighth bass, a catchy major tune",
@@ -251,7 +257,7 @@ GENRES = [
          bass=dict(mode="REPEAT"),
          pad=dict(mode="RHYTHM", rhythm=B16 * 2, gate=1, base=52, tones=3, power=True),
          groove="G90_POPPUNK",
-         orch=[("WAVEBASS", "DISTGUITAR", "DISTGUITAR"), ("EBASS", "EGUITAR", "DISTGUITAR")]),
+         orch=[("EBASS", "DISTGUITAR", "DISTGUITAR"), ("EBASS", "EGUITAR", "DISTGUITAR")]),
     dict(id="MIDWEST_EMO", name="EMO", decade=1990, year=1994,
          comment="American Football, Cap'n Jazz, Mineral: 5/4, twinkly clean guitars tapping open major sevenths "
                  "and add9s, a second guitar's wandering line, a busy jazzy kit",
@@ -262,7 +268,7 @@ GENRES = [
          bass=dict(mode="OSTINATO", rhythm="x.....x...x.....x...", notes=(0, 0, 2, 1), gate=0),
          pad=dict(mode="FIGURE", base=55, figure=(0, 2, 4, 3, 1, 3, 5, 4, 2, 4)),
          groove="G90_EMO",
-         orch=[("EBASS", "EGUITAR", "GUITAR"), ("EBASS", "GUITAR", "EGUITAR"), ("EBASS", "TRUMPET", "GUITAR")]),
+         orch=[("EBASS", "EGUITAR", "EGUITAR"), ("EBASS", "TRUMPET", "EGUITAR"), ("EBASS", "GUITAR", "EGUITAR")]),
     dict(id="REGGAETON_90S", name="REGGAETON 90S", decade=1990, year=1994,
          comment="DJ Playero, El General, Tego's beginnings: the dembow riddim from Jamaica via Panama and Puerto "
                  "Rico, a deep bass on the three-three-two, synth stabs and a minor hook",
@@ -273,5 +279,6 @@ GENRES = [
          bass=dict(mode="OSTINATO", rhythm="x..x..x.x..x..x.", notes=(0, 0, 7, 0), semis=True, gate=2),
          pad=dict(mode="RHYTHM", rhythm="...x..x....x..x....x..x....x..x.", gate=1, base=57, tones=3),
          groove="G90_DEMBOW",
-         orch=[("808", "SYNCLEAD", "PLUCKSYNTH"), ("WAVEBASS", "CHIP", "PIANO"), ("808", "SAWLEAD", "MARIMBA")]),
+         orch=[("808", "SYNCLEAD", "PLUCKSYNTH"), ("WAVEBASS", "STEELDRUM", "GUITAR"),
+               ("808", "SAWLEAD", "MARIMBA")]),
 ]

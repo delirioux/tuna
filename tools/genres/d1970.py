@@ -99,8 +99,9 @@ GENRES = [
                      profile=(0.2, 0.62, 0.84, 0.95)),
          bass=dict(mode="OSTINATO", rhythm="x.x.x.x.x.x.xxx.", notes=(0, 0, 0, 0, 0, 0, 10, 12), semis=True),
          pad=dict(mode="RHYTHM", rhythm="x..x..x.x.x..x..x..x..x.x..x.x..", gate=2, base=52, tones=3, power=True),
-         groove="G70_HARDROCK", orch=[("WAVEBASS", "DISTGUITAR", "DISTGUITAR"), ("EBASS", "EGUITAR", "DISTGUITAR"),
-                                      ("WAVEBASS", "ROCKORGAN", "DISTGUITAR")]),
+         groove="G70_HARDROCK",
+         orch=[("EBASS", "DISTGUITAR", "DISTGUITAR"), ("EBASS", "ROCKORGAN", "DISTGUITAR"),
+               ("EBASS", "HARMONICA", "DISTGUITAR")]),
     dict(id="HEAVY_METAL_70S", name="HEAVY METAL", decade=1970, year=1970,
          comment="Black Sabbath, Judas Priest: Phrygian power chords chugging in eighths with the bass, the "
                  "flat second, a screaming minor lead, ride and driving kick",
@@ -110,7 +111,9 @@ GENRES = [
                      profile=(0.2, 0.68, 0.86, 0.95)),
          bass=dict(mode="OSTINATO", rhythm=B16, notes=(0,), gate=1),
          pad=dict(mode="RHYTHM", rhythm=B16 * 2, gate=1, base=52, tones=3, power=True),
-         groove="G70_METAL", orch=[("WAVEBASS", "DISTGUITAR", "DISTGUITAR"), ("EBASS", "EGUITAR", "DISTGUITAR")]),
+         groove="G70_METAL",
+         orch=[("DISTGUITAR", "DISTGUITAR", "ROCKORGAN"), ("DISTGUITAR", "TUBULAR", "DISTGUITAR"),
+               ("EBASS", "DISTGUITAR", "CHOIR")]),
     dict(id="PROG_ROCK_70S", name="PROG ROCK", decade=1970, year=1971, reverb="HALL",
          comment="Genesis, Yes, Pink Floyd, ELP: 7/4 riffs, a Moog lead over Mellotron and Hammond chords, "
                  "modal harmony wandering through Dorian, an arpeggiated bass riff",
@@ -124,7 +127,8 @@ GENRES = [
          bass=dict(mode="OSTINATO", rhythm="x..xx.x.x..x.x", notes=(0, 7, 12, 7, 0, 12, 10), semis=True),
          pad=dict(mode="BLOCK", base=55, tones=3),
          groove="G70_PROG7", orch_mode="CONTRAST",
-         orch=[("WAVEBASS", "SAWLEAD", "STRINGS"), ("WAVEBASS", "SAWLEAD", "ROCKORGAN"), ("EBASS", "FLUTE", "PIANO")]),
+         orch=[("FATBASS", "SAWLEAD", "STRMACH"), ("BASSOON", "FLUTE", "HARPSICHORD"),
+               ("FATBASS", "SYNCLEAD", "ROCKORGAN"), ("FATBASS", "GLOCKEN", "STRMACH")]),
     dict(id="GLAM_ROCK", name="GLAM ROCK", decade=1970, year=1971,
          comment="T. Rex, Bowie's Ziggy, Slade, Sweet: a stomping shuffle with handclaps, boogie guitar on "
                  "the beats, a saxophone or guitar hook, a singalong I-bVII-IV",
@@ -134,7 +138,8 @@ GENRES = [
                      profile=(0.3, 0.72, 0.9, 0.97)),
          bass=dict(mode="OSTINATO", rhythm=B16, notes=(0, 0, 7, 7, 9, 9, 7, 7), semis=True),
          pad=dict(mode="RHYTHM", rhythm="x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.", gate=1, base=52, tones=3, power=True),
-         groove="G70_GLAM", orch=[("EBASS", "SAX", "DISTGUITAR"), ("EBASS", "EGUITAR", "PIANO")]),
+         groove="G70_GLAM",
+         orch=[("EBASS", "SAX", "EGUITAR"), ("CELLO", "OBOE", "STRINGS"), ("EBASS", "EGUITAR", "ROCKORGAN")]),
     dict(id="ROOTS_REGGAE", name="REGGAE", decade=1970, year=1972, reverb="SPRING",
          comment="Bob Marley and the Wailers, Burning Spear: the one drop on 3, the guitar and organ skank on "
                  "2 and 4, a deep melodic bass that leaves holes, a melodica-like lead",
@@ -143,7 +148,8 @@ GENRES = [
          melody=dict(density=0.4, base=62, range=12, sync=0.45, motif=0.75, profile=(0.25, 0.72, 0.9, 0.97)),
          bass=dict(mode="OSTINATO", rhythm="x..x..x...x.x...", notes=(0, 0, 7, 12, 10), semis=True, gate=3),
          pad=dict(mode="RHYTHM", rhythm="....x.......x.......x.......x...", gate=2, base=60, tones=3, strum_ms=4),
-         groove="G70_ONEDROP", orch=[("EBASS", "FLUTE", "GUITAR"), ("EBASS", "SAX", "GUITAR")]),
+         groove="G70_ONEDROP",
+         orch=[("EBASS", "REEDORGAN", "ORGAN"), ("EBASS", "TRUMPET", "GUITAR"), ("EBASS", "SAX", "REEDEP")]),
     dict(id="DISCO", name="DISCO", decade=1970, year=1974,
          comment="Chic, the Bee Gees, Gloria Gaynor: four on the floor, open hats on the offbeats, the octave "
                  "bass, a choppy guitar on the sixteenths, a string hook, a minor seventh vamp",
@@ -153,8 +159,9 @@ GENRES = [
                      profile=(0.25, 0.65, 0.88, 0.96)),
          bass=dict(mode="OSTINATO", rhythm=B16, notes=(0, 12), semis=True, gate=1),
          pad=dict(mode="RHYTHM", rhythm="..x.x.xx..x.x.xx..x.x.xx..x.x.xx", gate=1, base=60, tones=3),
-         groove="G70_DISCO", orch=[("EBASS", "STRINGS", "GUITAR"), ("EBASS", "FLUTE", "GUITAR"),
-                                   ("SYNTHBASS", "STRINGS", "GUITAR")]),
+         groove="G70_DISCO",
+         orch=[("SLAPBASS", "STRINGS", "CLAV"), ("SYNTHBASS", "SYNCLEAD", "STRMACH"),
+               ("SLAPBASS", "FLUTE", "EPIANO"), ("SLAPBASS", "BRASS", "VIBES")]),
     dict(id="PUNK_70S", name="PUNK", decade=1970, year=1976, reverb="BATHROOM",
          comment="the Ramones, Sex Pistols, the Clash: three chords as fast as possible, downstroked power "
                  "chords and bass in eighths, a shouted two-note hook",
@@ -164,7 +171,9 @@ GENRES = [
                      profile=(0.4, 0.8, 0.94, 0.99)),
          bass=dict(mode="OSTINATO", rhythm=B16, notes=(0,), gate=2),
          pad=dict(mode="RHYTHM", rhythm=B16 * 2, gate=1, base=52, tones=3, power=True),
-         groove="G70_PUNK", orch=[("WAVEBASS", "EGUITAR", "DISTGUITAR"), ("WAVEBASS", "DISTGUITAR", "DISTGUITAR")]),
+         groove="G70_PUNK",
+         orch=[("EBASS", "DISTGUITAR", "DISTGUITAR"), ("EBASS", "EGUITAR", "DISTGUITAR"),
+               ("EBASS", "SAX", "DISTGUITAR")]),
     dict(id="SALSA", name="SALSA", decade=1970, year=1971,
          comment="Fania: Willie Colon, Hector Lavoe, Eddie Palmieri: the 3-2 clave, an anticipated tumbao bass "
                  "that skips the one, the piano montuno, trombones and trumpets, cowbell and congas",
@@ -175,7 +184,9 @@ GENRES = [
          bass=dict(mode="OSTINATO", rhythm="......x.....x...", notes=(0, 2)),
          pad=dict(mode="FIGURE", base=52, tones=3,
                   figure=(3, R, 2, 4, R, 3, R, 2, 4, R, 3, R, 1, 3, R, 2)),
-         groove="G70_SALSA", orch=[("EBASS", "TRUMPET", "PIANO"), ("EBASS", "BRASS", "PIANO")]),
+         groove="G70_SALSA",
+         orch=[("FRETLESS", "TRUMPET", "PIANO"), ("FRETLESS", "BRASS", "PIANO"), ("FRETLESS", "FLUTE", "VIOLIN"),
+               ("FRETLESS", "VIBES", "PIANO")]),
     dict(id="OLD_SCHOOL_HIP_HOP", name="BLOCK PARTY", decade=1970, year=1973,
          comment="Kool Herc, Grandmaster Flash in the Bronx: the break of a funk record looped on two turntables, "
                  "a funky drummer beat, a one-chord minor groove, chopped guitar and a horn stab hook cut back "
@@ -186,7 +197,8 @@ GENRES = [
                      pattern=(0, None, None, 0, None, 2, None, None, 3, 2, None, None, None, None, None, None)),
          bass=dict(mode="OSTINATO", rhythm="x.x...x..xx...x.", notes=(0, 0, 12, 10, 7, 12), semis=True, gate=2),
          pad=dict(mode="RHYTHM", rhythm="..x..x....x..x..x.x..x....x..x.x", gate=1, base=58, tones=3),
-         groove="G70_BREAK", orch=[("EBASS", "BRASS", "EGUITAR"), ("EBASS", "SAX", "CLAV")]),
+         groove="G70_BREAK",
+         orch=[("SLAPBASS", "BRASS", "EGUITAR"), ("SLAPBASS", "SAX", "CLAV"), ("SLAPBASS", "JAZZORGAN", "EGUITAR")]),
     dict(id="KRAUTROCK", name="KRAUTROCK", decade=1970, year=1971,
          comment="Neu!, Can, Kraftwerk's Autobahn: the motorik beat forever, a hypnotic eighth-note bass on one "
                  "chord, a sequencer figure, drones that barely change",
@@ -198,5 +210,6 @@ GENRES = [
          bass=dict(mode="REPEAT"),
          pad=dict(mode="BLOCK", base=55, tones=3),
          groove="G70_MOTORIK", orch_mode="CYCLE",
-         orch=[("EBASS", "EGUITAR", "GUITAR"), ("WAVEBASS", "SYNTH", "SINEKEY"), ("WAVEBASS", "CHIP", "ORGAN")]),
+         orch=[("FATBASS", "RINGMOD", "PLUCKSYNTH"), ("ORGAN", "FLUTE", "SINEKEY"),
+               ("FATBASS", "ARPLEAD", "STRMACH"), ("WAVEBASS", "SYNTH", "ROCKORGAN")]),
 ]

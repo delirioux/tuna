@@ -92,6 +92,7 @@ static const tsn_family TSN_FAMILY[TI_COUNT] = {
     [TI_TOYPIANO] = TSN_FM6P(TSN_FM6_TOYPIANO),
     [TI_FRETLESS] = TSN_FM6PX(TSN_FM6_FRETLESS, TSN_KEEP, 22, TSN_LEGATO),
     [TI_ENGLISHHORN] = TSN_FM6P(TSN_FM6_ENGLISHHORN),
+    [TI_UPRIGHT] = TSN_OWN(TSN_PHYS, 2, TSN_UPRIGHT),
 };
 #undef TSN
 #undef TSN_X
@@ -109,7 +110,7 @@ static const int8_t TSN_TRIM[TI_COUNT] = {
     [TI_HORN] = -7, [TI_TRUMPET] = -2, [TI_BRASS] = 2, [TI_TUBA] = -4, [TI_HARP] = 16, [TI_GUITAR] = 18,
     [TI_CHOIR] = -4, [TI_VOICE] = -1, [TI_BELLS] = 11, [TI_CELESTA] = 6, [TI_MARIMBA] = 9, [TI_BANDONEON] = 3,
     [TI_SAX] = 0, [TI_SYNTH] = -3, [TI_PAD] = 3, [TI_WHISTLE] = 4, [TI_DRONE] = 5, [TI_EPIANO] = -4,
-    [TI_EGUITAR] = 18, [TI_DISTGUITAR] = 8, [TI_EBASS] = 8, [TI_SYNTHBASS] = -2, [TI_808] = 8, [TI_ACID] = 1,
+    [TI_EGUITAR] = 18, [TI_DISTGUITAR] = 9, [TI_EBASS] = 8, [TI_SYNTHBASS] = -2, [TI_808] = 8, [TI_ACID] = 1,
     [TI_SUPERSAW] = -8, [TI_FATBASS] = 8, [TI_SYNCLEAD] = 0, [TI_CHIP] = -1, [TI_CLAV] = 18, [TI_ROCKORGAN] = 0,
     [TI_GOSPEL] = -2, [TI_TALKBASS] = -7, [TI_GLITCH] = 9, [TI_SINEKEY] = -5, [TI_SHIMMER] = 5, [TI_KALIMBA] = 17,
     [TI_LOGDRUM] = 10, [TI_PLUCKSYNTH] = 1, [TI_SAWLEAD] = -1, [TI_WAVEBASS] = 7, [TI_STEELDRUM] = 12,
@@ -120,6 +121,7 @@ static const int8_t TSN_TRIM[TI_COUNT] = {
     [TI_GLOCKEN] = 11, [TI_TUBULAR] = 18, [TI_MUSICBOX] = 7, [TI_TABLA] = 12, [TI_PIPEORGAN] = 6, [TI_REEDEP] = 2,
     [TI_SLAPBASS] = 8, [TI_SYNBRASS] = 0, [TI_HARMONICA] = 8, [TI_PANFLUTE] = 3, [TI_SHAKUHACHI] = 4, [TI_ERHU] = 11,
     [TI_MUTETRUMPET] = 15, [TI_FLUGELHORN] = 5, [TI_TOYPIANO] = 6, [TI_FRETLESS] = 6, [TI_ENGLISHHORN] = 5,
+    [TI_UPRIGHT] = 18,
 };
 
 /* the part's level (0..127) with its family's trim; 0 stays 0 (a part turned off) */

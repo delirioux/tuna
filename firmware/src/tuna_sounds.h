@@ -13,16 +13,25 @@ enum { TSN_POLY = 0, TSN_MONO = 1, TSN_LEGATO = 2 };   /* core.h's V_POLY V_MONO
 
 /* own: a sound of Tuna's on the engine (Felucca's preset layout, core.h preset_t), in place of the factory
  * preset's values; 0: the factory preset as it is */
-typedef struct { uint8_t engine, preset; int8_t dist, glide, voice; const preset_t *own; } tsn_family;
+/* fm6: a patch of Tuna's own for FM6 (tuna_fm6.inc, 128 bytes packed), loaded as the track's own (SLOT OWN) */
+typedef struct {
+    uint8_t engine, preset;
+    int8_t dist, glide, voice;
+    const preset_t *own;
+    const uint8_t *fm6;
+} tsn_family;
 
-#define TSN(e, p) {(uint8_t)(e), (uint8_t)(p), TSN_KEEP, TSN_KEEP, TSN_KEEP, 0}
-#define TSN_X(e, p, d, gl, v) {(uint8_t)(e), (uint8_t)(p), (int8_t)(d), (int8_t)(gl), (int8_t)(v), 0}
-#define TSN_OWN(e, p, own) {(uint8_t)(e), (uint8_t)(p), TSN_KEEP, TSN_KEEP, TSN_KEEP, &(own)}
-#define TSN_OWNX(e, p, own, d, gl, v) {(uint8_t)(e), (uint8_t)(p), (int8_t)(d), (int8_t)(gl), (int8_t)(v), &(own)}
+#define TSN(e, p) {(uint8_t)(e), (uint8_t)(p), TSN_KEEP, TSN_KEEP, TSN_KEEP, 0, 0}
+#define TSN_X(e, p, d, gl, v) {(uint8_t)(e), (uint8_t)(p), (int8_t)(d), (int8_t)(gl), (int8_t)(v), 0, 0}
+#define TSN_OWN(e, p, own) {(uint8_t)(e), (uint8_t)(p), TSN_KEEP, TSN_KEEP, TSN_KEEP, &(own), 0}
+#define TSN_OWNX(e, p, own, d, gl, v) {(uint8_t)(e), (uint8_t)(p), (int8_t)(d), (int8_t)(gl), (int8_t)(v), &(own), 0}
+#define TSN_FM6P(patch) {(uint8_t)TSN_FM6, 0, TSN_KEEP, TSN_KEEP, TSN_KEEP, 0, (patch)}
+#define TSN_FM6PX(patch, d, gl, v) {(uint8_t)TSN_FM6, 0, (int8_t)(d), (int8_t)(gl), (int8_t)(v), 0, (patch)}
 
 /* ---- Tuna's own sounds (TSN_OWN): Felucca's engines set otherwise. e: the engine's E0..E7 (eng_*.c .edit),
  * env: ATK DEC SUS REL, fenv: ENV -> FILTER, mono, FX(dist, chorus, delay, reverb) ---- */
 #include "tuna_sounds_own.inc"
+#include "tuna_fm6.inc"
 static const tsn_family TSN_FAMILY[TI_COUNT] = {
     [TI_DEFAULT] = TSN(TSN_ANALOG, 1),     [TI_PIANO] = TSN(TSN_SAMPLE, 0),     [TI_HARPSICHORD] = TSN(TSN_FM6, 7),
     [TI_ORGAN] = TSN(TSN_WHEEL, 0),        [TI_STRINGS] = TSN(TSN_ANALOG, 11),  [TI_VIOLIN] = TSN(TSN_PHASE, 2),
@@ -74,11 +83,22 @@ static const tsn_family TSN_FAMILY[TI_COUNT] = {
     [TI_XYLOPHONE] = TSN_OWN(TSN_PHYS, 1, TSN_XYLO), [TI_GLOCKEN] = TSN_OWN(TSN_PHYS, 0, TSN_GLOCK),
     [TI_TUBULAR] = TSN_OWN(TSN_PHYS, 0, TSN_TUBULAR), [TI_MUSICBOX] = TSN_OWN(TSN_PHYS, 0, TSN_MUSICBOX),
     [TI_TABLA] = TSN_OWN(TSN_PHYS, 5, TSN_TABLA),
+    /* Tuna's own FM6 patches (tools/tuna_fm6.py) */
+    [TI_PIPEORGAN] = TSN_FM6P(TSN_FM6_PIPEORGAN),     [TI_REEDEP] = TSN_FM6P(TSN_FM6_REEDEP),
+    [TI_SLAPBASS] = TSN_FM6P(TSN_FM6_SLAPBASS),       [TI_SYNBRASS] = TSN_FM6P(TSN_FM6_SYNBRASS),
+    [TI_HARMONICA] = TSN_FM6P(TSN_FM6_HARMONICA),     [TI_PANFLUTE] = TSN_FM6P(TSN_FM6_PANFLUTE),
+    [TI_SHAKUHACHI] = TSN_FM6P(TSN_FM6_SHAKUHACHI),   [TI_ERHU] = TSN_FM6P(TSN_FM6_ERHU),
+    [TI_MUTETRUMPET] = TSN_FM6P(TSN_FM6_MUTETRUMPET), [TI_FLUGELHORN] = TSN_FM6P(TSN_FM6_FLUGELHORN),
+    [TI_TOYPIANO] = TSN_FM6P(TSN_FM6_TOYPIANO),
+    [TI_FRETLESS] = TSN_FM6PX(TSN_FM6_FRETLESS, TSN_KEEP, 22, TSN_LEGATO),
+    [TI_ENGLISHHORN] = TSN_FM6P(TSN_FM6_ENGLISHHORN),
 };
 #undef TSN
 #undef TSN_X
 #undef TSN_OWN
 #undef TSN_OWNX
+#undef TSN_FM6P
+#undef TSN_FM6PX
 
 /* each family's level, evened out: half-dB steps added to the part's level (LVL), so that a plucked guitar and
  * held strings come out alike at the same mix setting (from tests/tuna_audition.sh: the peak of a held C4 to
@@ -97,7 +117,9 @@ static const int8_t TSN_TRIM[TI_COUNT] = {
     [TI_WAVELEAD] = 11, [TI_STEPLEAD] = -3, [TI_WHISPER] = -2, [TI_ARPLEAD] = -2, [TI_RINGMOD] = 18,
     [TI_CHIPCHOIR] = 2, [TI_FROZEN] = 18, [TI_BELLTREE] = 15, [TI_GLASS] = 18, [TI_REEDORGAN] = -7, [TI_KOTO] = 18,
     [TI_SITAR] = -3, [TI_OUD] = 17, [TI_BANJO] = 18, [TI_DULCIMER] = 13, [TI_VIBES] = 8, [TI_XYLOPHONE] = 10,
-    [TI_GLOCKEN] = 11, [TI_TUBULAR] = 18, [TI_MUSICBOX] = 7, [TI_TABLA] = 12,
+    [TI_GLOCKEN] = 11, [TI_TUBULAR] = 18, [TI_MUSICBOX] = 7, [TI_TABLA] = 12, [TI_PIPEORGAN] = 6, [TI_REEDEP] = 2,
+    [TI_SLAPBASS] = 8, [TI_SYNBRASS] = 0, [TI_HARMONICA] = 8, [TI_PANFLUTE] = 3, [TI_SHAKUHACHI] = 4, [TI_ERHU] = 11,
+    [TI_MUTETRUMPET] = 15, [TI_FLUGELHORN] = 5, [TI_TOYPIANO] = 6, [TI_FRETLESS] = 6, [TI_ENGLISHHORN] = 5,
 };
 
 /* the part's level (0..127) with its family's trim; 0 stays 0 (a part turned off) */
@@ -107,6 +129,19 @@ static inline int16_t tsn_level(int level, int fam)
         return 0;
     int v = level + (fam > TI_DEFAULT && fam < TI_COUNT ? TSN_TRIM[fam] : 0);
     return (int16_t)(v < 1 ? 1 : v > 127 ? 127 : v);
+}
+
+/* a family's own FM6 patch into track t (FM6, its factory preset just loaded): the track's own patch, SLOT OWN,
+ * so nothing reloads a factory one over it (eng_fm6.c fm6_poll). Main loop, as every patch load */
+static inline void tsn_fm6_load(track_t *t, const uint8_t *packed)
+{
+    uint32_t tr = (uint32_t)(t - trk) % NTRK;
+    uint8_t v[FP_SIZE + 1u];
+    fm6_unpack(packed, v);
+    fm6_set_patch(tr, v);
+    t->p[P_E7] = FM6_OWN;
+    fm6_slot[tr] = FM6_OWN;
+    fm6_own_ok &= (uint8_t)~(1u << tr);
 }
 
 /* a family's own sound into a track's parameters, after its factory preset was loaded (as ui.c

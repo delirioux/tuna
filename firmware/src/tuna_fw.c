@@ -98,6 +98,8 @@ static void tf_load_family(uint32_t k, int fam)
     fm1_irq_off();
     if (TSN_FAMILY[fam].own)
         tsn_apply_own(trk[k].p, TSN_FAMILY[fam].own);
+    if (TSN_FAMILY[fam].fm6)
+        tsn_fm6_load(&trk[k], TSN_FAMILY[fam].fm6);
     tf_part_settings(k);
     tf_snapshot(k);
     fm1_irq_on();

@@ -29,7 +29,7 @@ static int family_shift(int f)
 {
     switch (f) {
     case TI_CONTRABASS: case TI_TUBA: case TI_EBASS: case TI_SYNTHBASS: case TI_808: case TI_FATBASS:
-    case TI_TALKBASS: case TI_WAVEBASS: case TI_ACID:
+    case TI_TALKBASS: case TI_WAVEBASS: case TI_ACID: case TI_SLAPBASS: case TI_FRETLESS:
         return -24;
     case TI_CELLO: case TI_BASSOON: case TI_HORN: case TI_DRONE: case TI_LOGDRUM:
         return -12;
@@ -44,6 +44,8 @@ static void load_family(track_t *t, int f, bool dry)
     host_preset(t, fm->engine, fm->preset);
     if (fm->own)
         tsn_apply_own(t->p, fm->own);
+    if (fm->fm6)
+        tsn_fm6_load(t, fm->fm6);
     if (fm->dist != TSN_KEEP) t->p[P_DIST] = fm->dist;
     if (fm->glide != TSN_KEEP) t->p[P_GLIDE] = fm->glide;
     if (fm->voice != TSN_KEEP) t->p[P_VOICE] = fm->voice;
@@ -152,7 +154,7 @@ int main(int argc, char **argv)
         const tsn_family *fm = &TSN_FAMILY[f];
         int sh = family_shift(f);
         fprintf(list, "%02d %-10s engine %2u preset %2u %s shift %d\n", f, name, fm->engine, fm->preset,
-                fm->own ? fm->own->name : "-", sh);
+                fm->own ? fm->own->name : fm->fm6 ? "fm6" : "-", sh);
         /* listen */
         host_tracks_init();
         silence(S / 4);

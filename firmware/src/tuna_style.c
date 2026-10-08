@@ -1883,6 +1883,8 @@ static const char *const family_names[TI_COUNT] = {
     "STR.MACH", "JAZZ ORG", "ACCORDN", "RESO SYN", "METAL LD", "WAVE LD", "STEP LD", "WHISPER",
     "ARP LEAD", "RING MOD", "CHIP CHR", "FROZEN", "BELLTREE", "GLASS", "REED ORG", "KOTO", "SITAR",
     "OUD", "BANJO", "DULCIMER", "VIBES", "XYLO", "GLOCK", "TUBULAR", "MUSICBOX", "TABLA",
+    "PIPE ORG", "REED EP", "SLAPBASS", "SYNBRASS", "HARMONCA", "PANFLUTE", "SHAKU", "ERHU",
+    "MUTE TPT", "FLUGEL", "TOY PNO", "FRETLESS", "ENG HORN",
 };
 
 const char *tg_family_name(int f) { return f >= 0 && f < TI_COUNT ? family_names[f] : "?"; }

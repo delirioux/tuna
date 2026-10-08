@@ -141,7 +141,7 @@ GENRES = [
          pad=dict(mode="RHYTHM", rhythm="x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.", gate=1, base=64, tones=3),
          groove="G20_SPEDUP",
          orch=[("WAVEBASS", "VOICE", "PLUCKSYNTH"), ("WAVEBASS", "SINEKEY", "PIANO")]),
-    dict(id="SLOWED_REVERB", name="SLOWED+REVERB", decade=2020, year=2020,
+    dict(id="SLOWED_REVERB", name="SLOWED+REVERB", decade=2020, year=2020, reverb="CATHEDRAL",
          comment="the slowed + reverb edits of YouTube and TikTok: a song pulled down to a crawl, lower, washed in "
                  "reverb, dreamy major sevenths, the 808 booming",
          key="D", scale="AEOLIAN", bpm=68, div=4, chord_beats=8, period_bars=8,
@@ -152,7 +152,7 @@ GENRES = [
          pad=dict(mode="BLOCK", base=52, tones=3, spread=True),
          groove="G20_SLOWED", swing=0.3, swing16=True, orch_mode="CYCLE",
          orch=[("808", "VOICE", "SINEKEY"), ("808", "SINEKEY", "SHIMMER"), ("808", "FLUTE", "CHOIR")]),
-    dict(id="BEDROOM_POP", name="BEDROOM POP", decade=2020, year=2020,
+    dict(id="BEDROOM_POP", name="BEDROOM POP", decade=2020, year=2020, reverb="BATHROOM",
          comment="Clairo, beabadoobee, Rex Orange County, Steve Lacy: home-made pop, a jangly strummed guitar, "
                  "major sevenths, a soft bass and a cheap drum machine",
          key="A", scale="IONIAN", bpm=92, div=4, chord_beats=4, period_bars=8, swing=0.25, swing16=True,

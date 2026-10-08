@@ -114,7 +114,7 @@ GENRES = [
          pad=dict(mode="RHYTHM", rhythm=two("x...x...x...x..."), gate=2, base=57, tones=3),
          groove="G60_MOTOWN", orch=[("EBASS", "SAX", "PIANO"), ("EBASS", "VOICE", "PIANO"),
                                     ("EBASS", "BELLS", "PIANO")]),
-    dict(id="SURF_ROCK", name="SURF ROCK", decade=1960, year=1961,
+    dict(id="SURF_ROCK", name="SURF ROCK", decade=1960, year=1961, reverb="SPRING",
          comment="Dick Dale, the Ventures, the Chantays: a reverb guitar tremolo-picking down the chord, the "
                  "Andalusian i VII VI V, pounding floor toms",
          key="E", scale="AEOLIAN", bpm=160, div=4, chord_beats=4, period_bars=8,
@@ -145,7 +145,7 @@ GENRES = [
          bass=dict(mode="OSTINATO", rhythm="x.......x...x...", notes=(0, 7, 12), semis=True),
          pad=dict(mode="FIGURE", figure=(0, 1, 2, 3, 4, 3, 2, 1), base=55, tones=3),
          groove="G60_FOLKROCK", orch=[("EBASS", "VOICE", "EGUITAR"), ("EBASS", "FLUTE", "EGUITAR")]),
-    dict(id="GARAGE_ROCK", name="GARAGE ROCK", decade=1960, year=1965,
+    dict(id="GARAGE_ROCK", name="GARAGE ROCK", decade=1960, year=1965, reverb="SPRING",
          comment="the Kingsmen, the Sonics, ? and the Mysterians, Them: three chords (I bVII IV, Gloria), fuzz "
                  "power chords in the Louie Louie 1-2-3, 1-2, a cheap Farfisa organ hook",
          key="E", scale="MIXOLYDIAN", bpm=140, div=4, chord_beats=2, period_bars=4,
@@ -155,7 +155,7 @@ GENRES = [
          bass=dict(mode="OSTINATO", rhythm=E8, notes=(0,)),
          pad=dict(mode="RHYTHM", rhythm=two("x.x.x...x.x....."), gate=1, base=52, tones=3, power=True),
          groove="G60_GARAGE", orch=[("EBASS", "ROCKORGAN", "DISTGUITAR"), ("EBASS", "EGUITAR", "DISTGUITAR")]),
-    dict(id="PSYCHEDELIC", name="PSYCHEDELIC", decade=1960, year=1966,
+    dict(id="PSYCHEDELIC", name="PSYCHEDELIC", decade=1960, year=1966, reverb="SPRING",
          comment="Revolver to the Doors and Hendrix: a Dorian vamp i IV over a droning bass, swirling organ, a "
                  "long fuzz-guitar line, a hypnotic tom loop",
          key="A", scale="DORIAN", bpm=104, div=4, chord_beats=4, period_bars=8,
@@ -167,7 +167,7 @@ GENRES = [
          pad=dict(mode="BLOCK", base=55, tones=3, spread=True),
          groove="G60_PSYCH", orch=[("EBASS", "DISTGUITAR", "ORGAN"), ("EBASS", "FLUTE", "ORGAN"),
                                    ("EBASS", "DISTGUITAR", "STRINGS")], orch_mode="CYCLE"),
-    dict(id="SKA", name="SKA", decade=1960, year=1961,
+    dict(id="SKA", name="SKA", decade=1960, year=1961, reverb="SPRING",
          comment="the Skatalites, Prince Buster, Millie: the guitar and piano chopping every off-beat, a walking "
                  "upright bass, a horn section on the melody",
          key="BB", scale="IONIAN", bpm=136, div=4, chord_beats=4, period_bars=8, swing=0.25,
@@ -178,7 +178,7 @@ GENRES = [
          pad=dict(mode="RHYTHM", rhythm=two(OFF8), gate=1, base=58, tones=3),
          groove="G60_SKA", orch=[("CONTRABASS", "TRUMPET", "PIANO"), ("CONTRABASS", "SAX", "GUITAR"),
                                  ("EBASS", "TRUMPET", "GUITAR")]),
-    dict(id="ROCKSTEADY", name="ROCKSTEADY", decade=1960, year=1966,
+    dict(id="ROCKSTEADY", name="ROCKSTEADY", decade=1960, year=1966, reverb="SPRING",
          comment="Alton Ellis, the Paragons, Phyllis Dillon: ska slowed down, the guitar on 2 and 4 only, a "
                  "heavy melodic bass with gaps, beat three marked, sweet minor-key harmony",
          key="A", scale="AEOLIAN", bpm=82, div=4, chord_beats=4, period_bars=8, swing=0.15,

@@ -481,7 +481,7 @@ static void test_chaos_page(void)
     tu_goto_page(&ui, TU_PG_HOME);
 }
 
-/* REVERB (GLO, GLO): the send, Felucca's reverb size, damping and type, kept by a slot */
+/* REVERB (GLO, GLO): the send, and Felucca's reverb: size, damping, type; each piece brings its own type */
 static void test_reverb_page(void)
 {
     ta_play(&app, false);
@@ -489,27 +489,55 @@ static void test_reverb_page(void)
     press(TU_B_GLO);
     press(TU_B_GLO);
     CHECK(ui.page == TU_PG_FX, "GLO, GLO: the REVERB page (%d)", ui.page);
-    CHECK(app.rev_size == TA_REV_SIZE && app.rev_damp == TA_REV_DAMP && app.rev_type == TA_REV_ROOM,
-          "Felucca's reverb as designed at first (%d %d %d)", app.rev_size, app.rev_damp, app.rev_type);
-    tu_knob(&ui, TU_K2, 5);
-    tu_knob(&ui, TU_K3, -4);
+    int st = ta_lib_style(app.item), own = ta_piece_reverb(st);
+    CHECK(app.rev_type == own && app.rev_size == ta_reverb_type(own)->size, "the piece's own reverb, %s (%d %d)",
+          ta_reverb_type(own)->name, app.rev_type, app.rev_size);
+    ta_set_reverb_type(&app, TG_REV_ROOM);
+    CHECK(app.rev_size == 71 && app.rev_damp == 48, "ROOM: Felucca's reverb as designed (%d %d)", app.rev_size, app.rev_damp);
     tu_knob(&ui, TU_K4, 1);
-    CHECK(app.rev_size == TA_REV_SIZE + 10 && app.rev_damp == TA_REV_DAMP - 8 && app.rev_type == TA_REV_SPRING,
-          "K2 SIZE, K3 DAMP, K4 SPRING (%d %d %d)", app.rev_size, app.rev_damp, app.rev_type);
+    CHECK(app.rev_type == TG_REV_HALL && app.rev_size == ta_reverb_type(TG_REV_HALL)->size,
+          "K4: ROOM -> HALL, with its size (%d %d)", app.rev_type, app.rev_size);
+    tu_knob(&ui, TU_K4, 1);
+    tu_knob(&ui, TU_K4, 1);
+    tu_knob(&ui, TU_K4, 1);
+    CHECK(app.rev_type == TG_REV_SPRING, "K4 on: CATHEDRAL, then SPRING, the last (%d)", app.rev_type);
+    for (int i = 0; i < 6; ++i)
+        tu_knob(&ui, TU_K4, -1);
+    CHECK(app.rev_type == TG_REV_BATHROOM, "K4 back: BATHROOM, the first (%d)", app.rev_type);
     lint_where = "reverb";
+    all_palettes("reverb_bath");
+    ta_set_reverb_type(&app, TG_REV_CATHEDRAL);
+    all_palettes("reverb_cathedral");
+    ta_set_reverb_type(&app, TG_REV_SPRING);
+    tu_knob(&ui, TU_K2, -5);
+    tu_knob(&ui, TU_K3, 4);
+    CHECK(app.rev_size == 61 && app.rev_damp == 56 && app.rev_type == TG_REV_SPRING, "K2 SIZE, K3 DAMP (%d %d)",
+          app.rev_size, app.rev_damp);
     all_palettes("reverb");
     CHECK(ta_slot_save(&app, 6) == TP_OK, "saved slot 7");
-    tu_knob(&ui, TU_K2, -50);
-    tu_knob(&ui, TU_K4, -1);
-    CHECK(app.rev_size == 0 && app.rev_type == TA_REV_ROOM, "SIZE down to 0, ROOM (%d %d)", app.rev_size, app.rev_type);
-    CHECK(ta_slot_load(&app, 6) == TP_OK && app.rev_size == TA_REV_SIZE + 10 && app.rev_damp == TA_REV_DAMP - 8 &&
-              app.rev_type == TA_REV_SPRING,
+    ta_set_reverb_type(&app, TG_REV_ROOM);
+    CHECK(ta_slot_load(&app, 6) == TP_OK && app.rev_size == 61 && app.rev_damp == 56 && app.rev_type == TG_REV_SPRING,
           "the slot brings the reverb back (%d %d %d)", app.rev_size, app.rev_damp, app.rev_type);
-    ta_select(&app, ta_lib_first(3));
-    CHECK(app.rev_type == TA_REV_SPRING, "kept for the next piece");
-    app.rev_size = TA_REV_SIZE;                      /* (as designed again, for the tests after) */
-    app.rev_damp = TA_REV_DAMP;
-    app.rev_type = TA_REV_ROOM;
+    /* a new piece: its own reverb, the send kept */
+    app.reverb = 44;
+    int it = -1, ren = -1, rom = -1;
+    for (int i = 0; i < ta_lib_count() && (it < 0 || ren < 0 || rom < 0); ++i) {
+        int s2 = ta_lib_style(i);
+        if (s2 < 0) continue;
+        if (it < 0 && tg_style_get(s2)->reverb == TG_REV_SPRING + 1) it = i;
+        if (ren < 0 && tp_style_era(s2) == TP_ERA_RENAISSANCE) ren = i;
+        if (rom < 0 && tp_style_era(s2) == TP_ERA_ROMANTIC) rom = i;
+    }
+    CHECK(it >= 0 && ren >= 0 && rom >= 0, "a SPRING genre, a renaissance and a romantic composer (%d %d %d)", it, ren, rom);
+    ta_select(&app, it);
+    CHECK(app.rev_type == TG_REV_SPRING && app.rev_size == 71 && app.reverb == 44, "%s: SPRING, the send kept (%d %d)",
+          ta_lib_name(it), app.rev_type, app.reverb);
+    ta_select(&app, ren);
+    CHECK(app.rev_type == TG_REV_CATHEDRAL, "%s: CATHEDRAL (%d)", ta_lib_name(ren), app.rev_type);
+    ta_select(&app, rom);
+    CHECK(app.rev_type == TG_REV_HALL, "%s: HALL (%d)", ta_lib_name(rom), app.rev_type);
+    app.reverb = 30;
+    ta_set_reverb_type(&app, TG_REV_ROOM);
     tu_goto_page(&ui, TU_PG_HOME);
 }
 

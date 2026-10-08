@@ -209,7 +209,7 @@ GENRES = [
          pad=dict(mode="BLOCK", base=53, tones=3),
          groove="G90_DNB",
          orch=[("FATBASS", "PLUCKSYNTH", "SINEKEY"), ("FATBASS", "SINEKEY", "SHIMMER"), ("FATBASS", "GLITCH", "SINEKEY")]),
-    dict(id="TRANCE_90S", name="TRANCE", decade=1990, year=1993,
+    dict(id="TRANCE_90S", name="TRANCE", decade=1990, year=1993, reverb="HALL",
          comment="Paul van Dyk, Robert Miles, ATB, Ferry Corsten: 138 four on the floor, the rolling off-beat bass, "
                  "sixteenth arpeggios over i VI III VII, supersaw chords, long builds",
          key="A", scale="AEOLIAN", bpm=138, div=4, chord_beats=8, period_bars=16, swell=0.6,

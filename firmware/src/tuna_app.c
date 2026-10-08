@@ -106,6 +106,51 @@ static float deja_value(const tuna_app *a)
     return a->g.style ? a->g.style->motif : 0.0f;
 }
 
+/* ---- the reverb ---- */
+static const ta_reverb REVERBS[TG_REV_COUNT] = {
+    [TG_REV_ROOM] = {"ROOM", "ROOM", 71, 48, false},           /* Felucca's reverb as designed (SIZE 90, DAMP 60 of 127) */
+    [TG_REV_SPRING] = {"SPRING", "SPRING", 71, 48, true},
+    [TG_REV_BATHROOM] = {"BATHROOM", "BATH", 22, 8, false},    /* short and bright: hard walls close by */
+    [TG_REV_HALL] = {"HALL", "HALL", 86, 45, false},
+    [TG_REV_CATHEDRAL] = {"CATHEDRAL", "CHURCH", 97, 30, false}, /* (about four seconds) */
+};
+static const uint8_t REV_ORDER[TG_REV_COUNT] = {TG_REV_BATHROOM, TG_REV_ROOM, TG_REV_HALL, TG_REV_CATHEDRAL,
+                                                TG_REV_SPRING};
+
+const ta_reverb *ta_reverb_type(int type) { return &REVERBS[type >= 0 && type < TG_REV_COUNT ? type : TG_REV_ROOM]; }
+
+int ta_reverb_step(int type, int d)
+{
+    int i = 0;
+    while (i < TG_REV_COUNT - 1 && REV_ORDER[i] != type)
+        ++i;
+    i += d;
+    return REV_ORDER[i < 0 ? 0 : i >= TG_REV_COUNT ? TG_REV_COUNT - 1 : i];
+}
+
+int ta_piece_reverb(int style)
+{
+    const tg_style *s = style >= 0 ? tg_style_get(style) : 0;
+    if (!s)
+        return TG_REV_ROOM;
+    if (s->reverb)
+        return s->reverb - 1;
+    switch (tp_style_era(style)) {
+    case TP_ERA_RENAISSANCE: return TG_REV_CATHEDRAL;   /* (written for churches) */
+    case TP_ERA_EARLY_ROMANTIC: case TP_ERA_ROMANTIC: case TP_ERA_LATE_ROMANTIC: case TP_ERA_FILM:
+        return TG_REV_HALL;                             /* (the concert hall's orchestra) */
+    default: return TG_REV_ROOM;
+    }
+}
+
+void ta_set_reverb_type(tuna_app *a, int type)
+{
+    const ta_reverb *r = ta_reverb_type(type);
+    a->rev_type = (uint8_t)(r - REVERBS);
+    a->rev_size = r->size;
+    a->rev_damp = r->damp;
+}
+
 /* a fresh generator for the item: the piece's own tempo, key, percussion and evolution; the player's chaos
  * knobs (and the parts they move) and memory stay as they were */
 static void load_item(tuna_app *a, int item)
@@ -124,6 +169,7 @@ static void load_item(tuna_app *a, int item)
     tg_set_chaos_parts(g, parts);
     g->x.deja_vu = deja_value(a);
     tg_reseed(g, a->seed);
+    ta_set_reverb_type(a, ta_piece_reverb(st));   /* (its reverb too; the send is the player's) */
     a->item = item;
     a->req_on = false;
     a->req.meter = a->req.mel = a->req.bass = a->req.pad = a->req.harm = a->req.scale = -1;
@@ -141,9 +187,7 @@ void ta_init(tuna_app *a, float sample_rate, uint32_t seed)
     for (int t = 0; t < TP_TRACKS; ++t)
         a->level[t] = 80;
     a->reverb = 30;
-    a->rev_size = TA_REV_SIZE;
-    a->rev_damp = TA_REV_DAMP;
-    a->rev_type = TA_REV_ROOM;
+    ta_set_reverb_type(a, TG_REV_ROOM);
     a->local = true;
     tmi_init(&a->midi, sample_rate);
     tr_init(&a->reso, sample_rate);
@@ -476,9 +520,13 @@ int ta_slot_load(tuna_app *a, int slot)
     for (int t = 0; t < TP_TRACKS; ++t)
         a->level[t] = h.sound[t].level;
     a->reverb = h.sound[0].rev;
-    a->rev_size = h.reverb[0] > 100 ? TA_REV_SIZE : h.reverb[0];
-    a->rev_damp = h.reverb[1] > 100 ? TA_REV_DAMP : h.reverb[1];
-    a->rev_type = h.reverb[2] < TA_REV_TYPES ? h.reverb[2] : TA_REV_ROOM;
+    if (h.reverb[0] <= 100 && h.reverb[1] <= 100 && h.reverb[2] < TG_REV_COUNT) {
+        a->rev_type = h.reverb[2];
+        a->rev_size = h.reverb[0];
+        a->rev_damp = h.reverb[1];
+    } else {                                      /* (an older record: the piece's own) */
+        ta_set_reverb_type(a, ta_piece_reverb(st));
+    }
     ta_reso_set(a, h.reso[0], h.reso[1], h.reso[2], h.reso[3]);
     a->blocks = 0;
     return TP_OK;

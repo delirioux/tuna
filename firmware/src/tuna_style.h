@@ -143,6 +143,9 @@ enum { TF_T, TF_S, TF_D, TF_SEC };          /* tonic, pre-dominant, dominant, ap
 #define TG_VOC_AUG_I 19                     /* vocabulary indices of the whole-tone colour chords */
 #define TG_VOC_AUG_BVII 20
 
+/* the reverb a piece asks for (the host's: Felucca's ROOM or SPRING model, at a size and damping of its own) */
+enum { TG_REV_ROOM, TG_REV_SPRING, TG_REV_BATHROOM, TG_REV_HALL, TG_REV_CATHEDRAL, TG_REV_COUNT };
+
 typedef struct {
     int8_t semis;      /* chord root, semitones above the tonic (TQ_DIATONIC: the scale degree) */
     uint8_t quality;   /* TQ_* */
@@ -246,6 +249,7 @@ typedef struct {
 
     /* ---- the popular genres: all zero gives the behaviour above ---- */
     uint8_t groove;                  /* TG_PERC_GROOVE: a drum groove (tg_groove_get), index + 1; 0 none */
+    uint8_t reverb;                  /* the piece's reverb: TG_REV_* + 1; 0: its era's (ta_piece_reverb) */
     bool swing16;                    /* swing the off sixteenths (hip hop, house) rather than the off eighths */
     bool bass_semis;                 /* OSTINATO: bass_notes are semitones above the chord's root (boogie, riffs) */
     uint8_t bass_gate;               /* OSTINATO, 808: ticks a bass note holds (0: to the next note) */

@@ -118,7 +118,7 @@ GROOVES = {
 }
 
 GENRES = [
-    dict(id="EDM_BIG_ROOM", name="BIG ROOM EDM", decade=2010, year=2012,
+    dict(id="EDM_BIG_ROOM", name="BIG ROOM EDM", decade=2010, year=2012, reverb="HALL",
          comment="Swedish House Mafia, Martin Garrix's Animals, Hardwell: 128 on the floor, the off-beat bass, a "
                  "snare build into a supersaw drop, a stabbing lead hook",
          key="F", scale="AEOLIAN", bpm=128, div=4, chord_beats=4, period_bars=8, swell=0.35,
@@ -174,7 +174,7 @@ GENRES = [
          pad=dict(mode="BLOCK", base=52, tones=3),
          groove="G10_UK_DRILL", orch=[("808", "STRINGS", "PIANO"), ("808", "PIANO", "CHOIR"),
                                       ("808", "SINEKEY", "PIANO")]),
-    dict(id="LOFI_HIP_HOP", name="LO-FI HIP HOP", decade=2010, year=2015,
+    dict(id="LOFI_HIP_HOP", name="LO-FI HIP HOP", decade=2010, year=2015, reverb="BATHROOM",
          comment="Nujabes and J Dilla's heirs, the lo-fi beats to study to stream: swung dusty drums, a mellow "
                  "Rhodes on jazz sevenths and ninths, a soft upright, a lazy keys or flute line",
          key="EB", scale="IONIAN", bpm=78, div=4, chord_beats=4, period_bars=8, swing=0.55, swing16=True,
@@ -186,7 +186,7 @@ GENRES = [
          pad=dict(mode="BLOCK", base=55, tones=4),
          groove="G10_LOFI", orch=[("CONTRABASS", "SINEKEY", "EPIANO"), ("WAVEBASS", "FLUTE", "EPIANO"),
                                   ("CONTRABASS", "GUITAR", "PIANO")]),
-    dict(id="VAPORWAVE", name="VAPORWAVE", decade=2010, year=2011,
+    dict(id="VAPORWAVE", name="VAPORWAVE", decade=2010, year=2011, reverb="HALL",
          comment="Macintosh Plus' Floral Shoppe, Saint Pepsi: 80s smooth jazz and mall muzak slowed down and "
                  "chopped, a DX7 piano stuttering on lush major sevenths, a lonely sax in a loop",
          key="DB", scale="IONIAN", bpm=72, div=4, chord_beats=4, period_bars=4, echo=0.3,

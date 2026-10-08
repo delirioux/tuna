@@ -321,7 +321,7 @@ static void tu_page_cards(tuna_ui *u, tu_card *c)
         tu_card_int(&c[0], "SEND", a->reverb, 0, 100);
         tu_card_int(&c[1], "SIZE", a->rev_size, 0, 100);
         tu_card_int(&c[2], "DAMP", a->rev_damp, 0, 100);
-        tu_card_text(&c[3], "TYPE", a->rev_type == TA_REV_SPRING ? "SPRING" : "ROOM", -1);
+        tu_card_text(&c[3], "TYPE", ta_reverb_type(a->rev_type)->card, -1);
         break;
     case TU_PG_SAVE:
     case TU_PG_LOAD: {
@@ -759,7 +759,7 @@ static void tu_panel_fx(tuna_ui *u)
         if (w > 0)
             cv_rrect(20, y + 14, w < 8 ? 8 : w, 8, 4, T_THEME, T_RAISE);
     }
-    cv_text_on(20, 92, &AF_M, a->rev_type == TA_REV_SPRING ? "SPRING" : "ROOM", T_THEME, T_SURF);
+    cv_text_on(20, 92, &AF_M, ta_reverb_type(a->rev_type)->name, T_THEME, T_SURF);
 }
 
 /* SAVE and LOAD: the 16 slots as the 16 white keys, in 4 rows */
@@ -1085,7 +1085,7 @@ void tu_knob(tuna_ui *u, int k, int d)
         if (c == 0) a->reverb = (uint8_t)tu_clampi(a->reverb + 2 * d, 0, 100);
         else if (c == 1) a->rev_size = (uint8_t)tu_clampi(a->rev_size + 2 * d, 0, 100);
         else if (c == 2) a->rev_damp = (uint8_t)tu_clampi(a->rev_damp + 2 * d, 0, 100);
-        else a->rev_type = d > 0 ? TA_REV_SPRING : TA_REV_ROOM;
+        else ta_set_reverb_type(a, ta_reverb_step(a->rev_type, d > 0 ? 1 : -1));   /* (its size and damping too) */
         break;
     case TU_PG_SAVE: case TU_PG_LOAD:
         if (c == 0) {

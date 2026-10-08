@@ -258,7 +258,17 @@ static void tu_page_cards(tuna_ui *u, tu_card *c)
         c[1].name = true;
         tu_card_int(&c[2], "SEED", a->seed_req >= 0 ? a->seed_req : (int)(a->seed % TA_SEEDS), 0, -1);
         c[2].ratio = -1;
-        c[3].off = true;
+        /* the composer's manner: chosen, or the seed's (AUTO) */
+        int st = item >= 0 ? ta_lib_style(item) : -1, nm = tg_manner_count(st);
+        if (nm > 1 && item == a->item) {
+            tu_card_text(&c[3], a->manner_fix < 0 ? "AUTO" : "MANNER", ta_manner_name(a),
+                         (g->manner + 1) * 1000 / nm);
+            c[3].name = true;
+        } else if (nm > 1) {
+            tu_card_text(&c[3], "MANNER", a->manner_fix < 0 ? "AUTO" : tg_manner_name(st, a->manner_fix), -1);
+        } else {
+            c[3].off = true;
+        }
         break;
     }
     case TU_PG_KEY: {
@@ -443,7 +453,8 @@ static void tu_draw_foot(tuna_ui *u)
     int filled = a->playing && period > 0 ? (pos * 16) / period : 0;
     int item = a->item;
     const char *name = item >= 0 ? ta_lib_name(item) : "SLOT";
-    const char *era = item >= 0 ? ta_group_name(ta_lib_group(item)) : "";
+    const char *manner = ta_manner_name(a);       /* (a composer's manner where it has them, else the era) */
+    const char *era = manner[0] ? manner : item >= 0 ? ta_group_name(ta_lib_group(item)) : "";
     uint32_t sig = tu_hash(tu_hash((uint32_t)filled * 7u + (uint32_t)a->playing * 3u + ux.gen * 11u + (uint32_t)u->page * 13u,
                                    name), era);
     if (!u->force && sig == u->sig_foot)
@@ -1045,6 +1056,7 @@ void tu_knob(tuna_ui *u, int k, int d)
         if (c == 0) tu_lib_turn(u, d, true);
         else if (c == 1) tu_lib_turn(u, d, false);
         else if (c == 2) ta_seed_step(a, d);
+        else ta_set_manner(a, a->manner_fix + d);  /* AUTO, then each manner */
         break;
     case TU_PG_KEY:
         if (c == 0) ta_set_root(a, (g->root_req >= 0 ? g->root_req : g->root) + d);

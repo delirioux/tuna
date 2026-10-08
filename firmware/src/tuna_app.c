@@ -151,8 +151,23 @@ void ta_set_reverb_type(tuna_app *a, int type)
     a->rev_damp = r->damp;
 }
 
-/* a fresh generator for the item: the piece's own tempo, key, percussion and evolution; the player's chaos
- * knobs (and the parts they move) and memory stay as they were */
+/* the manner a composer plays in: the one chosen (LIBRARY, K4), else the seed's. Each seed has its manner, so a
+ * new seed may bring a chorale where a fugue was, and the same seed brings the same again */
+static int manner_for(const tuna_app *a, int st, uint32_t seed)
+{
+    int n = tg_manner_count(st);
+    if (n <= 1)
+        return 0;
+    if (a->manner_fix >= 0 && a->manner_fix < n)
+        return a->manner_fix;
+    uint32_t h = (seed + 1u) * 2654435761u ^ (uint32_t)st * 40503u;
+    h ^= h >> 15;
+    h *= 2246822519u;
+    return (int)((h >> 16) % (uint32_t)n);
+}
+
+/* a fresh generator for the item: the piece's own tempo, key, percussion and evolution, in its manner; the
+ * player's chaos knobs (and the parts they move) and memory stay as they were */
 static void load_item(tuna_app *a, int item)
 {
     tg_gen *g = &a->g;
@@ -161,7 +176,7 @@ static void load_item(tuna_app *a, int item)
     int st = ta_lib_style(item);
     if (st >= 0) {
         tg_init(g, a->seed, a->sample_rate);
-        tg_apply_style(g, st);
+        tg_apply_manner(g, st, manner_for(a, st, a->seed));
     } else {
         tp_character_apply(g, item, a->seed);   /* (tg_init inside) */
     }
@@ -169,7 +184,8 @@ static void load_item(tuna_app *a, int item)
     tg_set_chaos_parts(g, parts);
     g->x.deja_vu = deja_value(a);
     tg_reseed(g, a->seed);
-    ta_set_reverb_type(a, ta_piece_reverb(st));   /* (its reverb too; the send is the player's) */
+    /* its reverb too (its manner's, else its own or its era's); the send is the player's */
+    ta_set_reverb_type(a, st >= 0 && g->style && g->style->reverb ? g->style->reverb - 1 : ta_piece_reverb(st));
     a->item = item;
     a->req_on = false;
     a->req.meter = a->req.mel = a->req.bass = a->req.pad = a->req.harm = a->req.scale = -1;
@@ -181,6 +197,7 @@ void ta_init(tuna_app *a, float sample_rate, uint32_t seed)
     a->sample_rate = sample_rate;
     a->seed = seed % TA_SEEDS;
     a->rnd = seed * 2654435761u + 0x6d2b79f5u;
+    a->manner_fix = -1;
     a->pending = -1;
     a->seed_req = -1;
     a->req.meter = a->req.mel = a->req.bass = a->req.pad = a->req.harm = a->req.scale = -1;
@@ -244,13 +261,33 @@ void ta_select(tuna_app *a, int item)
         }
         a->pending = item;
         a->seed_req = (int)new_seed(a);
+        a->manner_fix = -1;                       /* (a new composer: its manner by the seed) */
         return;
     }
     a->pending = -1;
     a->seed_req = -1;
     a->seed = new_seed(a);
+    a->manner_fix = -1;
     load_item(a, item);
 }
+
+/* the manner: -1 the seed's (AUTO), else one of the composer's; playing, at the next half period */
+void ta_set_manner(tuna_app *a, int m)
+{
+    int st = a->pending >= 0 ? ta_lib_style(a->pending) : a->g.style_id;
+    int n = tg_manner_count(st);
+    a->manner_fix = st < 0 || n <= 1 ? -1 : m < -1 ? -1 : m >= n ? n - 1 : m;
+    if (a->pending >= 0 || st < 0)
+        return;                                   /* (a piece on its way: it takes it when it comes) */
+    if (manner_for(a, st, a->seed_req >= 0 ? (uint32_t)a->seed_req : a->seed) == a->g.manner)
+        return;
+    if (a->playing)
+        a->pending = a->item;
+    else
+        load_item(a, a->item);
+}
+
+const char *ta_manner_name(const tuna_app *a) { return tg_manner_name(a->g.style_id, a->g.manner); }
 
 void ta_set_chaos_parts(tuna_app *a, unsigned mask) { tg_set_chaos_parts(&a->g, mask); }
 
@@ -306,7 +343,10 @@ void ta_set_seed(tuna_app *a, uint32_t seed)
     }
     a->seed_req = -1;
     a->seed = seed;
-    tg_reseed(&a->g, a->seed);
+    if (a->g.style_id >= 0 && manner_for(a, a->g.style_id, seed) != a->g.manner)
+        load_item(a, a->item);                    /* (the seed brings another manner: the piece anew) */
+    else
+        tg_reseed(&a->g, a->seed);
 }
 
 void ta_set_deja(tuna_app *a, int mode)
@@ -452,7 +492,9 @@ static void apply_changes(tuna_app *a, bool keep_clock)
     if (a->seed_req >= 0) {
         a->seed = (uint32_t)a->seed_req;
         a->seed_req = -1;
-        if (a->pending < 0 && !a->req_on)
+        if (a->pending < 0 && a->g.style_id >= 0 && manner_for(a, a->g.style_id, a->seed) != a->g.manner)
+            a->pending = a->item;                 /* (the seed brings another manner: the piece anew) */
+        else if (a->pending < 0 && !a->req_on)
             tg_reseed(&a->g, a->seed);            /* (with a new piece: its seed too) */
     }
     if (a->pending >= 0) {
@@ -560,8 +602,11 @@ int ta_slot_load(tuna_app *a, int slot)
     if (r != TP_OK)
         return r;
     a->seed = a->g.seed;
+    a->manner_fix = -1;                           /* (the seed's manner, or the one saved as chosen) */
+    if (a->g.style_id >= 0 && manner_for(a, a->g.style_id, a->seed) != a->g.manner)
+        a->manner_fix = a->g.manner;
     a->pending = -1;
-    int st = a->g.style ? tg_style_index(a->g.style) : -1;
+    int st = a->g.style_id;
     if (st >= 0) {
         a->item = item_of_style(st);
     } else {                                      /* a character preset: found by its name */

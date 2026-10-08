@@ -164,6 +164,9 @@ typedef struct {
     int perc_mode;                /* TG_PERC_OFF, TG_PERC_PERIOD (the composer's orchestra), TG_PERC_KIT */
     uint8_t perc_w[TG_PI_COUNT];  /* period percussion: 0..10 per instrument */
     const tg_style *style;        /* NULL: the fixed progression `prog` */
+    tg_style style_buf;           /* a library style with its manner's changes (style points here) */
+    int style_id;                 /* TG_STYLE_* of the library style playing, -1: none or a style of its own */
+    int manner;                   /* its manner (0: the profile as it is) */
 
     /* Marbles */
     tm_rng rng;
@@ -359,6 +362,8 @@ void tg_meter_at(const tg_gen *g, long q, tg_meter_pos *m);
 /* Apply a composer signature (TG_STYLE_*): key, tempo, meter, harmony, accompaniment, ornaments.
  * Takes effect from the next period; call tg_reseed() to start cleanly. */
 void tg_apply_style(tg_gen *g, int style);
+/* The same in one of the composer's manners (tg_manner_count). */
+void tg_apply_manner(tg_gen *g, int style, int manner);
 /* The same from a signature table (a user's own composer, or a test's). It must outlive its use. */
 void tg_apply_style_def(tg_gen *g, const tg_style *st);
 /* The chord at a chord step (the planned harmony with a style, else the progression). */

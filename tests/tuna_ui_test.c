@@ -619,6 +619,64 @@ static void test_scale_order(void)
     tu_goto_page(&ui, TU_PG_HOME);
 }
 
+/* a composer's manners: the seed picks one (each seed its own), LIBRARY's K4 fixes one, a slot keeps it */
+static void test_manners(void)
+{
+    ta_play(&app, false);
+    int bach = -1;
+    for (int i = 0; i < ta_lib_count() && bach < 0; ++i)
+        if (ta_lib_style(i) == TG_STYLE_BACH) bach = i;
+    int n = tg_manner_count(TG_STYLE_BACH);
+    CHECK(bach >= 0 && n >= 2, "Bach has manners (%d)", n);
+    ta_select(&app, bach);
+    unsigned seen = 0;
+    for (int s = 0; s < 256; ++s) {
+        ta_set_seed(&app, (uint32_t)s);
+        seen |= 1u << app.g.manner;
+    }
+    CHECK(seen == (1u << n) - 1, "over the 256 seeds every manner comes (%x)", seen);
+    ta_set_seed(&app, 7);
+    int m7 = app.g.manner;
+    ta_set_seed(&app, 8);
+    ta_set_seed(&app, 7);
+    CHECK(app.g.manner == m7, "the same seed, the same manner (%d)", app.g.manner);
+    /* fixed on K4 */
+    tu_goto_page(&ui, TU_PG_LIB);
+    while (app.manner_fix > -1) tu_knob(&ui, TU_K4, -1);
+    tu_knob(&ui, TU_K4, 1);
+    CHECK(app.manner_fix == 0 && app.g.manner == 0, "K4: AUTO, then the first manner (%d)", app.g.manner);
+    tu_knob(&ui, TU_K4, 1);
+    const tg_style *base = tg_style_get(TG_STYLE_BACH);
+    CHECK(app.g.manner == 1 && !strcmp(ta_manner_name(&app), tg_manner_name(TG_STYLE_BACH, 1)),
+          "K4 again: the second, %s (%d)", ta_manner_name(&app), app.g.manner);
+    CHECK(app.g.style != base && app.g.style->name == base->name, "it plays the profile with its changes");
+    for (int s = 0; s < 20; ++s) {
+        ta_set_seed(&app, (uint32_t)s);
+        if (app.g.manner != 1) break;
+    }
+    CHECK(app.g.manner == 1, "fixed: the seed no longer changes it (%d)", app.g.manner);
+    lint_where = "manner";
+    all_palettes("lib_manner");
+    CHECK(ta_slot_save(&app, 8) == TP_OK, "saved slot 9");
+    tu_knob(&ui, TU_K4, -5);
+    CHECK(app.manner_fix == -1, "K4 down to AUTO (%d)", app.manner_fix);
+    CHECK(ta_slot_load(&app, 8) == TP_OK && app.g.manner == 1, "the slot brings the manner back (%d)", app.g.manner);
+    /* playing: a manner chosen comes in at the next half period */
+    ta_set_manner(&app, 0);
+    ta_play(&app, true);
+    run_ms(200);
+    ta_set_manner(&app, 2 < n ? 2 : 1);
+    CHECK(app.g.manner == 0 && app.pending == app.item, "playing: it waits (%d, pending %d)", app.g.manner, app.pending);
+    long guard = 0;
+    while (app.pending >= 0 && guard++ < 20000)
+        ta_process(&app, 64);
+    CHECK(app.g.manner == (2 < n ? 2 : 1), "and comes in (%d)", app.g.manner);
+    ta_play(&app, false);
+    ta_set_manner(&app, -1);
+    ta_select(&app, 0);
+    tu_goto_page(&ui, TU_PG_HOME);
+}
+
 /* every composer drawn on HOME and LIBRARY without a lint finding (names, chords, keys) */
 static void test_every_composer(void)
 {
@@ -691,6 +749,7 @@ int main(int argc, char **argv)
     test_chaos_page();
     test_reverb_page();
     test_scale_order();
+    test_manners();
     test_every_composer();
     for (int i = 0; i < ta_lib_count(); ++i) {
         if (ta_lib_style(i) == TG_STYLE_DEBUSSY) anim(i, "debussy");

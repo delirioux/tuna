@@ -19,7 +19,8 @@
 #include <stdint.h>
 #include "tuna_gen.h"
 
-#define TP_VERSION 3                      /* 2: which parts follow the chaos knobs; 3: the reverb's size, damping, type */
+#define TP_VERSION 4                      /* 2: which parts follow the chaos knobs; 3: the reverb's size, damping, type;
+                                             4: the composer's manner */
 #define TP_SLOTS 16
 #define TP_GROUPS 4
 #define TP_SLOTS_PER_GROUP (TP_SLOTS / TP_GROUPS)

@@ -287,7 +287,23 @@ int tg_groove_count(void);
 
 const tg_style *tg_style_get(int id);
 int tg_style_index(const tg_style *st);           /* TG_STYLE_* of a library style, or -1 */
-const char *tg_family_name(int family);       /* TI_*: a short name for the screen */
+const char *tg_family_name(int family);
+
+/* ---- manners: a composer wrote in several ways (Bach's chorales, fugues and dances); its profile above is the
+ * first, the others are changes to it (tools/manners, tools/tuna_manners.py -> tuna_manners.inc) ---- */
+enum { TGK_F32, TGK_I32, TGK_U8, TGK_I8, TGK_BOOL, TGK_U16, TGK_I16, TGK_U32 };
+typedef struct { uint16_t off; uint8_t kind, count; } tg_field;          /* a field of tg_style */
+typedef struct { uint8_t field, index; int16_t value; } tg_delta;        /* F32 in hundredths; U32 by halves */
+typedef struct {
+    const char *name;
+    const tg_delta *delta;
+    uint8_t n;
+    uint8_t orch[4][3];              /* its own instrument sets (orch_n 0: the profile's) */
+    uint8_t orch_n, orch_mode;
+} tg_manner;
+int tg_manner_count(int style);                  /* 1 for a style without manners */
+const char *tg_manner_name(int style, int k);    /* "" for a style without manners */
+void tg_style_manner(tg_style *out, int style, int k);   /* the profile with manner k's changes */       /* TI_*: a short name for the screen */
 const tg_chord_def *tg_vocab(bool minor);               /* the classic vocabulary */
 const tg_chord_def *tg_vocab_of(int vocab, bool minor);
 

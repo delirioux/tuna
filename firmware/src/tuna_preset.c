@@ -99,6 +99,7 @@ static uint32_t crc32(const uint8_t *p, int n)        /* zlib CRC-32, as Felucca
  * the key, the tempo or the density, the record keeps the values they return to. */
 typedef struct {
     int style;                            /* TG_STYLE_*, -1: none */
+    int manner;                           /* the composer's manner (version 4) */
     uint32_t seed;
     bool evolve, evolve_modulate;
     int evolve_periods;
@@ -348,7 +349,8 @@ int tp_encode(const tg_gen *gc, const tp_host *host, uint8_t *buf, int max)
     tg_gen *g = (tg_gen *)gc;                     /* written only when reading: never here */
     tp_io io = {buf, 0, max - 4, true, false, TP_VERSION};
     tp_head h;
-    h.style = g->style ? tg_style_index(g->style) : -1;
+    h.style = g->style_id;
+    h.manner = g->manner;
     h.seed = g->seed;
     h.evolve = g->evolve;
     h.evolve_modulate = g->evolve_modulate;
@@ -377,6 +379,7 @@ int tp_encode(const tg_gen *gc, const tp_host *host, uint8_t *buf, int max)
     io_bool(&io, &h.evolve_modulate);
     IO_U8(&io, h.evolve_periods);
     io_f32(&io, &h.evolve_depth);
+    IO_U8(&io, h.manner);
     settings(&io, g, &h);
     sequencer(&io, g, &h);
     host_part(&io, (tp_host *)hp);
@@ -433,13 +436,15 @@ int tp_decode(tg_gen *g, tp_host *host, const uint8_t *buf, int n)
     io_bool(&io, &h.evolve_modulate);
     IO_U8(&io, h.evolve_periods);
     io_f32(&io, &h.evolve_depth);
+    if (io.version >= 4)
+        IO_U8(&io, h.manner);
     if (io.err || h.style < -1 || h.style >= TG_STYLE_COUNT)
         return TP_ERR_FORMAT;
     /* a fresh generator: the composer, then every setting over it, then the seed */
     float sr = g->sample_rate;
     tg_init(g, h.seed, sr);
     if (h.style >= 0)
-        tg_apply_style(g, h.style);
+        tg_apply_manner(g, h.style, h.manner);
     g->evolve = false;                            /* switched on below, from the settings saved */
     settings(&io, g, &h);
     if (io.err)

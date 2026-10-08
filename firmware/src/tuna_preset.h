@@ -19,7 +19,7 @@
 #include <stdint.h>
 #include "tuna_gen.h"
 
-#define TP_VERSION 2                      /* 2: which parts follow the chaos knobs */
+#define TP_VERSION 3                      /* 2: which parts follow the chaos knobs; 3: the reverb's size, damping, type */
 #define TP_SLOTS 16
 #define TP_GROUPS 4
 #define TP_SLOTS_PER_GROUP (TP_SLOTS / TP_GROUPS)
@@ -45,6 +45,8 @@ typedef struct {
     bool sounds_set;                      /* false: the composer's own instruments */
     tp_sound sound[TP_TRACKS];
     uint8_t reso[4];                      /* the resonator: amount, decay, brightness (0..100), tuning mode */
+    uint8_t reverb[3];                    /* version 3: the reverb's size, damping (0..100), type (0 room, 1 spring);
+                                             older records: 255, the host's defaults */
 } tp_host;
 
 /* record <-> generator */

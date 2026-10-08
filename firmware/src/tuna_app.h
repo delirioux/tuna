@@ -42,6 +42,7 @@ typedef struct {
     int deja;                             /* TA_DV_* */
     uint8_t level[TP_TRACKS];             /* 0..100: bass, melody, pad, drums */
     uint8_t reverb;                       /* 0..100: the reverb send of the mix */
+    uint8_t rev_size, rev_damp, rev_type; /* the reverb itself: size and damping 0..100, TA_REV_ROOM / SPRING */
     ta_note feed[TA_FEED];                /* note-ons for the screen (a ring) */
     uint8_t feed_w, feed_r;
     void (*sound)(void *ctx, const tg_event *e);
@@ -56,6 +57,10 @@ typedef struct {
     long blocks;
     int seed_req;                         /* a seed asked for while playing (the next half period), -1 none */
 } tuna_app;
+
+enum { TA_REV_ROOM, TA_REV_SPRING, TA_REV_TYPES };
+#define TA_REV_SIZE 71                    /* Felucca's own reverb as designed (SIZE 90, DAMP 60 of 127) */
+#define TA_REV_DAMP 48
 
 void ta_init(tuna_app *a, float sample_rate, uint32_t seed);
 void ta_set_sound(tuna_app *a, void (*fn)(void *ctx, const tg_event *e), void *ctx);

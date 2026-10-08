@@ -48,7 +48,7 @@ preset and let it drift, from still and ambient to driving and rhythmic.
 | OCT− / OCT+ | the seed (256, a new one at every power-on): another piece in the same manner, playing from the next half of the period; on SAVE, LOAD and SEQ: back / do it |
 | REC | memory: the phrase locked (deja vu) / the composer's own |
 | HOME | the falling notes; held: the menu (colour, style) |
-| FX · SCL · EDIT · ARP · SEQ · GLO · SAVE | library · key, scale, tuning, memory · time, then the parts, then which parts follow the chaos knobs · evolution · freeze · mix, then reverb · save, then load |
+| FX · SCL · EDIT · ARP · SEQ · GLO · SAVE | library · key, scale, tuning, memory · time, then the parts, then which parts follow the chaos knobs · evolution · freeze · mix, then reverb (send, size, damping, ROOM or SPRING) · save, then load |
 | ENV · LFO | MIDI out · the resonator |
 
 ## Roadmap

@@ -64,7 +64,6 @@ typedef struct {
     uint32_t keys_down;                   /* bit (note - TU_KEY_LO) */
     int key_gesture;                      /* keys pressed since all were up: 1 = a tap sets the root */
     int key_first;
-    uint8_t master;
     int palette, style;
     tu_particle pt[TU_PARTICLES];
     uint32_t rnd;

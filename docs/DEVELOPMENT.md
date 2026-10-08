@@ -84,6 +84,9 @@ touched only where Tuna hooks in (`felucca.c`, `main.c`, `audio.c`, `tools/build
   next half of the period: its start (on the cadence) or its middle (on the half cadence). Seeds run 0..255.
   The change goes in just before that tick, with the clock's phase kept: the new music starts on the beat, with no
   gap and no clipped notes from the old.
+- **A new piece, a new seed.** A seed means nothing across pieces, so choosing a piece draws one of the 256 (stirred
+  by the moment of each touch on the panel): every visit plays something new. Turn back to the piece playing and
+  nothing changes; a slot still loads exactly what was saved.
 - **Genres are data.** The 86 popular genres live in `tools/genres/d1950.py` .. `d2020.py` (readable: grooves as
   tick strings, chords by name); `python3 tools/tuna_genres.py` writes `firmware/src/tuna_genres.inc` and checks
   them (chord names against the vocabularies, lengths, names); `tuna_tests.sh` fails if the two differ. A

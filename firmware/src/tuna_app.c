@@ -180,6 +180,7 @@ void ta_init(tuna_app *a, float sample_rate, uint32_t seed)
     memset(a, 0, sizeof *a);
     a->sample_rate = sample_rate;
     a->seed = seed % TA_SEEDS;
+    a->rnd = seed * 2654435761u + 0x6d2b79f5u;
     a->pending = -1;
     a->seed_req = -1;
     a->req.meter = a->req.mel = a->req.bass = a->req.pad = a->req.harm = a->req.scale = -1;
@@ -216,15 +217,38 @@ void ta_set_store(tuna_app *a, const tp_store *s) { a->store = *s; }
 /* every sounding note off, through the sound */
 static void all_off(tuna_app *a) { tg_all_off(&a->g, on_event, a); }
 
+void ta_stir(tuna_app *a, uint32_t v) { a->rnd = (a->rnd ^ v) * 16777619u + 1u; }
+
+/* a new piece's seed, one of 256: drawn (xorshift, stirred by the host and the time played) */
+static uint32_t new_seed(tuna_app *a)
+{
+    uint32_t x = a->rnd ^ (a->frame * 2246822519u);
+    x ^= x << 13;
+    x ^= x >> 17;
+    x ^= x << 5;
+    a->rnd = x ? x : 1u;
+    return (a->rnd >> 13) % TA_SEEDS;
+}
+
+/* another piece: with a new seed (a seed means nothing across pieces; this way each visit plays something
+ * new); playing, both at the next half of the period */
 void ta_select(tuna_app *a, int item)
 {
     if (item < 0 || item >= ta_lib_count())
         return;
     if (a->playing) {
-        a->pending = item == a->item ? -1 : item;
+        if (item == a->item) {                    /* (turned back: nothing changes) */
+            a->pending = -1;
+            a->seed_req = -1;
+            return;
+        }
+        a->pending = item;
+        a->seed_req = (int)new_seed(a);
         return;
     }
     a->pending = -1;
+    a->seed_req = -1;
+    a->seed = new_seed(a);
     load_item(a, item);
 }
 

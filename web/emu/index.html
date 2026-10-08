@@ -143,7 +143,7 @@ function label(parent, x, y, s, size, font = SANS, ink = "var(--label)") {
 const KEYNAMES = ["F", "F♯", "G", "G♯", "A", "A♯", "B", "C", "C♯", "D", "D♯", "E"];
 const keyName = (k) => KEYNAMES[k % 12] + (3 + Math.floor((k + 5) / 12));
 
-let node = null, btnMask = 0, keyMask = 0, latched = 0, masterValue = 700, lastLeds = [0, 0, 0, 0, 0], layout = null;
+let node = null, btnMask = 0, keyMask = 0, latched = 0, masterValue = 512, lastLeds = [0, 0, 0, 0, 0], layout = null;
 const angle = Object.fromEntries(KNOBS.map((n) => [n, 0]));
 angle.MASTER = -135 + 270 * masterValue / 1023;
 const knobs = [], buttons = [], keys = [];

@@ -42,7 +42,7 @@ preset and let it drift, from still and ambient to driving and rhythmic.
 | --- | --- |
 | PLAY | start / stop; always from the top (the same seed plays the same music) |
 | SELECT / MASTER | tempo / volume |
-| PRESETS / ALGORITHM | the library: piece by piece, or a whole era (or decade) at a time; playing, the new piece comes in at the next half of the period. Each piece brings its own tempo, key, percussion, evolution and reverb type |
+| PRESETS / ALGORITHM | the library: piece by piece, or a whole era (or decade) at a time; playing, the new piece comes in at the next half of the period. Each piece brings its own tempo, key, percussion, evolution and reverb type, and a new random seed |
 | KNOB 1–4 | the page's four cards; on HOME the chaos knobs: RHYTHM, PITCH, DENSITY and MACRO (0 is the composer exactly), on melody, bass and pad, each in its own way |
 | keys | tap one: the root (from the next chord); hold several: that chord, while held; on SAVE / LOAD the 16 white keys are the slots |
 | OCT− / OCT+ | the seed (256, a new one at every power-on): another piece in the same manner, playing from the next half of the period; on SAVE, LOAD and SEQ: back / do it |

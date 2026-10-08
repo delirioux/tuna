@@ -278,6 +278,7 @@ static void tf_input(void)
         uint32_t bit = 1u << panel.btn[b];
         if (pressed & bit) {
             fm1_irq_off();
+            ta_stir(&tf_app, fm1_ticks());        /* (the moment of each touch: the next piece's seed) */
             /* the first PLAY mixes in when it came (the ADC may be quiet), unless a seed was chosen since */
             if (b == TU_B_PLAY && !tf_seed_mixed && !tf_app.playing && tf_app.seed == tf_seed_boot)
                 ta_set_seed(&tf_app, tf_mix(tf_seed_boot, fm1_ticks()));
@@ -296,6 +297,7 @@ static void tf_input(void)
         int32_t s = panel_enc(k);
         if (s) {
             fm1_irq_off();
+            ta_stir(&tf_app, fm1_ticks());
             tu_knob(&tf_ui, KNOB[k], s);
             fm1_irq_on();
         }

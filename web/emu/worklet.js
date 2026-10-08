@@ -54,7 +54,7 @@ if (typeof registerProcessor === "function") {
           ex._initialize();
           ex.web_nor_erase();
           restoreSectors(new Uint8Array(ex.memory.buffer, ex.web_nor(), ex.web_nor_size()), m.sectors);
-          ex.web_master(m.master ?? 700);
+          ex.web_master(m.master ?? 512);
           ex.web_boot();
           if (ex.web_tuna_seed && m.seed) ex.web_tuna_seed(m.seed >>> 0);   // Tuna: another piece at every switch-on
           this.ex = ex;

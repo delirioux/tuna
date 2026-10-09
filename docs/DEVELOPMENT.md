@@ -15,7 +15,7 @@ Status: 7 October 2026. Phases 1 to 7 done, phase 8 prepared; the FM-1 is on its
 | Language | English throughout: code, comments, commits, docs. |
 | Licence | GPL-3.0-only, as Felucca; Marbles parts MIT ([LICENSES/MIT-Marbles.txt](../LICENSES/MIT-Marbles.txt)). |
 | Commits | Author `delirioux <340923392+delirioux@users.noreply.github.com>`. Work done with Claude ends with the `Co-Authored-By` and `Claude-Session` lines. |
-| Publishing | Personal use first. |
+| Publishing | Public, GPL-3.0, for everyone, as soon as it works on the FM-1 (release checklist below). |
 
 ## How changes reach Codeberg
 
@@ -165,6 +165,22 @@ generator's design, not the hardware's; in order of value:
    upper voices needs a bass mode of its own.
 7. **A lighter, lower choir.** CHOIR is heavy and mid-register, so a choir cannot sing all three parts
    (a cappella motets, Rachmaninoff's basses).
+
+## Release checklist
+
+Before the first public release (GPL-3.0, on Codeberg):
+
+1. **It works on the FM-1**: built, flashed, played through every era; flash and CPU measured; the way back to the
+   stock firmware tried.
+2. **The name**: search "Tuna" in the EUIPO and BOIP registers (classes 9 and 15). An iOS tuner (Aurora DSP), a
+   Windows tuner suite (Tuna+) and an OBS plugin already use it; none is a composer or a synth firmware. Release
+   as "Tuna for FM-1" at least.
+3. **Licences and credits**: Tuna stays GPL-3.0-only, as Felucca; Felucca's copyright lines stay; the MIT parts
+   (Marbles, DaisySP, Rings, Fukiai), msfa's Apache-2.0 (FM6) and the OFL fonts keep their texts in LICENSES/ and
+   their credits in the README and the menu. The samples are Versilian Studios' CC0 library (tools/fetch_cc0.py):
+   free to use.
+4. **Other names**: "for the M-VAVE FM-1" in words only, no logos, nothing that suggests it is official.
+5. **A courtesy note** to Leo Kuroshita (Felucca), not required.
 
 ## When the FM-1 arrives
 

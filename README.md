@@ -24,6 +24,8 @@ preset and let it drift, from still and ambient to driving and rhythmic.
   own harmony, melody, rhythm, form and instrumentation: chant on a drone, Bach's counterpoint,
   Satie's parallel chords, Debussy's whole tones, Gershwin's jazz chords, Reich's phasing, Pärt's
   tintinnabuli, Messiaen's octatonic modes and birdsong.
+- **Tuned from the scores**: the melodies of 45 composers lean toward what 3,486 public-domain scores of theirs
+  measure: how often a line repeats a note, steps or leaps, how wide and how high it goes, how busy it is.
 - **285 manners**: most composers wrote in several ways, and Tuna plays them all: Bach's fugues, chorales and
   gigues, Chopin's nocturnes, mazurkas, polonaises and études, Mozart's sonatas, arias, serenades and masses,
   Verdi's arias, choruses and Requiem. The seed picks the manner (each seed its own); LIBRARY's fourth knob fixes

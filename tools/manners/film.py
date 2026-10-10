@@ -23,20 +23,22 @@ MANNERS = {
         dict(name="MARCH"),
         # Hedwig's Theme, Hook: the quick fairy-tale waltz-scherzo, celesta, chromatic minor
         dict(name="SCHERZO", root="E", scale="HARM_MINOR", bpm=168, division=2, beats_per_bar=3, chord_beats=3,
-             period_bars=8, melody_density=0.6, mel_min_ticks=1, chromatic=True, appoggiatura=0.2, octave=0.15,
+             period_bars=8, melody_density=0.6, mel_min_ticks=1, chromatic=True, appoggiatura=0.2, octave=0.12,
              bass_mode="BAR", pad_mode="AFTERBEAT", perc_mode="OFF", color=0.0,
              w_minor={"i": 10, "iv": 6, "iv6": 4, "V": 6, "V7": 7, "VI": 5, "bII": 3, "#iv°7": 3, "vii°7": 3,
                       "Ger+6": 3, "III": 3, "III+": 2, "iiø7": 3, "V7/V": 2},
              orch=[("CONTRABASS", "CELESTA", "STRINGS"), ("CELLO", "FLUTE", "STRINGS"), ("CONTRABASS", "GLOCKEN", "PIZZ")],
-             orch_mode="RANDOM"),
+             orch_mode="RANDOM",
+             profile=[0.09, 0.43, 0.59, 0.7], direction=0.04, melody_range=21),
         # Schindler's List, the Angela's Ashes / Memoirs themes: the slow minor elegy for solo violin and strings
         dict(name="ELEGY", root="D", scale="AEOLIAN", bpm=60, division=2, chord_beats=4, period_bars=4,
-             melody_density=0.35, mel_min_ticks=2, melody_range=17, appoggiatura=0.3, rubato=0.4, swell=0.8,
-             color=0.0, octave=0.1, bass_mode="ROOT", perc_mode="OFF", reverb="HALL",
+             melody_density=0.35, mel_min_ticks=2, melody_range=23, appoggiatura=0.3, rubato=0.4, swell=0.8,
+             color=0.0, octave=0.13, bass_mode="ROOT", perc_mode="OFF", reverb="HALL",
              w_minor={"i": 10, "iv": 7, "VI": 6, "III": 4, "V7": 7, "V": 5, "iiø7": 5, "iv6": 3, "VII": 3,
                       "V7/iv": 3, "Ger+6": 2, "bII": 2},
              orch=[("CONTRABASS", "VIOLIN", "STRINGS"), ("CELLO", "VIOLIN", "PIANO"), ("CONTRABASS", "CLARINET", "STRINGS")],
-             orch_mode="RANDOM"),
+             orch_mode="RANDOM",
+             profile=[0.09, 0.27, 0.46, 0.75], direction=0.2),
     ],
     "HOWARD SHORE": [
         # the Shire: pentatonic folk tune on whistle, lilting

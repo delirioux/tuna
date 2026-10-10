@@ -97,6 +97,22 @@ touched only where Tuna hooks in (`felucca.c`, `main.c`, `audio.c`, `tools/build
   its own. What the fields cannot say yet, by the composers' manners: dotted and other fixed melodic rhythm
   cells, a stress on a given beat, a drum pattern per manner, glissandi, a one-time form (one crescendo, march
   then trio), a cantus firmus in the bass, a choir without accompaniment.
+- **Composers are tuned from their scores.** `tools/tuna_corpus.py` measures the top line of public-domain
+  scores (PDMX: its deduplicated subset, no licence conflict, rated scores at 4 or better; 3,486 scores of 79 of
+  the composers, 45 of them with enough to tune from) and, the same way, the melody each manner plays (`tests/tuna_corpus_dump.c`): the shares of
+  repeated notes, steps, thirds, fourths and wider leaps, how wide the leaps are, octaves, rising against
+  falling, the range, notes a beat. `tune` then moves a manner's `profile`, `max_leap`, `octave`, `direction`
+  and `melody_range` toward the scores, playing and measuring again each round, and writes them into
+  `tuna_style.c` and `tools/manners`. A manner with at least 8 scores of its own by title (Bach's fugues,
+  Chopin's nocturnes) follows those, its `melody_density` too; the others follow the composer's whole work
+  (at least 15 scores) half as far and keep their rhythm, which belongs to the manner. Trust grows with the
+  number of scores, and no setting moves far from what was written by hand (an interval's chance at most
+  doubled or halved, the range 6 semitones wider, the density 1.3 times): the scores lean a manner, they do
+  not rewrite it. A top line is not always the tune (a right hand's figuration counts as melody), the
+  generator turns a profile into notes through its own rules (a leap is answered by a step, motifs return),
+  and patterns, tintinnabuli and birdsong have no free line to tune. The measurements are kept in
+  `tools/corpus/composers.json`; PDMX itself is not in the repository. Each `tune` moves on from where the
+  sources stand, so it is run once per corpus, not repeatedly.
 - **Genres are data.** The 86 popular genres live in `tools/genres/d1950.py` .. `d2020.py` (readable: grooves as
   tick strings, chords by name); `python3 tools/tuna_genres.py` writes `firmware/src/tuna_genres.inc` and checks
   them (chord names against the vocabularies, lengths, names); `tuna_tests.sh` fails if the two differ. A
@@ -125,6 +141,7 @@ sh tests/tuna_ui_test.sh          # the screen: every page as PNG, GIFs of HOME 
 sh tests/tuna_felucca.sh out 60   # every composer through Felucca's engines to WAV
 sh tests/tuna_cpu.sh 30           # instruction counts against Felucca's reference mix (valgrind)
 sh tests/tuna_audition.sh out     # every instrument on the same phrase: WAVs, sound-alikes; CPU=1 its cost
+python3 tools/tuna_corpus.py report   # what the scores say of each composer (stats PDMX_DIR measures them again)
 sh web/emu/tuna_build.sh          # Tuna in the browser (emcc, or clang with WASI_SYSROOT)
 node web/emu/tuna_emu_test.mjs build/tuna_emu/tuna.wasm
 ```
@@ -132,8 +149,9 @@ node web/emu/tuna_emu_test.mjs build/tuna_emu/tuna.wasm
 `tuna_tests.sh` runs the browser build and its test too when `node` and `emcc` or `WASI_SYSROOT` are there. A
 WASI sysroot comes with the npm package `@yowasp/clang` (`gen/llvm-resources.tar`).
 
-Last full run, 7 Oct 2026: theory 230, mechanisms 1591, sequencer 1096, presets 1127, resonator 18, MIDI 102,
-maths 6, screen 150 checks, the browser test, and every composer over 10 seeds of 4 minutes: all pass.
+Last full run, 11 Oct 2026: theory 230, mechanisms 1837, sequencer 2128, presets 2005, resonator 18, MIDI 165,
+maths 6, screen 466 checks, and every composer and manner over 10 seeds of 4 minutes: all pass (built with
+clang; the freestanding check and the browser test were not at hand that day, last run 7 Oct).
 
 ## Open risks
 
@@ -190,4 +208,6 @@ Before the first public release (GPL-3.0, on Codeberg):
 4. Set up WSL2 with the JieLi toolchain (`tools/get_toolchain.sh`, see [BUILDING.md](../BUILDING.md)).
 5. Build: `FELUCCA_TUNA=1 ./build.sh`. Send any errors as they are.
 6. Flash Tuna, play every era, measure the CPU.
-7. Then fine-tune the composers from their music (MIDI files); this can also start before, in the browser.
+7. Then fine-tune the composers by ear. Their melodies were leaned toward their scores on 10 Oct 2026
+   (`tools/tuna_corpus.py`); harmony and rhythm figures still wait (chord transitions need a harmonic analysis
+   of the scores, the figures the generator's first two next steps above).

@@ -219,8 +219,9 @@ static const tg_style styles[TG_STYLE_COUNT] = {
     [TG_STYLE_BACH] = {
         .name = "BACH", .root = 2, .scale = TS_AEOLIAN,                              /* D minor */
         .bpm = 76, .division = 4, .beats_per_bar = 4, .chord_beats = 2, .period_bars = 4,
-        .melody_density = 0.85f, .melody_base = 62, .melody_range = 17,
-        .profile = {0.04f, 0.72f, 0.90f, 0.97f}, .max_leap = 4,         /* running sixteenths */
+        .melody_density = 0.98f, .melody_base = 62, .melody_range = 23,
+        .profile = {0.02f, 0.49f, 0.78f, 0.94f}, .max_leap = 4,         /* running sixteenths */
+        .octave = 0.02f, .direction = -0.15f,
         .suspension = 0.45f, .arrival_bars = 1,
         .bass_mode = TG_BASS_WALKING, .pad_mode = TG_PAD_COUNTER, .pad_base = 50, .pad_tones = 3,
         .fifth_bias = 4.0f, .repeat = 0.25f,
@@ -236,8 +237,9 @@ static const tg_style styles[TG_STYLE_COUNT] = {
     [TG_STYLE_MOZART] = {
         .name = "MOZART", .root = 0, .scale = TS_IONIAN,                             /* C major */
         .bpm = 112, .division = 4, .beats_per_bar = 4, .chord_beats = 4, .period_bars = 8,
-        .melody_density = 0.30f, .melody_base = 64, .melody_range = 19,
-        .profile = {0.10f, 0.62f, 0.88f, 0.97f}, .max_leap = 4,
+        .melody_density = 0.39f, .melody_base = 64, .melody_range = 20,
+        .profile = {0.08f, 0.67f, 0.79f, 0.94f}, .max_leap = 4,
+        .octave = 0.03f, .direction = -0.20f,
         .appoggiatura = 0.35f, .trill = true, .arrival_bars = 1,
         .bass_mode = TG_BASS_ROOT, .pad_mode = TG_PAD_ALBERTI, .pad_base = 48, .pad_tones = 3,
         .fifth_bias = 1.0f, .repeat = 0.5f,
@@ -252,8 +254,9 @@ static const tg_style styles[TG_STYLE_COUNT] = {
     [TG_STYLE_BEETHOVEN] = {
         .name = "BEETHOVEN", .root = 0, .scale = TS_AEOLIAN,                         /* C minor */
         .bpm = 100, .division = 2, .beats_per_bar = 4, .chord_beats = 4, .period_bars = 8,
-        .melody_density = 0.55f, .melody_base = 60, .melody_range = 19,
-        .profile = {0.18f, 0.55f, 0.80f, 0.93f}, .max_leap = 5,         /* repeated notes, then leaps */
+        .melody_density = 0.72f, .melody_base = 60, .melody_range = 25,
+        .profile = {0.20f, 0.59f, 0.72f, 0.85f}, .max_leap = 5,         /* repeated notes, then leaps */
+        .octave = 0.05f, .direction = -0.07f,
         .syncopation = 0.1f, .suspension = 0.1f, .arrival_bars = 2,
         .bass_mode = TG_BASS_BAR, .pad_mode = TG_PAD_REPEAT, .pad_base = 48, .pad_tones = 3,
         .fifth_bias = 1.5f, .repeat = 0.3f,
@@ -269,8 +272,9 @@ static const tg_style styles[TG_STYLE_COUNT] = {
     [TG_STYLE_BRAHMS] = {
         .name = "BRAHMS", .root = 5, .scale = TS_IONIAN,                             /* F major, 3/4 */
         .bpm = 84, .division = 2, .beats_per_bar = 3, .chord_beats = 3, .period_bars = 8,
-        .melody_density = 0.5f, .melody_base = 60, .melody_range = 17,
-        .profile = {0.08f, 0.60f, 0.85f, 0.95f}, .max_leap = 5,
+        .melody_density = 0.5f, .melody_base = 60, .melody_range = 19,
+        .profile = {0.10f, 0.55f, 0.74f, 0.90f}, .max_leap = 4,
+        .octave = 0.03f, .direction = -0.05f,
         .syncopation = 0.2f, .appoggiatura = 0.15f, .suspension = 0.2f, .arrival_bars = 2,
         .bass_mode = TG_BASS_BAR, .pad_mode = TG_PAD_DOUBLE, .pad_base = 50, .pad_tones = 3,
         .fifth_bias = 1.5f, .repeat = 0.4f, .plagal = true,
@@ -286,8 +290,9 @@ static const tg_style styles[TG_STYLE_COUNT] = {
     [TG_STYLE_MAHLER] = {
         .name = "MAHLER", .root = 2, .scale = TS_IONIAN,                             /* D major */
         .bpm = 60, .division = 2, .beats_per_bar = 4, .chord_beats = 4, .period_bars = 8,
-        .melody_density = 0.4f, .melody_base = 62, .melody_range = 24,
-        .profile = {0.06f, 0.45f, 0.70f, 0.85f}, .max_leap = 6,         /* long lines, wide leaps */
+        .melody_density = 0.52f, .melody_base = 62, .melody_range = 24,
+        .profile = {0.11f, 0.37f, 0.50f, 0.76f}, .max_leap = 5,         /* long lines, wide leaps */
+        .octave = 0.05f, .direction = 0.03f,
         .appoggiatura = 0.4f, .chromatic = true, .suspension = 0.25f, .arrival_bars = 3,
         .bass_mode = TG_BASS_MARCH, .pad_mode = TG_PAD_BLOCK, .pad_base = 52, .pad_tones = 4,
         .fifth_bias = 1.5f, .repeat = 0.2f,
@@ -303,8 +308,9 @@ static const tg_style styles[TG_STYLE_COUNT] = {
     [TG_STYLE_CHOPIN] = {
         .name = "CHOPIN", .root = 3, .scale = TS_IONIAN,                             /* E-flat major */
         .bpm = 60, .division = 3, .beats_per_bar = 4, .chord_beats = 2, .period_bars = 4,
-        .melody_density = 0.45f, .melody_base = 63, .melody_range = 19,
-        .profile = {0.08f, 0.62f, 0.85f, 0.95f}, .max_leap = 5,
+        .melody_density = 0.59f, .melody_base = 63, .melody_range = 23,
+        .profile = {0.09f, 0.54f, 0.73f, 0.91f}, .max_leap = 5,
+        .octave = 0.02f,
         .syncopation = 0.15f, .appoggiatura = 0.3f, .chromatic = true, .suspension = 0.1f,
         .trill = true, .arrival_bars = 1,
         .bass_mode = TG_BASS_ROOT, .pad_mode = TG_PAD_BROKEN, .pad_base = 46, .pad_tones = 3,
@@ -320,8 +326,9 @@ static const tg_style styles[TG_STYLE_COUNT] = {
     [TG_STYLE_SATIE] = {
         .name = "SATIE", .root = 2, .scale = TS_IONIAN,                              /* D major, 3/4 */
         .bpm = 70, .division = 2, .beats_per_bar = 3, .chord_beats = 3, .period_bars = 8,
-        .melody_density = 0.18f, .melody_base = 66, .melody_range = 14,
-        .profile = {0.05f, 0.70f, 0.90f, 0.98f}, .max_leap = 4,         /* plain and slow */
+        .melody_density = 0.18f, .melody_base = 66, .melody_range = 20,
+        .profile = {0.04f, 0.56f, 0.80f, 0.96f}, .max_leap = 4,         /* plain and slow */
+        .octave = 0.01f, .direction = -0.13f,
         .arrival_bars = 2,
         .bass_mode = TG_BASS_BAR, .pad_mode = TG_PAD_AFTERBEAT, .pad_base = 54, .pad_tones = 4,
         .fifth_bias = 0.5f, .repeat = 0.6f,
@@ -337,8 +344,9 @@ static const tg_style styles[TG_STYLE_COUNT] = {
     [TG_STYLE_DEBUSSY] = {
         .name = "DEBUSSY", .root = 1, .scale = TS_IONIAN,                            /* D-flat, 9/8 feel */
         .bpm = 58, .division = 3, .beats_per_bar = 3, .chord_beats = 3, .period_bars = 8,
-        .melody_density = 0.35f, .melody_base = 61, .melody_range = 19,
-        .profile = {0.06f, 0.55f, 0.82f, 0.95f}, .max_leap = 4,
+        .melody_density = 0.45f, .melody_base = 61, .melody_range = 25,
+        .profile = {0.07f, 0.51f, 0.72f, 0.89f}, .max_leap = 4,
+        .octave = 0.04f, .direction = -0.03f,
         .syncopation = 0.3f, .appoggiatura = 0.1f, .suspension = 0.1f, .arrival_bars = 2,
         .bass_mode = TG_BASS_PEDAL, .pad_mode = TG_PAD_PARALLEL, .pad_base = 50, .pad_tones = 3,
         .fifth_bias = 0.7f, .repeat = 0.3f, .plagal = true, .whole_tone = 0.4f,
@@ -354,8 +362,9 @@ static const tg_style styles[TG_STYLE_COUNT] = {
     [TG_STYLE_DVORAK] = {
         .name = "DVORAK", .root = 2, .scale = TS_IONIAN,                             /* D major */
         .bpm = 66, .division = 2, .beats_per_bar = 4, .chord_beats = 4, .period_bars = 8,
-        .melody_density = 0.4f, .melody_base = 62, .melody_range = 16,
-        .profile = {0.06f, 0.60f, 0.85f, 0.96f}, .max_leap = 4,
+        .melody_density = 0.52f, .melody_base = 62, .melody_range = 22,
+        .profile = {0.12f, 0.66f, 0.89f, 0.95f}, .max_leap = 4,
+        .direction = -0.01f,
         .melody_mask = 0x295,                                           /* major pentatonic */
         .syncopation = 0.35f, .appoggiatura = 0.1f, .suspension = 0.1f, .arrival_bars = 2,
         .bass_mode = TG_BASS_PEDAL, .pad_mode = TG_PAD_BLOCK, .pad_base = 50, .pad_tones = 3,
@@ -372,8 +381,9 @@ static const tg_style styles[TG_STYLE_COUNT] = {
     [TG_STYLE_SAINT_SAENS] = {
         .name = "SAINT-SAENS", .root = 7, .scale = TS_AEOLIAN,                       /* G minor */
         .bpm = 96, .division = 4, .beats_per_bar = 4, .chord_beats = 4, .period_bars = 8,
-        .melody_density = 0.4f, .melody_base = 67, .melody_range = 19,
-        .profile = {0.08f, 0.60f, 0.86f, 0.96f}, .max_leap = 5,
+        .melody_density = 0.4f, .melody_base = 67, .melody_range = 21,
+        .profile = {0.17f, 0.63f, 0.83f, 0.92f}, .max_leap = 4,
+        .octave = 0.01f, .direction = 0.03f,
         .syncopation = 0.1f, .appoggiatura = 0.2f, .suspension = 0.1f, .trill = true, .arrival_bars = 1,
         .bass_mode = TG_BASS_ROOT, .pad_mode = TG_PAD_ARPEGGIO, .pad_base = 43, .pad_tones = 3,
         .fifth_bias = 2.5f, .repeat = 0.55f,
@@ -410,8 +420,9 @@ static const tg_style styles[TG_STYLE_COUNT] = {
         /* Tudor polyphony: Dorian, false relations between the modal and the raised third, Amen endings */
         .name = "TALLIS", .root = 7, .scale = TS_DORIAN,                             /* G Dorian */
         .bpm = 58, .division = 2, .beats_per_bar = 4, .chord_beats = 2, .period_bars = 4,
-        .melody_density = 0.35f, .melody_base = 62, .melody_range = 14,
-        .profile = {0.05f, 0.76f, 0.92f, 0.98f}, .max_leap = 4,
+        .melody_density = 0.35f, .melody_base = 62, .melody_range = 18,
+        .profile = {0.10f, 0.65f, 0.89f, 0.96f}, .max_leap = 4,
+        .direction = -0.19f,
         .suspension = 0.5f, .arrival_bars = 2,
         .bass_mode = TG_BASS_ROOT, .pad_mode = TG_PAD_COUNTER, .pad_base = 50, .pad_tones = 3,
         .fifth_bias = 1.5f, .repeat = 0.3f, .plagal = true,
@@ -465,8 +476,9 @@ static const tg_style styles[TG_STYLE_COUNT] = {
         /* seconda prattica: an expressive voice over basso continuo, repeated-note concitato in the ritornelli */
         .name = "MONTEVERDI", .root = 2, .scale = TS_AEOLIAN,                        /* D minor */
         .bpm = 72, .division = 4, .beats_per_bar = 4, .chord_beats = 4, .period_bars = 4,
-        .melody_density = 0.35f, .melody_base = 62, .melody_range = 15,
-        .profile = {0.25f, 0.70f, 0.88f, 0.96f}, .max_leap = 5,                        /* repeated notes, leaps of grief */
+        .melody_density = 0.35f, .melody_base = 62, .melody_range = 17,
+        .profile = {0.35f, 0.56f, 0.77f, 0.92f}, .max_leap = 4,                        /* repeated notes, leaps of grief */
+        .direction = -0.05f,
         .appoggiatura = 0.3f, .suspension = 0.3f, .arrival_bars = 1,
         .bass_mode = TG_BASS_ROOT, .pad_mode = TG_PAD_BLOCK, .pad_base = 52, .pad_tones = 3,
         .fifth_bias = 1.5f, .repeat = 0.3f,
@@ -486,7 +498,8 @@ static const tg_style styles[TG_STYLE_COUNT] = {
         .name = "SWEELINCK", .root = 9, .scale = TS_AEOLIAN,                         /* A Aeolian */
         .bpm = 76, .division = 4, .beats_per_bar = 4, .chord_beats = 2, .period_bars = 4,
         .melody_density = 0.75f, .melody_base = 64, .melody_range = 17,
-        .profile = {0.02f, 0.85f, 0.95f, 0.99f}, .max_leap = 4,
+        .profile = {0.04f, 0.76f, 0.89f, 0.98f}, .max_leap = 4,
+        .octave = 0.02f, .direction = -0.16f,
         .suspension = 0.25f, .arrival_bars = 1,
         .bass_mode = TG_BASS_ROOT, .pad_mode = TG_PAD_COUNTER, .pad_base = 50, .pad_tones = 3,
         .fifth_bias = 2.0f, .repeat = 0.3f,
@@ -529,8 +542,9 @@ static const tg_style styles[TG_STYLE_COUNT] = {
         /* the Canon: eight chords over a ground, violins in canon two bars apart, the figuration growing */
         .name = "PACHELBEL", .root = 2, .scale = TS_IONIAN,                          /* D major */
         .bpm = 58, .division = 4, .beats_per_bar = 4, .chord_beats = 2, .period_bars = 4,
-        .melody_density = 0.5f, .melody_base = 66, .melody_range = 14,
-        .profile = {0.05f, 0.80f, 0.93f, 0.98f}, .max_leap = 4,
+        .melody_density = 0.65f, .melody_base = 66, .melody_range = 20,
+        .profile = {0.09f, 0.66f, 0.85f, 0.96f}, .max_leap = 4,
+        .octave = 0.05f, .direction = -0.11f,
         .suspension = 0.2f, .arrival_bars = 1,
         .bass_mode = TG_BASS_ROOT, .pad_mode = TG_PAD_CANON, .pad_base = 54, .pad_tones = 3,
         .fifth_bias = 1.0f, .repeat = 0.0f,
@@ -548,8 +562,9 @@ static const tg_style styles[TG_STYLE_COUNT] = {
         /* Dido's lament: the chromatic ground falling from tonic to dominant, sighs over it, in 3/2 */
         .name = "PURCELL", .root = 7, .scale = TS_AEOLIAN,                           /* G minor */
         .bpm = 60, .division = 2, .beats_per_bar = 3, .chord_beats = 3, .period_bars = 6,
-        .melody_density = 0.35f, .melody_base = 62, .melody_range = 15,
-        .profile = {0.08f, 0.75f, 0.90f, 0.97f}, .max_leap = 5,
+        .melody_density = 0.35f, .melody_base = 62, .melody_range = 17,
+        .profile = {0.09f, 0.67f, 0.81f, 0.95f}, .max_leap = 5,
+        .octave = 0.02f,
         .appoggiatura = 0.4f, .chromatic = true, .suspension = 0.4f, .arrival_bars = 1,
         .bass_mode = TG_BASS_LINE, .pad_mode = TG_PAD_BLOCK, .pad_base = 55, .pad_tones = 3,
         .fifth_bias = 1.0f, .repeat = 0.0f,
@@ -558,7 +573,7 @@ static const tg_style styles[TG_STYLE_COUNT] = {
         .perc_mode = TG_PERC_OFF,
         .vocab = TG_VOC_MODAL, .harmony = TG_HARM_CYCLE, .cycle = {0, 7, 13, 12, 3, 7}, .cycle_len = 6, /* i V bVII IV iv V */
         .bass_notes = {0, -1, -2, -3, -4, -5}, .bass_len = 6,                              /* G F# F E Eb D */
-        .direction = -0.4f, .tuning = TT_TUNE_MEANTONE,
+        .direction = -0.30f, .tuning = TT_TUNE_MEANTONE,
         .orch = {{TI_CELLO, TI_VOICE, TI_OUD}, {TI_BASSOON, TI_TRUMPET, TI_BRASS},
                  {TI_HARPSICHORD, TI_FLUTE, TI_HARPSICHORD}}, .orch_n = 3,
         .orch_mode = TG_ORCH_RANDOM,
@@ -567,8 +582,9 @@ static const tg_style styles[TG_STYLE_COUNT] = {
         /* motor rhythm: a drum bass, sequences round the circle of fifths, tutti and solo in turn, terraces */
         .name = "VIVALDI", .root = 9, .scale = TS_AEOLIAN,                           /* A minor */
         .bpm = 112, .division = 4, .beats_per_bar = 4, .chord_beats = 2, .period_bars = 4,
-        .melody_density = 0.7f, .melody_base = 64, .melody_range = 19,
-        .profile = {0.10f, 0.60f, 0.82f, 0.94f}, .max_leap = 5,
+        .melody_density = 0.89f, .melody_base = 64, .melody_range = 25,
+        .profile = {0.21f, 0.54f, 0.66f, 0.87f}, .max_leap = 4,
+        .octave = 0.03f, .direction = -0.20f,
         .trill = true, .arrival_bars = 1,
         .bass_mode = TG_BASS_REPEAT, .pad_mode = TG_PAD_REPEAT, .pad_base = 52, .pad_tones = 3,
         .fifth_bias = 4.0f, .repeat = 0.3f,
@@ -604,8 +620,9 @@ static const tg_style styles[TG_STYLE_COUNT] = {
         /* ceremonial D major: trumpets and drums, plain strong harmony, marching eighths, the grand pause */
         .name = "HANDEL", .root = 2, .scale = TS_IONIAN,                             /* D major */
         .bpm = 92, .division = 4, .beats_per_bar = 4, .chord_beats = 2, .period_bars = 4,
-        .melody_density = 0.45f, .melody_base = 64, .melody_range = 17,
-        .profile = {0.15f, 0.55f, 0.82f, 0.95f}, .max_leap = 5,                        /* repeated notes, fanfares */
+        .melody_density = 0.50f, .melody_base = 64, .melody_range = 21,
+        .profile = {0.28f, 0.47f, 0.70f, 0.91f}, .max_leap = 4,                        /* repeated notes, fanfares */
+        .octave = 0.05f, .direction = -0.20f,
         .trill = true, .arrival_bars = 1,
         .bass_mode = TG_BASS_REPEAT, .pad_mode = TG_PAD_REPEAT, .pad_base = 52, .pad_tones = 3,
         .fifth_bias = 2.0f, .repeat = 0.45f,
@@ -623,8 +640,9 @@ static const tg_style styles[TG_STYLE_COUNT] = {
         /* keyboard sonatas: fast 3/8, leaps across the keyboard, repeated notes, strummed Spanish chords */
         .name = "SCARLATTI", .root = 2, .scale = TS_IONIAN,                          /* D major */
         .bpm = 180, .division = 2, .beats_per_bar = 3, .chord_beats = 3, .period_bars = 8,
-        .melody_density = 0.75f, .melody_base = 62, .melody_range = 24,
-        .profile = {0.20f, 0.55f, 0.75f, 0.88f}, .max_leap = 7,
+        .melody_density = 0.98f, .melody_base = 62, .melody_range = 26,
+        .profile = {0.09f, 0.59f, 0.68f, 0.79f}, .max_leap = 6,
+        .direction = -0.20f,
         .trill = true, .arrival_bars = 1,
         .bass_mode = TG_BASS_BAR, .pad_mode = TG_PAD_REPEAT, .pad_base = 50, .pad_tones = 3,
         .fifth_bias = 1.5f, .repeat = 0.8f,                                             /* each half again */
@@ -634,7 +652,7 @@ static const tg_style styles[TG_STYLE_COUNT] = {
         .w_major = {10, 4, 2, 7, 5, 3, 8, 9, 3, 4, 2, 2, 1, 2, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0},
         .w_minor = {10, 5, 5, 7, 2, 4, 8, 9, 4, 3, 2, 2, 4, 4, 2, 0, 0, 0, 1, 0, 0, 0, 1, 0},
         .color_scale = TS_PHRYG_DOM, .color = 0.2f, .mixture = 0.2f,
-        .octave = 0.12f, .strum_ms = 9,
+        .octave = 0.07f, .strum_ms = 9,
         .orch = {{TI_HARPSICHORD, TI_HARPSICHORD, TI_HARPSICHORD}, {TI_GUITAR, TI_HARPSICHORD, TI_GUITAR}}, .orch_n = 2,
         .orch_mode = TG_ORCH_RANDOM,
     },
@@ -642,8 +660,9 @@ static const tg_style styles[TG_STYLE_COUNT] = {
         /* French ornament, the added-sixth chord, a tambourin over a drone and a tabor, gavottes between */
         .name = "RAMEAU", .root = 2, .scale = TS_IONIAN,                             /* D major, 2/4 */
         .bpm = 132, .division = 4, .beats_per_bar = 2, .chord_beats = 2, .period_bars = 8,
-        .melody_density = 0.55f, .melody_base = 66, .melody_range = 17,
-        .profile = {0.10f, 0.68f, 0.88f, 0.96f}, .max_leap = 4,
+        .melody_density = 0.55f, .melody_base = 66, .melody_range = 18,
+        .profile = {0.10f, 0.61f, 0.79f, 0.92f}, .max_leap = 4,
+        .octave = 0.02f, .direction = -0.02f,
         .appoggiatura = 0.25f, .trill = true, .arrival_bars = 1,
         .bass_mode = TG_BASS_PEDAL, .pad_mode = TG_PAD_BLOCK, .pad_base = 54, .pad_tones = 3,
         .fifth_bias = 1.5f, .repeat = 0.5f,
@@ -701,8 +720,9 @@ static const tg_style styles[TG_STYLE_COUNT] = {
         /* wit and surprise: a tune of repeated notes worked from one idea, sudden accents, sudden quiet, pauses */
         .name = "HAYDN", .root = 7, .scale = TS_IONIAN,                              /* G major, 2/4 */
         .bpm = 120, .division = 4, .beats_per_bar = 2, .chord_beats = 2, .period_bars = 8,
-        .melody_density = 0.45f, .melody_base = 67, .melody_range = 17,
-        .profile = {0.25f, 0.60f, 0.85f, 0.95f}, .max_leap = 4,
+        .melody_density = 0.45f, .melody_base = 67, .melody_range = 18,
+        .profile = {0.22f, 0.60f, 0.79f, 0.90f}, .max_leap = 4,
+        .octave = 0.04f, .direction = -0.17f,
         .appoggiatura = 0.1f, .trill = true, .arrival_bars = 1,
         .bass_mode = TG_BASS_BAR, .pad_mode = TG_PAD_REPEAT, .pad_base = 55, .pad_tones = 3,
         .fifth_bias = 1.2f, .repeat = 0.45f,
@@ -725,8 +745,9 @@ static const tg_style styles[TG_STYLE_COUNT] = {
         /* the Lied: a singable line, major and minor trading places, third-related chords, repeated triplets */
         .name = "SCHUBERT", .root = 10, .scale = TS_IONIAN,                          /* B-flat major */
         .bpm = 72, .division = 3, .beats_per_bar = 4, .chord_beats = 2, .period_bars = 4,
-        .melody_density = 0.35f, .melody_base = 62, .melody_range = 14,
-        .profile = {0.08f, 0.75f, 0.90f, 0.97f}, .max_leap = 5,
+        .melody_density = 0.35f, .melody_base = 62, .melody_range = 20,
+        .profile = {0.17f, 0.58f, 0.79f, 0.94f}, .max_leap = 4,
+        .octave = 0.05f, .direction = -0.11f,
         .appoggiatura = 0.15f, .arrival_bars = 2,
         .bass_mode = TG_BASS_ROOT, .pad_mode = TG_PAD_REPEAT, .pad_base = 53, .pad_tones = 3,
         .fifth_bias = 1.5f, .repeat = 0.45f,
@@ -784,8 +805,9 @@ static const tg_style styles[TG_STYLE_COUNT] = {
         /* the Italian symphony: a running 6/8, light staccato, repeated woodwind chords, elegant harmony */
         .name = "FELIX MENDELSSOHN", .root = 9, .scale = TS_IONIAN,                  /* A major, 6/8 */
         .bpm = 116, .division = 3, .beats_per_bar = 2, .chord_beats = 2, .period_bars = 8,
-        .melody_density = 0.6f, .melody_base = 64, .melody_range = 17,
-        .profile = {0.15f, 0.60f, 0.85f, 0.95f}, .max_leap = 5,
+        .melody_density = 0.6f, .melody_base = 64, .melody_range = 18,
+        .profile = {0.17f, 0.60f, 0.76f, 0.90f}, .max_leap = 5,
+        .octave = 0.04f, .direction = -0.09f,
         .trill = true, .arrival_bars = 1,
         .bass_mode = TG_BASS_BAR, .pad_mode = TG_PAD_REPEAT, .pad_base = 57, .pad_tones = 3,
         .fifth_bias = 1.5f, .repeat = 0.4f,
@@ -821,8 +843,9 @@ static const tg_style styles[TG_STYLE_COUNT] = {
         /* Eusebius and Florestan in turn: dreamy and impetuous periods, syncopation, off-beat accents, inner voices */
         .name = "ROBERT SCHUMANN", .root = 5, .scale = TS_IONIAN,                    /* F major */
         .bpm = 66, .division = 4, .beats_per_bar = 4, .chord_beats = 2, .period_bars = 4,
-        .melody_density = 0.35f, .melody_base = 60, .melody_range = 17,
-        .profile = {0.06f, 0.70f, 0.88f, 0.96f}, .max_leap = 5,
+        .melody_density = 0.35f, .melody_base = 60, .melody_range = 22,
+        .profile = {0.09f, 0.62f, 0.79f, 0.92f}, .max_leap = 4,
+        .octave = 0.04f, .direction = -0.15f,
         .syncopation = 0.45f, .appoggiatura = 0.2f, .suspension = 0.25f, .arrival_bars = 2,
         .bass_mode = TG_BASS_ROOT, .pad_mode = TG_PAD_COUNTER, .pad_base = 50, .pad_tones = 3,
         .fifth_bias = 1.5f, .repeat = 0.35f,
@@ -859,8 +882,9 @@ static const tg_style styles[TG_STYLE_COUNT] = {
         /* Liebestraum: the melody in the middle wrapped in wide arpeggios, diminished sevenths, Hungarian colour */
         .name = "LISZT", .root = 1, .scale = TS_IONIAN,                              /* D-flat major */
         .bpm = 60, .division = 3, .beats_per_bar = 4, .chord_beats = 2, .period_bars = 4,
-        .melody_density = 0.4f, .melody_base = 60, .melody_range = 19,
-        .profile = {0.05f, 0.65f, 0.86f, 0.95f}, .max_leap = 6,
+        .melody_density = 0.4f, .melody_base = 60, .melody_range = 25,
+        .profile = {0.10f, 0.45f, 0.78f, 0.90f}, .max_leap = 7,
+        .octave = 0.05f, .direction = 0.18f,
         .appoggiatura = 0.25f, .chromatic = true, .arrival_bars = 2,
         .bass_mode = TG_BASS_ROOT, .pad_mode = TG_PAD_ARPEGGIO, .pad_base = 44, .pad_tones = 3,
         .fifth_bias = 1.5f, .repeat = 0.3f, .whole_tone = 0.1f,
@@ -880,8 +904,9 @@ static const tg_style styles[TG_STYLE_COUNT] = {
         /* the opera house: oom-pah-pah, a big singable tune, brass, emphatic cadences, the banda */
         .name = "VERDI", .root = 3, .scale = TS_IONIAN,                              /* E-flat major, 3/4 */
         .bpm = 132, .division = 2, .beats_per_bar = 3, .chord_beats = 3, .period_bars = 8,
-        .melody_density = 0.5f, .melody_base = 62, .melody_range = 15,
-        .profile = {0.12f, 0.60f, 0.82f, 0.94f}, .max_leap = 5,
+        .melody_density = 0.5f, .melody_base = 62, .melody_range = 17,
+        .profile = {0.16f, 0.61f, 0.79f, 0.88f}, .max_leap = 4,
+        .octave = 0.05f, .direction = -0.15f,
         .appoggiatura = 0.15f, .arrival_bars = 1,
         .bass_mode = TG_BASS_BAR, .pad_mode = TG_PAD_OOMPAH, .pad_base = 55, .pad_tones = 3,
         .fifth_bias = 1.2f, .repeat = 0.5f,
@@ -898,8 +923,9 @@ static const tg_style styles[TG_STYLE_COUNT] = {
         /* endless melody: the half-diminished chord, deceptive endings, leitmotifs, swells that never land */
         .name = "WAGNER", .root = 9, .scale = TS_AEOLIAN,                            /* A minor (Tristan) */
         .bpm = 52, .division = 2, .beats_per_bar = 4, .chord_beats = 4, .period_bars = 8,
-        .melody_density = 0.35f, .melody_base = 60, .melody_range = 22,
-        .profile = {0.04f, 0.55f, 0.78f, 0.90f}, .max_leap = 6,
+        .melody_density = 0.35f, .melody_base = 60, .melody_range = 27,
+        .profile = {0.08f, 0.40f, 0.62f, 0.79f}, .max_leap = 6,
+        .octave = 0.05f, .direction = 0.17f,
         .appoggiatura = 0.5f, .chromatic = true, .suspension = 0.3f, .arrival_bars = 3,
         .bass_mode = TG_BASS_ROOT, .pad_mode = TG_PAD_TREMOLO, .pad_base = 50, .pad_tones = 4,
         .fifth_bias = 1.0f, .repeat = 0.15f,
@@ -917,8 +943,9 @@ static const tg_style styles[TG_STYLE_COUNT] = {
         /* Ave Maria over Bach's prelude: a long plain melody above the broken-chord figure, organ, Amen */
         .name = "GOUNOD", .root = 0, .scale = TS_IONIAN,                             /* C major */
         .bpm = 66, .division = 4, .beats_per_bar = 4, .chord_beats = 4, .period_bars = 4,
-        .melody_density = 0.25f, .melody_base = 64, .melody_range = 15,
-        .profile = {0.05f, 0.78f, 0.92f, 0.98f}, .max_leap = 5,
+        .melody_density = 0.25f, .melody_base = 64, .melody_range = 20,
+        .profile = {0.11f, 0.63f, 0.83f, 0.96f}, .max_leap = 5,
+        .octave = 0.05f, .direction = -0.14f,
         .appoggiatura = 0.1f, .arrival_bars = 2,
         .bass_mode = TG_BASS_ROOT, .pad_mode = TG_PAD_FIGURE, .pad_base = 52, .pad_tones = 3,
         .fifth_bias = 2.0f, .repeat = 0.3f, .plagal = true,
@@ -955,8 +982,9 @@ static const tg_style styles[TG_STYLE_COUNT] = {
         /* cathedrals of sound: tremolo from nothing, brass chorales between, pauses, pedal points, octave themes */
         .name = "BRUCKNER", .root = 2, .scale = TS_AEOLIAN,                          /* D minor */
         .bpm = 56, .division = 3, .beats_per_bar = 4, .chord_beats = 4, .period_bars = 8,
-        .melody_density = 0.3f, .melody_base = 57, .melody_range = 19,
-        .profile = {0.05f, 0.50f, 0.75f, 0.90f}, .max_leap = 6,
+        .melody_density = 0.3f, .melody_base = 57, .melody_range = 17,
+        .profile = {0.10f, 0.59f, 0.76f, 0.92f}, .max_leap = 5,
+        .direction = -0.06f,
         .arrival_bars = 3,
         .bass_mode = TG_BASS_PEDAL, .pad_mode = TG_PAD_TREMOLO, .pad_base = 50, .pad_tones = 3,
         .fifth_bias = 1.8f, .repeat = 0.3f, .plagal = true,
@@ -965,7 +993,7 @@ static const tg_style styles[TG_STYLE_COUNT] = {
         .perc_mode = TG_PERC_PERIOD, .perc = {8, 0, 0, 4, 0, 0},
         .w_major = {10, 5, 3, 8, 5, 4, 7, 8, 3, 5, 3, 3, 3, 3, 4, 4, 3, 3, 2, 0, 0, 2, 2, 1},
         .w_minor = {10, 6, 4, 8, 3, 5, 7, 8, 4, 4, 3, 3, 3, 4, 3, 3, 2, 2, 2, 0, 0, 1, 2, 2},
-        .vocab = TG_VOC_ROMANTIC, .modulate = 0.2f, .gp = 0.35f, .octave = 0.15f,
+        .vocab = TG_VOC_ROMANTIC, .modulate = 0.2f, .gp = 0.35f, .octave = 0.12f,
         .alt = {.pad_mode = TG_PAD_BLOCK + 1, .bass_mode = TG_BASS_ROOT + 1}, .alt_every = 2,
         .orch = {{TI_PIPEORGAN, TI_HORN, TI_STRINGS}, {TI_TUBA, TI_BRASS, TI_PIPEORGAN},
                  {TI_TUBA, TI_HORN, TI_HORN}}, .orch_n = 3,
@@ -975,8 +1003,9 @@ static const tg_style styles[TG_STYLE_COUNT] = {
         /* the Habanera: the dotted bass, a melody sliding down by semitones, minor turning major, castanets */
         .name = "BIZET", .root = 2, .scale = TS_AEOLIAN,                             /* D minor, 2/4 */
         .bpm = 72, .division = 4, .beats_per_bar = 2, .chord_beats = 2, .period_bars = 8,
-        .melody_density = 0.45f, .melody_base = 62, .melody_range = 15,
-        .profile = {0.05f, 0.80f, 0.92f, 0.97f}, .max_leap = 4,
+        .melody_density = 0.45f, .melody_base = 62, .melody_range = 19,
+        .profile = {0.06f, 0.74f, 0.83f, 0.94f}, .max_leap = 4,
+        .octave = 0.02f,
         .arrival_bars = 1,
         .bass_mode = TG_BASS_OSTINATO, .pad_mode = TG_PAD_BLOCK, .pad_base = 55, .pad_tones = 3,
         .fifth_bias = 1.0f, .repeat = 0.6f,
@@ -1037,8 +1066,9 @@ static const tg_style styles[TG_STYLE_COUNT] = {
         .name = "MUSSORGSKY", .root = 10, .scale = TS_IONIAN,                        /* B-flat */
         .bpm = 92, .division = 2, .beats_per_bar = 5, .chord_beats = 1, .period_bars = 4,
         .meter = {6, 4, 6, 6}, .meter_bars = 1u << 2,                                   /* 5/4 (3+2), 6/4 (3+3) */
-        .melody_density = 0.45f, .melody_base = 58, .melody_range = 15,
-        .profile = {0.15f, 0.75f, 0.90f, 0.97f}, .max_leap = 4,
+        .melody_density = 0.45f, .melody_base = 58, .melody_range = 21,
+        .profile = {0.13f, 0.62f, 0.80f, 0.94f}, .max_leap = 4,
+        .octave = 0.05f, .direction = -0.07f,
         .melody_mask = 0x295, .arrival_bars = 1,
         .bass_mode = TG_BASS_BAR, .pad_mode = TG_PAD_PARALLEL, .pad_base = 50, .pad_tones = 3,
         .fifth_bias = 1.0f, .repeat = 0.4f,
@@ -1057,8 +1087,9 @@ static const tg_style styles[TG_STYLE_COUNT] = {
         /* sequences rising to a climax, falling scale lines, harp and celesta colour, big swells */
         .name = "TCHAIKOVSKY", .root = 11, .scale = TS_AEOLIAN,                      /* B minor */
         .bpm = 72, .division = 4, .beats_per_bar = 4, .chord_beats = 2, .period_bars = 4,
-        .melody_density = 0.4f, .melody_base = 62, .melody_range = 19,
-        .profile = {0.04f, 0.80f, 0.92f, 0.97f}, .max_leap = 5,
+        .melody_density = 0.52f, .melody_base = 62, .melody_range = 25,
+        .profile = {0.09f, 0.76f, 0.83f, 0.93f}, .max_leap = 4,
+        .octave = 0.04f,
         .appoggiatura = 0.25f, .chromatic = true, .suspension = 0.3f, .arrival_bars = 2,
         .bass_mode = TG_BASS_ROOT, .pad_mode = TG_PAD_BLOCK, .pad_base = 52, .pad_tones = 3,
         .fifth_bias = 1.8f, .repeat = 0.3f,
@@ -1067,7 +1098,7 @@ static const tg_style styles[TG_STYLE_COUNT] = {
         .perc_mode = TG_PERC_PERIOD, .perc = {7, 0, 2, 6, 2, 0},
         .w_major = {10, 6, 3, 7, 5, 5, 7, 8, 4, 6, 4, 3, 3, 3, 3, 2, 2, 2, 2, 0, 0, 2, 1, 1},
         .w_minor = {10, 7, 4, 7, 3, 6, 7, 8, 5, 5, 3, 3, 3, 3, 3, 2, 2, 2, 2, 0, 0, 0, 2, 1},
-        .vocab = TG_VOC_ROMANTIC, .direction = -0.4f,
+        .vocab = TG_VOC_ROMANTIC, .direction = -0.45f,
         .alt = {.pad_mode = TG_PAD_ARPEGGIO + 1}, .alt_every = 2,
         .orch = {{TI_CONTRABASS, TI_TUBULAR, TI_STRINGS}, {TI_CONTRABASS, TI_OBOE, TI_STRINGS},
                  {TI_PIZZ, TI_CELESTA, TI_CLARINET}, {TI_CONTRABASS, TI_BASSOON, TI_STRINGS}}, .orch_n = 4,
@@ -1096,8 +1127,9 @@ static const tg_style styles[TG_STYLE_COUNT] = {
         /* Morning: a pentatonic pastoral tune passed between flute and oboe, a drone fifth, Lydian light */
         .name = "GRIEG", .root = 4, .scale = TS_IONIAN,                              /* E major, 6/8 */
         .bpm = 58, .division = 3, .beats_per_bar = 2, .chord_beats = 2, .period_bars = 8,
-        .melody_density = 0.4f, .melody_base = 64, .melody_range = 15,
-        .profile = {0.06f, 0.70f, 0.90f, 0.97f}, .max_leap = 4,
+        .melody_density = 0.4f, .melody_base = 64, .melody_range = 21,
+        .profile = {0.09f, 0.59f, 0.86f, 0.94f}, .max_leap = 4,
+        .octave = 0.03f, .direction = -0.01f,
         .melody_mask = 0x295, .arrival_bars = 2,
         .bass_mode = TG_BASS_PEDAL, .pad_mode = TG_PAD_BLOCK, .pad_base = 56, .pad_tones = 3,
         .fifth_bias = 1.0f, .repeat = 0.5f,
@@ -1133,8 +1165,9 @@ static const tg_style styles[TG_STYLE_COUNT] = {
         /* Scheherazade: violin arabesques over harp, augmented seconds, octatonic colour, a glittering orchestra */
         .name = "RIMSKY-KORSAKOV", .root = 4, .scale = TS_HARM_MINOR,                /* E minor */
         .bpm = 76, .division = 4, .beats_per_bar = 4, .chord_beats = 4, .period_bars = 4,
-        .melody_density = 0.5f, .melody_base = 67, .melody_range = 19,
-        .profile = {0.03f, 0.70f, 0.88f, 0.96f}, .max_leap = 5,
+        .melody_density = 0.5f, .melody_base = 67, .melody_range = 24,
+        .profile = {0.03f, 0.64f, 0.77f, 0.92f}, .max_leap = 5,
+        .octave = 0.01f, .direction = -0.03f,
         .appoggiatura = 0.2f, .chromatic = true, .arrival_bars = 1,
         .bass_mode = TG_BASS_ROOT, .pad_mode = TG_PAD_ARPEGGIO, .pad_base = 48, .pad_tones = 3,
         .fifth_bias = 1.5f, .repeat = 0.4f,
@@ -1171,8 +1204,9 @@ static const tg_style styles[TG_STYLE_COUNT] = {
         /* the Pavane: a pizzicato pulse, off-beat chords, a flute line, the modal minor dominant, side-steps */
         .name = "FAURE", .root = 6, .scale = TS_AEOLIAN,                             /* F-sharp minor */
         .bpm = 88, .division = 2, .beats_per_bar = 4, .chord_beats = 2, .period_bars = 4,
-        .melody_density = 0.4f, .melody_base = 66, .melody_range = 15,
-        .profile = {0.05f, 0.72f, 0.90f, 0.97f}, .max_leap = 5,
+        .melody_density = 0.4f, .melody_base = 66, .melody_range = 17,
+        .profile = {0.10f, 0.64f, 0.81f, 0.94f}, .max_leap = 5,
+        .octave = 0.01f, .direction = 0.04f,
         .appoggiatura = 0.15f, .suspension = 0.2f, .arrival_bars = 2,
         .bass_mode = TG_BASS_BEAT, .pad_mode = TG_PAD_OOMPAH, .pad_base = 57, .pad_tones = 3,
         .fifth_bias = 1.3f, .repeat = 0.4f,
@@ -1190,8 +1224,9 @@ static const tg_style styles[TG_STYLE_COUNT] = {
         /* nobilmente: a broad melody of rising sixths and sevenths over a stepping bass, warm strings */
         .name = "ELGAR", .root = 3, .scale = TS_IONIAN,                              /* E-flat major, 3/4 */
         .bpm = 50, .division = 2, .beats_per_bar = 3, .chord_beats = 3, .period_bars = 8,
-        .melody_density = 0.35f, .melody_base = 58, .melody_range = 19,
-        .profile = {0.05f, 0.55f, 0.75f, 0.90f}, .max_leap = 6,
+        .melody_density = 0.35f, .melody_base = 58, .melody_range = 21,
+        .profile = {0.05f, 0.47f, 0.63f, 0.81f}, .max_leap = 6,
+        .direction = 0.02f,
         .appoggiatura = 0.2f, .suspension = 0.35f, .arrival_bars = 2,
         .bass_mode = TG_BASS_WALKING, .pad_mode = TG_PAD_BLOCK, .pad_base = 51, .pad_tones = 4,
         .fifth_bias = 1.5f, .repeat = 0.35f,
@@ -1268,8 +1303,9 @@ static const tg_style styles[TG_STYLE_COUNT] = {
         /* the second concerto: tolling low octaves, wide chords, a narrow long-breathed melody, sevenths */
         .name = "RACHMANINOFF", .root = 0, .scale = TS_AEOLIAN,                      /* C minor */
         .bpm = 66, .division = 3, .beats_per_bar = 4, .chord_beats = 2, .period_bars = 4,
-        .melody_density = 0.3f, .melody_base = 60, .melody_range = 14,
-        .profile = {0.05f, 0.85f, 0.95f, 0.98f}, .max_leap = 4,
+        .melody_density = 0.3f, .melody_base = 60, .melody_range = 20,
+        .profile = {0.05f, 0.81f, 0.90f, 0.96f}, .max_leap = 4,
+        .octave = 0.05f, .direction = 0.08f,
         .appoggiatura = 0.2f, .chromatic = true, .suspension = 0.3f, .arrival_bars = 2,
         .bass_mode = TG_BASS_TOLL, .pad_mode = TG_PAD_BLOCK, .pad_base = 45, .pad_tones = 4,
         .fifth_bias = 1.5f, .repeat = 0.3f,
@@ -1289,8 +1325,9 @@ static const tg_style styles[TG_STYLE_COUNT] = {
         .name = "HOLST", .root = 7, .scale = TS_PHRYGIAN,                            /* on G, 5/4 */
         .bpm = 160, .division = 2, .beats_per_bar = 5, .chord_beats = 1, .period_bars = 4,
         .meter = {6, 4},                                                                /* 3 + 2 */
-        .melody_density = 0.3f, .melody_base = 55, .melody_range = 15,
-        .profile = {0.10f, 0.55f, 0.80f, 0.92f}, .max_leap = 5,
+        .melody_density = 0.3f, .melody_base = 55, .melody_range = 20,
+        .profile = {0.08f, 0.42f, 0.63f, 0.87f}, .max_leap = 5,
+        .octave = 0.01f, .direction = -0.03f,
         .arrival_bars = 1,
         .bass_mode = TG_BASS_OSTINATO, .pad_mode = TG_PAD_BLOCK, .pad_base = 50, .pad_tones = 3,
         .fifth_bias = 1.0f, .repeat = 0.3f,
@@ -1311,8 +1348,9 @@ static const tg_style styles[TG_STYLE_COUNT] = {
         /* The Lark Ascending: a high pentatonic violin over planing modal triads */
         .name = "VAUGHAN WILLIAMS", .root = 7, .scale = TS_DORIAN,                   /* G Dorian */
         .bpm = 60, .division = 4, .beats_per_bar = 4, .chord_beats = 4, .period_bars = 4,
-        .melody_density = 0.55f, .melody_base = 72, .melody_range = 19,
-        .profile = {0.05f, 0.70f, 0.88f, 0.96f}, .max_leap = 4,
+        .melody_density = 0.55f, .melody_base = 72, .melody_range = 24,
+        .profile = {0.05f, 0.60f, 0.83f, 0.95f}, .max_leap = 5,
+        .direction = -0.20f,
         .melody_mask = 0x4A9, .arrival_bars = 2,
         .bass_mode = TG_BASS_ROOT, .pad_mode = TG_PAD_PARALLEL, .pad_base = 50, .pad_tones = 3,
         .fifth_bias = 1.0f, .repeat = 0.35f,
@@ -1331,8 +1369,9 @@ static const tg_style styles[TG_STYLE_COUNT] = {
          * seventh and ninth chords of the G major concerto */
         .name = "RAVEL", .root = 0, .scale = TS_IONIAN,                              /* C major, 3/4 */
         .bpm = 72, .division = 4, .beats_per_bar = 3, .chord_beats = 3, .period_bars = 8,
-        .melody_density = 0.45f, .melody_base = 62, .melody_range = 15,
-        .profile = {0.06f, 0.70f, 0.88f, 0.96f}, .max_leap = 5,
+        .melody_density = 0.45f, .melody_base = 62, .melody_range = 21,
+        .profile = {0.08f, 0.55f, 0.76f, 0.92f}, .max_leap = 5,
+        .octave = 0.04f, .direction = -0.07f,
         .appoggiatura = 0.15f, .arrival_bars = 1,
         .bass_mode = TG_BASS_OSTINATO, .pad_mode = TG_PAD_BLOCK, .pad_base = 52, .pad_tones = 4,
         .fifth_bias = 1.5f, .repeat = 0.6f,
@@ -1428,8 +1467,9 @@ static const tg_style styles[TG_STYLE_COUNT] = {
         /* music-hall cheek and sacred calm in turn: stride chords and sevenths, then choir and organ */
         .name = "POULENC", .root = 0, .scale = TS_IONIAN,                            /* C major */
         .bpm = 132, .division = 2, .beats_per_bar = 4, .chord_beats = 2, .period_bars = 4,
-        .melody_density = 0.55f, .melody_base = 64, .melody_range = 15,
-        .profile = {0.12f, 0.65f, 0.85f, 0.95f}, .max_leap = 5,
+        .melody_density = 0.55f, .melody_base = 64, .melody_range = 20,
+        .profile = {0.12f, 0.56f, 0.75f, 0.90f}, .max_leap = 5,
+        .direction = -0.08f,
         .arrival_bars = 1,
         .bass_mode = TG_BASS_MARCH, .pad_mode = TG_PAD_OOMPAH, .pad_base = 55, .pad_tones = 4,
         .fifth_bias = 1.5f, .repeat = 0.35f,
@@ -1578,8 +1618,9 @@ static const tg_style styles[TG_STYLE_COUNT] = {
         /* the second Waltz: oom-pah-pah under a saxophone, chromatic and dark, Phrygian shadows, sarcasm */
         .name = "SHOSTAKOVICH", .root = 0, .scale = TS_AEOLIAN,                      /* C minor, 3/4 */
         .bpm = 152, .division = 2, .beats_per_bar = 3, .chord_beats = 3, .period_bars = 8,
-        .melody_density = 0.4f, .melody_base = 60, .melody_range = 15,
-        .profile = {0.06f, 0.65f, 0.85f, 0.95f}, .max_leap = 5,
+        .melody_density = 0.4f, .melody_base = 60, .melody_range = 20,
+        .profile = {0.06f, 0.62f, 0.77f, 0.90f}, .max_leap = 5,
+        .octave = 0.03f, .direction = 0.04f,
         .appoggiatura = 0.3f, .chromatic = true, .arrival_bars = 1,
         .bass_mode = TG_BASS_BAR, .pad_mode = TG_PAD_OOMPAH, .pad_base = 55, .pad_tones = 3,
         .fifth_bias = 1.3f, .repeat = 0.5f,
@@ -1878,7 +1919,8 @@ static const tg_style styles[TG_STYLE_COUNT] = {
         .name = "JOHN WILLIAMS", .root = 10, .scale = TS_IONIAN,                     /* B-flat major */
         .bpm = 104, .division = 3, .beats_per_bar = 4, .chord_beats = 2, .period_bars = 4,
         .melody_density = 0.45f, .melody_base = 62, .melody_range = 19,
-        .profile = {0.08f, 0.45f, 0.70f, 0.85f}, .max_leap = 5,
+        .profile = {0.09f, 0.31f, 0.48f, 0.72f}, .max_leap = 5,
+        .direction = -0.05f,
         .appoggiatura = 0.1f, .arrival_bars = 1,
         .bass_mode = TG_BASS_MARCH, .pad_mode = TG_PAD_BLOCK, .pad_base = 53, .pad_tones = 3,
         .fifth_bias = 1.5f, .repeat = 0.4f,

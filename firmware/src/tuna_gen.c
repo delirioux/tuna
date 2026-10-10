@@ -140,10 +140,13 @@ static void defaults(tg_gen *g)
     g->chaos_rhythm = g->chaos_pitch = g->chaos_density = g->chaos_macro = 0.5f;
     g->chaos_parts = TG_CHAOS_ALL;
     for (int s = 0; s < 2; ++s)
-        for (int n = 0; n < 128; ++n)
+        for (int n = 0; n < 128; ++n) {
             g->cx_map[s][n] = (int8_t)n;
+            g->cx_on[s][n] = 0;                      /* (notes a generator used before left sounding) */
+        }
     g->cx_pad_tick = g->cx_bass_tick = g->cx_bass_end = -1;
     g->cx_bass_note = -1;
+    g->cx_adding = g->cx_pad_skip = false;
     g->root_req = -1;
     g->hold_mask = 0;
     g->hold_root = -1;
@@ -626,6 +629,10 @@ static void plan_period(tg_gen *g)
         minor = scale_is_minor(g->next_scale);
     } else if (g->plan_len == n && g->plan_minor == minor && !fresh && hrand(g) < st->repeat) {
         goto ending;                                /* the period repeats its harmony: A A */
+    } else if (g->open_prev) {
+        /* an open ending named its chord in that period's mode and colour: the period it opens keeps them,
+         * so the chord the melody was led to is the chord that sounds */
+        minor = scale_is_minor(scale_now(g));
     } else {
         /* a coloured period: the parallel mode, or another scale */
         g->period_scale = -1;
@@ -1349,6 +1356,13 @@ static void melody_tick(tg_gen *g, beat_pos b, float x2, int velocity, int offse
         int a = mask_step(target, g->root, g->mel_note, 1), b = mask_step(target, g->root, g->mel_note, -1);
         home = a - g->mel_note <= g->mel_note - b ? a : b;
     }
+    if (home > hi || home < lo) {
+        /* outside the range: the target's next tone on the other side of the note (an open ending has two),
+         * else its octave */
+        int other = mask_step(target, g->root, g->mel_note, home > hi ? -1 : 1);
+        if (other >= lo && other <= hi)
+            home = other;
+    }
     if (home > hi) home -= 12;
     if (home < lo) home += 12;
 
@@ -1381,6 +1395,8 @@ static void melody_tick(tg_gen *g, beat_pos b, float x2, int velocity, int offse
     }
     if (!arrival && g->mel_pending >= 0 && b.q >= g->mel_pending_q) {
         /* an ornament resolves: appoggiatura or suspension, a step down to the chord tone */
+        if (b.downbeat && !in_mask(chord, g->mel_pending, g->root))
+            g->mel_pending = mask_nearest(chord, g->root, g->mel_pending);   /* (the chord moved on meanwhile) */
         g->mel_last_dir = g->mel_pending > g->mel_note ? 1 : g->mel_pending < g->mel_note ? -1 : 0;
         g->mel_note = g->mel_pending;
         g->mel_pending = -1;
@@ -1406,6 +1422,8 @@ static void melody_tick(tg_gen *g, beat_pos b, float x2, int velocity, int offse
          * D-flat major in F); then take the key's own neighbour */
         if (up - home > 2) up = mask_step(tt_scale_mask(scale_now(g)), g->root, home, 1);
         if (home - down > 2) down = mask_step(tt_scale_mask(scale_now(g)), g->root, home, -1);
+        if (up - home > 2) up = mask_step(tt_scale_mask(g->scale), g->root, home, 1);    /* (a coloured period) */
+        if (home - down > 2) down = mask_step(tt_scale_mask(g->scale), g->root, home, -1);
         if (up - home > 2) up = home + 2;
         if (home - down > 2) down = home - 1;
         int du = up > g->mel_note ? up - g->mel_note : g->mel_note - up;
@@ -1745,6 +1763,13 @@ static void pad_counter(tg_gen *g, beat_pos b, int velocity, int offset, tg_even
         if ((iv == 0 || iv == 7) && iv == g->counter_prev_iv && g->counter_prev_mel >= 0 &&
             mel != g->counter_prev_mel && cand != g->counter_note && (cand > g->counter_note ? 1 : -1) == mel_dir)
             cand = g->counter_note;
+        /* a held note the new chord's scale no longer has (the leading note after its dominant) moves a step
+         * against the melody: contrary motion, never parallel */
+        if (cand == g->counter_note && !in_mask((uint16_t)(tt_scale_mask(scale_now(g)) | g->chord_scale), cand, g->root)) {
+            cand = mask_step(g->chord_scale, g->root, g->counter_note, -mel_dir);
+            if (cand > hi || cand < lo)
+                cand = mask_step(g->chord_scale, g->root, g->counter_note, mel_dir);
+        }
     }
     g->counter_prev_iv = pmod12(mel - cand);
     g->counter_prev_mel = mel;

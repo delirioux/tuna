@@ -130,8 +130,11 @@ static void settings(tp_io *io, tg_gen *g, tp_head *h)
             scale = g->home_scale;
         }
         if (alt) {
-            if (st->alt.bpm > 0.0f) bpm /= st->alt.bpm;
-            if (st->alt.density > 0.0f) density /= st->alt.density;
+            /* (the style's own value where the contrast made this one from it: dividing a product back
+             * can miss it by a bit, 0.89 * 1.2 / 1.2) */
+            if (st->alt.bpm > 0.0f) bpm = bpm == st->bpm * st->alt.bpm ? st->bpm : bpm / st->alt.bpm;
+            if (st->alt.density > 0.0f)
+                density = density == st->melody_density * st->alt.density ? st->melody_density : density / st->alt.density;
             mel_mode = st->mel_mode;
             bass_mode = st->bass_mode;
             pad_mode = st->pad_mode;

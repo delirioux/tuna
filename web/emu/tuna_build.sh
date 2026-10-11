@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: GPL-3.0-only
 # TUNA in the browser: firmware/src/tuna_fw.c and Tuna's modules on Felucca's browser build (web/emu/tuna_web.c),
 # compiled to WebAssembly, plus Felucca's page and worklet with Tuna's name on them.
-#   web/emu/tuna_build.sh   ->  build/tuna_emu/{index.html, worklet.js, tuna.wasm, fonts/}
+#   web/emu/tuna_build.sh   ->  build/tuna_emu/{index.html, worklet.js, tuna.wasm, tuna-logo.png, fonts/}
 # Needs build/gen (the generated headers: tools/build.py's generate step) and either Emscripten (emcc) or clang
 # with wasm-ld and a WASI sysroot: WASI_SYSROOT=dir (include/wasm32-wasip1, lib/wasm32-wasip1 and
 # lib/wasm32-unknown-wasip1/libclang_rt.builtins.a; the npm package @yowasp/clang carries one in
@@ -54,6 +54,10 @@ sed -e "s/@VERSION@/$VERSION/g" -e "s/@PREVIEW@/ (Tuna preview)/g" \
     -e 's|  Felucca by Leo Kuroshita, Hügelton Instruments|  Tuna on Felucca · Felucca by Leo Kuroshita, Hügelton Instruments · Marbles by Emilie Gillet (MIT)|' \
     -e 's|  <nav><a href="../installer/">Install</a><a href="../editor/">Editor</a><a href="https://github.com/hugelton/Felucca">Source</a></nav>|  <nav><a href="https://github.com/delirioux/tuna">Tuna source</a><a href="https://github.com/hugelton/Felucca">Felucca source</a></nav>|' \
     -e 's|Felucca is not affiliated with or endorsed by them.|Tuna and Felucca are not affiliated with or endorsed by them.|' \
+    -e 's|<link rel="icon" href="[^"]*">|<link rel="icon" href="tuna-logo.png">|' \
+    -e 's|^<div class="device" id="device">|<img src="tuna-logo.png" alt="Tuna" width="128" height="128" style="display:block;margin:0 auto 12px;border-radius:50%">\n&|' \
     web/emu/index.html > "$OUT/index.html"
 cp web/emu/fonts/DotGothic16-subset.woff web/emu/fonts/OFL.txt "$OUT/fonts/"
+cp web/emu/tuna-logo.png "$OUT/"
+grep -q 'src="tuna-logo.png"' "$OUT/index.html" || { echo "tuna emu: the page's device line moved"; exit 1; }
 echo "tuna emu: $OUT ($(wc -c < "$OUT/tuna.wasm" | tr -d ' ') B wasm, on Felucca $VERSION)"

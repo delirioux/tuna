@@ -10,23 +10,23 @@ Status: 7 October 2026. Phases 1 to 7 done, phase 8 prepared; the FM-1 is on its
 
 | What | Agreed |
 | --- | --- |
-| Home | Codeberg, `codeberg.org/delirioux/tuna`, branch `tuna`. Not GitHub. |
+| Home | GitHub, `github.com/delirioux/tuna`, branch `tuna` (private until the release). |
 | Upstream | Tuna is a fork of [Felucca](https://github.com/hugelton/Felucca) (GPL-3.0). Never push to Felucca. Upstream releases are merged in by hand (`Merge Felucca 1.0.5.2 into Tuna`), Felucca's own README kept as [FELUCCA.md](FELUCCA.md). |
 | Language | English throughout: code, comments, commits, docs. |
 | Licence | GPL-3.0-only, as Felucca; Marbles parts MIT ([LICENSES/MIT-Marbles.txt](../LICENSES/MIT-Marbles.txt)). |
 | Commits | Author `delirioux <340923392+delirioux@users.noreply.github.com>`. Work done with Claude ends with the `Co-Authored-By` and `Claude-Session` lines. |
 | Publishing | Public, GPL-3.0, for everyone, as soon as it works on the FM-1 (release checklist below). |
 
-## How changes reach Codeberg
+## How changes reach GitHub
 
 Claude works in a sandbox that cannot push. Changes travel as git bundles:
 
-1. Claude commits on `tuna` and writes `tuna.bundle` (`git bundle create tuna.bundle codeberg/tuna..tuna`).
+1. Claude commits on `tuna` and writes `tuna.bundle` (`git bundle create tuna.bundle github/tuna..tuna`).
 2. Download it, then `Tuna-Sync.ps1 -Push`: it imports the newest `tuna*.bundle` from Downloads and pushes it.
 3. For a fresh session, `Tuna-Sync.ps1 -Fetch` writes `Downloads\tuna-full.bundle` of the whole repo; upload
-   that so the session starts from what is on Codeberg.
+   that so the session starts from what is on GitHub.
 
-`Tuna-Sync.ps1` with no argument shows a menu. A bundle that repeats commits Codeberg already has is harmless.
+`Tuna-Sync.ps1` with no argument shows a menu. A bundle that repeats commits GitHub already has is harmless.
 
 ## Where Tuna lives
 
@@ -186,7 +186,7 @@ generator's design, not the hardware's; in order of value:
 
 ## Release checklist
 
-Before the first public release (GPL-3.0, on Codeberg):
+Before the first public release (GPL-3.0, on GitHub):
 
 1. **It works on the FM-1**: built, flashed, played through every era; flash and CPU measured; the way back to the
    stock firmware tried.

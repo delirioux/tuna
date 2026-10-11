@@ -52,7 +52,7 @@ sed -e "s/@VERSION@/$VERSION/g" -e "s/@PREVIEW@/ (Tuna preview)/g" \
     -e 's|const STORE = "felucca-emu-flash";|const STORE = "tuna-emu-flash";|' \
     -e 's|fetch("felucca.wasm")|fetch("tuna.wasm")|' -e 's|felucca.wasm: |tuna.wasm: |' \
     -e 's|  Felucca by Leo Kuroshita, Hügelton Instruments|  Tuna on Felucca · Felucca by Leo Kuroshita, Hügelton Instruments · Marbles by Emilie Gillet (MIT)|' \
-    -e 's|  <nav><a href="../installer/">Install</a><a href="../editor/">Editor</a><a href="https://github.com/hugelton/Felucca">Source</a></nav>|  <nav><a href="https://codeberg.org/delirioux/tuna">Tuna source</a><a href="https://github.com/hugelton/Felucca">Felucca source</a></nav>|' \
+    -e 's|  <nav><a href="../installer/">Install</a><a href="../editor/">Editor</a><a href="https://github.com/hugelton/Felucca">Source</a></nav>|  <nav><a href="https://github.com/delirioux/tuna">Tuna source</a><a href="https://github.com/hugelton/Felucca">Felucca source</a></nav>|' \
     -e 's|Felucca is not affiliated with or endorsed by them.|Tuna and Felucca are not affiliated with or endorsed by them.|' \
     web/emu/index.html > "$OUT/index.html"
 cp web/emu/fonts/DotGothic16-subset.woff web/emu/fonts/OFL.txt "$OUT/fonts/"

@@ -10,7 +10,7 @@ Status: 7 October 2026. Phases 1 to 7 done, phase 8 prepared; the FM-1 is on its
 
 | What | Agreed |
 | --- | --- |
-| Home | GitHub, `github.com/delirioux/tuna`, branch `tuna` (private until the release). |
+| Home | GitHub, `github.com/delirioux/tuna`, branch `main` (private until the release). |
 | Upstream | Tuna is a fork of [Felucca](https://github.com/hugelton/Felucca) (GPL-3.0). Never push to Felucca. Upstream releases are merged in by hand (`Merge Felucca 1.0.5.2 into Tuna`), Felucca's own README kept as [FELUCCA.md](FELUCCA.md). |
 | Language | English throughout: code, comments, commits, docs. |
 | Licence | GPL-3.0-only, as Felucca; Marbles parts MIT ([LICENSES/MIT-Marbles.txt](../LICENSES/MIT-Marbles.txt)). |
@@ -21,7 +21,7 @@ Status: 7 October 2026. Phases 1 to 7 done, phase 8 prepared; the FM-1 is on its
 
 Claude works in a sandbox that cannot push. Changes travel as git bundles:
 
-1. Claude commits on `tuna` and writes `tuna.bundle` (`git bundle create tuna.bundle github/tuna..tuna`).
+1. Claude commits on `main` and writes `tuna.bundle` (`git bundle create tuna.bundle github/main..main`).
 2. Download it, then `Tuna-Sync.ps1 -Push`: it imports the newest `tuna*.bundle` from Downloads and pushes it.
 3. For a fresh session, `Tuna-Sync.ps1 -Fetch` writes `Downloads\tuna-full.bundle` of the whole repo; upload
    that so the session starts from what is on GitHub.

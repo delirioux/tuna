@@ -1,5 +1,7 @@
 # Tuna
 
+<p align="center"><img src="docs/tuna-logo.png" alt="Tuna" width="256"></p>
+
 [![License: GPL-3.0-only](https://img.shields.io/badge/license-GPL--3.0--only-blue.svg)](LICENSE)
 
 Generative music firmware for the M-VAVE FM-1, built on [Felucca](docs/FELUCCA.md).

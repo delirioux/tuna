@@ -966,7 +966,7 @@ void tu_init(tuna_ui *u, tuna_app *a)
     u->app = a;
     u->page = TU_PG_HOME;
     u->hot = -1;
-    u->palette = 1;                               /* GREEN, as Felucca starts */
+    u->palette = (int)TU_PALETTE_DEFAULT;         /* ICE, Tuna's own (Felucca starts GREY) */
     u->rnd = 0x7475u;
     u->batt = 3;
     u->browse = a->item >= 0 ? a->item : 0;

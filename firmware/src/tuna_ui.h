@@ -22,6 +22,9 @@
  *   LFO        the resonator: amount, decay, brightness, what its strings are tuned to */
 #ifndef TUNA_UI_H
 #define TUNA_UI_H
+#ifndef TU_PALETTE_DEFAULT
+#define TU_PALETTE_DEFAULT 3u              /* ICE (ui_palettes.h; tests/tuna_ui_test.c checks the name): Tuna's colour */
+#endif
 
 #include <stdbool.h>
 #include <stdint.h>

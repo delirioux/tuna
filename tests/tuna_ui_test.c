@@ -760,6 +760,7 @@ static void anim(int item, const char *tag)
 
 int main(int argc, char **argv)
 {
+    CHECK(!strcmp(UI_PALETTES[TU_PALETTE_DEFAULT].name, "ICE"), "Tuna's colour: ICE (%s)", UI_PALETTES[TU_PALETTE_DEFAULT].name);
     outdir = argc > 1 ? argv[1] : NULL;
     ta_init(&app, SR, 1);
     ta_set_sound(&app, sound, NULL);

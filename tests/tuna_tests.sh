@@ -10,6 +10,7 @@ mkdir -p build/host
 python3 tools/tuna_genres.py --check      # the genres' C is what tools/genres holds
 python3 tools/tuna_fm6.py --check      # the FM6 patches' C is what tools/tuna_fm6.py holds
 python3 tools/tuna_manners.py --check   # the manners' C is what tools/manners holds
+python3 tools/tuna_logo.py --check      # the boot logo's C is what docs/tuna-logo.png holds
 # the packed library (the firmware's) is the table, byte for byte
 cc -O1 -Wall -Ifirmware/src -o build/host/tuna_style_pack tests/tuna_style_pack.c
 cc -O1 -Wall -DTUNA_PACKED_STYLES=1 -Ifirmware/src -o build/host/tuna_style_pack_p tests/tuna_style_pack.c

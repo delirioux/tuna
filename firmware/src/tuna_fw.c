@@ -233,6 +233,36 @@ static uint32_t tf_entropy(void)
 }
 
 /* ---- start ------------------------------------------------------------------------------------------- */
+/* ---- the power-on screen: Tuna's logo (tools/tuna_logo.py: 176 px, 8 colours, rows run-length coded) and the
+ * Felucca it runs on; main.c holds it 0.75 s ---- */
+#include "tuna_logo.inc"
+#define TF_SPLASH_MS 750u
+static void tf_splash(void)
+{
+    uint16_t row[2][TUNA_LOGO_SIZE];               /* (two: one fills while the other goes out by DMA) */
+    uint32_t y, x0 = (240u - TUNA_LOGO_SIZE) / 2u, y0 = 12u;
+    char line[32] = "on Felucca ";
+    uint32_t k = 11u;
+    lcd_fill(0, 0, 240, 240, TUNA_LOGO_BG);
+    for (y = 0; y < TUNA_LOGO_SIZE; y++) {
+        const uint8_t *p = TUNA_LOGO_RLE + TUNA_LOGO_ROW[y];
+        uint16_t *r = row[y & 1u];
+        uint32_t x = 0;
+        while (x < TUNA_LOGO_SIZE) {
+            uint32_t n = (*p >> 3) + 1u, c = TUNA_LOGO_PAL[*p & 7u];
+            p++;
+            while (n-- && x < TUNA_LOGO_SIZE)
+                r[x++] = (uint16_t)c;
+        }
+        lcd_blit(x0, y0 + y, TUNA_LOGO_SIZE, 1, r);
+    }
+    for (const char *v = FELUCCA_VERSION; *v && k < sizeof line - 1u; v++)
+        line[k++] = *v;
+    line[k] = 0;
+    draw_text_line(0, y0 + TUNA_LOGO_SIZE + 14u, 240, &AF_S, line, 0xA535u, TUNA_LOGO_BG, 1);   /* (grey, 160 165 170) */
+    lcd_sync();
+}
+
 static void tf_init(void)
 {
     uint32_t i;

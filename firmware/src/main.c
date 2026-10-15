@@ -165,7 +165,11 @@ static void fm1_main(void)
     settings_init();
     usb_serial_apply();                                 /* (#67: the saved USB SERIAL before usb_start) */
     lcd_init();
+#if FELUCCA_TUNA
+    tf_splash();                                        /* Tuna's logo (tuna_fw.c) */
+#else
     draw_splash();                                      /* ui_draw.c (1.1.5) */
+#endif
     if (felucca_dbg.magic != DBG_MAGIC) {
         memset(&felucca_dbg, 0, sizeof felucca_dbg);
         felucca_dbg.magic = DBG_MAGIC;
@@ -218,7 +222,11 @@ static void fm1_main(void)
 #if !FELUCCA_TUNA
     autosave_boot(boot_clean);                /* (1.2) the last session's music, under the splash (Tuna: its own) */
 #endif
+#if FELUCCA_TUNA
+    for (ms = 30u; ms < TF_SPLASH_MS; ms += 10u) {   /* Tuna's logo, 0.75 s with the 30 ms above */
+#else
     for (ms = 0; ms < 400u; ms += 10u) {      /* the splash; the pot followed (MIDI IN plays under it) */
+#endif
         fm1_delay_ms(10);
         master_poll();
     }

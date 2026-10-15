@@ -174,12 +174,24 @@ static void palette_set(uint32_t i)
 }
 
 /* settings store a tagged id; ids below 20 are the palettes of earlier firmware */
+#if FELUCCA_TUNA
+/* Tuna keeps a colour of its own: stored as TUNA_PAL_TAG + index, so Felucca's choice (UI_PAL_TAG + index, or
+ * an old id) does not carry over: Tuna starts in ICE until one is chosen in Tuna (Felucca reads Tuna's as none:
+ * its default) */
+#define TUNA_PAL_TAG 256u
+static uint32_t palette_from_stored(uint32_t v)
+{
+    return v >= TUNA_PAL_TAG && v - TUNA_PAL_TAG < NPALETTES ? v - TUNA_PAL_TAG : 3u;   /* (3: ICE, tuna_ui.h) */
+}
+static uint32_t palette_to_stored(uint32_t i) { return TUNA_PAL_TAG + i % NPALETTES; }
+#else
 static uint32_t palette_from_stored(uint32_t v)
 {
     if (v >= UI_PAL_TAG && v - UI_PAL_TAG < NPALETTES) return v - UI_PAL_TAG;
     return v < 20u ? UI_PALETTE_MIGRATE[v] : UI_GREY_INDEX;
 }
 static uint32_t palette_to_stored(uint32_t i) { return UI_PAL_TAG + i % NPALETTES; }
+#endif
 static int palette_stored_ok(uint32_t v) { return v < 20u || (v >= UI_PAL_TAG && v - UI_PAL_TAG < NPALETTES); }
 
 static inline uint16_t swap16(uint32_t c) { return (uint16_t)(((c >> 8) & 0xFFu) | ((c & 0xFFu) << 8)); }

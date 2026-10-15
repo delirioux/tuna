@@ -39,6 +39,13 @@ jobs:
       - name: Build Tuna
         run: FELUCCA_TUNA=1 ./build.sh
 
+      - name: No soft-float routines (Tuna's floats run on the FPU; a routine like __mulsf3 here crashed an FM-1)
+        run: |
+          if grep -E '\s__(add|sub|mul|div|neg)[sd]f3$|\s__(fix|float|extend|trunc)\w*[sd]f\w*$|\s__(eq|ne|lt|le|gt|ge|unord)[sd]f2$' build/felucca.sym; then
+            echo "soft-float routines in the firmware: build Tuna with -mcpu=r3 -mfprev1 (tools/build.py)"; exit 1
+          fi
+          echo "none"
+
       - name: Sizes (each object's code, constants and RAM, its largest symbols; also when the link fails)
         if: always()
         run: |

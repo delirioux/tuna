@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 /* TUNA composer signatures (see tuna_style.h). */
 #include <stddef.h>
+#include "tuna_sys.h"        /* memcpy, memset */
 #include "tuna_style.h"
 #include "tuna_theory.h"
 
@@ -215,6 +216,7 @@ const tg_chord_def *tg_vocab_of(int vocab, bool minor)
  *         V/V ii bIII
  *  minor: i iadd9 VI VIM7 iv iv7 V v VII III iiø7 VIIsus2 Vsus4 IIIadd9 VIadd9 IV i7 isus2 v7 I+ bVII+ I
  *         bII VII7 */
+#if !TUNA_PACKED_STYLES   /* (packed: tuna_styles_packed.inc, made from this table by tests/tuna_style_pack.c) */
 static const tg_style styles[TG_STYLE_COUNT] = {
     [TG_STYLE_BACH] = {
         .name = "BACH", .root = 2, .scale = TS_AEOLIAN,                              /* D minor */
@@ -2001,6 +2003,7 @@ static const tg_style styles[TG_STYLE_COUNT] = {
 #include "tuna_genres.inc"
 #undef TUNA_GENRE_STYLES
 };
+#endif
 
 /* their grooves */
 #define TUNA_GENRE_GROOVES
@@ -2030,6 +2033,40 @@ const char *tg_family_name(int f) { return f >= 0 && f < TI_COUNT ? family_names
 #include "tuna_style_fields.inc"
 #include "tuna_manners.inc"
 
+/* ---- the packed library (TUNA_PACKED_STYLES: the firmware, 78 KB of profiles in some 25 KB of flash) ----------
+ * Each profile is its differences from a base: field, element, the element's bytes (tests/tuna_style_pack.c). The
+ * fields of TG_FIELDS, then these four, which the manners leave to their own sets */
+#define TGP_EXTRA 4
+#if TUNA_PACKED_STYLES || defined(TUNA_STYLE_PACKER)
+static const tg_field TGP_EXTRA_FIELDS[TGP_EXTRA] = {
+    {offsetof(tg_style, orch), TGK_U8, 12},
+    {offsetof(tg_style, orch_n), TGK_U8, 1},
+    {offsetof(tg_style, orch_mode), TGK_U8, 1},
+    {offsetof(tg_style, drum_pat), TGK_U32, 3},        /* (a hit: note, velocity, ticks; 4 bytes) */
+};
+#define EXTRA TGP_EXTRA_FIELDS
+#endif
+#if TUNA_PACKED_STYLES
+#include "tuna_styles_packed.inc"
+static void tgp_apply(tg_style *out, const uint8_t *p)
+{
+    while (*p != 0xFFu) {
+        const tg_field *f = p[0] < TGF_COUNT ? &TG_FIELDS[p[0]] : &TGP_EXTRA_FIELDS[p[0] - TGF_COUNT];
+        int sz = f->kind == TGK_F32 || f->kind == TGK_I32 || f->kind == TGK_U32 ? 4 :
+                 f->kind == TGK_U16 || f->kind == TGK_I16 ? 2 : 1;
+        memcpy((uint8_t *)out + f->off + p[1] * sz, p + 2, (size_t)sz);
+        p += 2 + sz;
+    }
+}
+static void tgp_expand(tg_style *out, int id)
+{
+    memset(out, 0, sizeof *out);
+    tgp_apply(out, TGP_BLOB);
+    tgp_apply(out, TGP_BLOB + TGP_OFF[id]);
+    out->name = TGP_NAME[id];
+}
+#endif
+
 int tg_manner_count(int id)
 {
     return id >= 0 && id < TG_STYLE_COUNT && TG_MANNER_N[id] ? TG_MANNER_N[id] : 1;
@@ -2050,10 +2087,13 @@ const char *tg_manner_name(int id, int k)
 
 void tg_style_manner(tg_style *out, int id, int k)
 {
-    const tg_style *st = tg_style_get(id);
-    if (!st)
+    if (id < 0 || id >= TG_STYLE_COUNT)
         return;
-    *out = *st;
+#if TUNA_PACKED_STYLES
+    tgp_expand(out, id);
+#else
+    *out = styles[id];
+#endif
     const tg_manner *m = manner_of(id, k);
     if (!m)
         return;
@@ -2086,9 +2126,28 @@ void tg_style_manner(tg_style *out, int id, int k)
     }
 }
 
+#if TUNA_PACKED_STYLES
+/* one profile expanded at a time: the pointer holds until the next call asks for another */
+static tg_style tgp_cache;
+static int tgp_cache_id = -1;
+const tg_style *tg_style_get(int id)
+{
+    if (id < 0 || id >= TG_STYLE_COUNT)
+        return 0;
+    if (tgp_cache_id != id) {
+        tgp_expand(&tgp_cache, id);
+        tgp_cache_id = id;
+    }
+    return &tgp_cache;
+}
+int tg_style_index(const tg_style *st) { return st == &tgp_cache ? tgp_cache_id : -1; }
+const char *tg_style_name(int id) { return id >= 0 && id < TG_STYLE_COUNT ? TGP_NAME[id] : ""; }
+#else
 const tg_style *tg_style_get(int id) { return id >= 0 && id < TG_STYLE_COUNT ? &styles[id] : 0; }
 
 int tg_style_index(const tg_style *st)
 {
     return st >= styles && st < styles + TG_STYLE_COUNT ? (int)(st - styles) : -1;
 }
+const char *tg_style_name(int id) { return id >= 0 && id < TG_STYLE_COUNT ? styles[id].name : ""; }
+#endif

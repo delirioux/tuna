@@ -21,6 +21,16 @@ static inline float interpolate(const float *table, float index, float size)
     float b = table[i + 1];
     return a + (b - a) * f;
 }
+/* the same on the 16-bit inverse CDFs (tools/gen_marbles_tables.py: 0..65535 for 0..1) */
+static inline float interpolate_u16(const uint16_t *table, float index, float size)
+{
+    index *= size;
+    int32_t i = (int32_t)index;
+    float f = index - (float)i;
+    float a = (float)table[i];
+    float b = (float)table[i + 1];
+    return (a + (b - a) * f) * (1.0f / 65535.0f);
+}
 
 static inline float semitones_to_ratio(float semitones)
 {
@@ -91,11 +101,11 @@ static float beta_distribution_sample(float uniform, float spread, float bias)
         offset = 2 * ((size_t)kIcdfTableSize + 1);
         uniform = (uniform - 0.95f) * 20.0f;
     }
-    const float *const *t = tm_distributions_table;
-    float x1y1 = interpolate(t[cell] + offset, uniform, kIcdfTableSize);
-    float x2y1 = interpolate(t[cell + 1] + offset, uniform, kIcdfTableSize);
-    float x1y2 = interpolate(t[cell + kNumRangeValues + 1] + offset, uniform, kIcdfTableSize);
-    float x2y2 = interpolate(t[cell + kNumRangeValues + 2] + offset, uniform, kIcdfTableSize);
+    const uint16_t *const *t = tm_distributions_table;
+    float x1y1 = interpolate_u16(t[cell] + offset, uniform, kIcdfTableSize);
+    float x2y1 = interpolate_u16(t[cell + 1] + offset, uniform, kIcdfTableSize);
+    float x1y2 = interpolate_u16(t[cell + kNumRangeValues + 1] + offset, uniform, kIcdfTableSize);
+    float x2y2 = interpolate_u16(t[cell + kNumRangeValues + 2] + offset, uniform, kIcdfTableSize);
     float y1 = x1y1 + (x2y1 - x1y1) * spread_fractional;
     float y2 = x1y2 + (x2y2 - x1y2) * spread_fractional;
     float y = y1 + (y2 - y1) * bias_fractional;
@@ -106,7 +116,7 @@ static float beta_distribution_sample(float uniform, float spread, float bias)
 
 static inline float fast_beta_distribution_sample(float uniform)
 {
-    return interpolate(tm_dist_icdf_4_3, uniform, kIcdfTableSize);
+    return interpolate_u16(tm_dist_icdf_4_3, uniform, kIcdfTableSize);
 }
 
 /* ---- random stream / sequence ---------------------------------------------------------------------- */

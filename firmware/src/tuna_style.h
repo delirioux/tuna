@@ -287,6 +287,10 @@ int tg_groove_count(void);
 
 const tg_style *tg_style_get(int id);
 int tg_style_index(const tg_style *st);           /* TG_STYLE_* of a library style, or -1 */
+const char *tg_style_name(int id);              /* a library style's name ("" for none), without expanding it */
+#ifndef TUNA_PACKED_STYLES
+#define TUNA_PACKED_STYLES 0             /* 1: the library packed (tuna_styles_packed.inc), one profile expanded at a time */
+#endif
 const char *tg_family_name(int family);
 
 /* ---- manners: a composer wrote in several ways (Bach's chorales, fugues and dances); its profile above is the

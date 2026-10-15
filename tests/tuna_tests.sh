@@ -10,6 +10,13 @@ mkdir -p build/host
 python3 tools/tuna_genres.py --check      # the genres' C is what tools/genres holds
 python3 tools/tuna_fm6.py --check      # the FM6 patches' C is what tools/tuna_fm6.py holds
 python3 tools/tuna_manners.py --check   # the manners' C is what tools/manners holds
+# the packed library (the firmware's) is the table, byte for byte
+cc -O1 -Wall -Ifirmware/src -o build/host/tuna_style_pack tests/tuna_style_pack.c
+cc -O1 -Wall -DTUNA_PACKED_STYLES=1 -Ifirmware/src -o build/host/tuna_style_pack_p tests/tuna_style_pack.c
+build/host/tuna_style_pack --check firmware/src/tuna_styles_packed.inc
+build/host/tuna_style_pack --print > build/host/styles_table.txt
+build/host/tuna_style_pack_p --print > build/host/styles_packed.txt
+cmp -s build/host/styles_table.txt build/host/styles_packed.txt || { echo "tuna: the packed styles differ from the table"; exit 1; }
 SRC="firmware/src/tuna_gen.c firmware/src/tuna_style.c firmware/src/tuna_marbles.c firmware/src/tuna_marbles_tables.c firmware/src/tuna_theory.c"
 for t in tuna_theory_test tuna_mech_test tuna_seq_test tuna_gen_render; do
     cc -O2 -Wall -Ifirmware/src -o build/host/$t tests/$t.c $SRC -lm
@@ -36,7 +43,7 @@ if command -v clang >/dev/null 2>&1 && [ -n "$LLD" ] && [ -n "$NM" ]; then
     mkdir -p $fs
     for m in tuna_gen tuna_style tuna_theory tuna_marbles tuna_marbles_tables tuna_preset tuna_app tuna_midi tuna_reso tuna_libm; do
         clang --target=riscv32 -march=rv32imf -mabi=ilp32f -Os -fno-builtin -ffreestanding -nostdinc \
-            -isystem "$(clang -print-resource-dir)/include" -DTUNA_FREESTANDING=1 -Wall -Werror -Wno-unused-function \
+            -isystem "$(clang -print-resource-dir)/include" -DTUNA_FREESTANDING=1 -DTUNA_PACKED_STYLES=1 -Wall -Werror -Wno-unused-function \
             -Ifirmware/src -c firmware/src/$m.c -o $fs/$m.o
     done
     "$LLD" -r -o $fs/tuna.o $fs/tuna_*.o

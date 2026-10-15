@@ -3,11 +3,12 @@
  * from Mutable Instruments' Marbles and stmlib, Copyright 2015 Emilie Gillet, MIT). */
 #ifndef TUNA_MARBLES_TABLES_H
 #define TUNA_MARBLES_TABLES_H
+#include <stdint.h>
 
 extern const float tm_lut_logit[];                /* 257 entries: logistic(x) for x in -10..10 */
 extern const float tm_lut_raised_cosine[];        /* 257 entries, used by the lag processor */
-extern const float tm_dist_icdf_4_3[];            /* fast beta sampler used by the clock jitter */
-extern const float *const tm_distributions_table[]; /* beta inverse CDFs, 6 bias rows x 10 spread cells */
+extern const uint16_t tm_dist_icdf_4_3[];         /* fast beta sampler used by the clock jitter (0..65535: 0..1) */
+extern const uint16_t *const tm_distributions_table[]; /* beta inverse CDFs, 6 bias rows x 10 spread cells (0..65535) */
 extern const float tm_lut_pitch_ratio_high[];     /* SemitonesToRatio, integral part */
 extern const float tm_lut_pitch_ratio_low[];      /* SemitonesToRatio, fractional part */
 

@@ -358,8 +358,15 @@ void tg_reseed(tg_gen *g, uint32_t seed)
     plan_period(g);
 }
 
+#if TUNA_REC_OUTSIDE
+static tg_pattern tg_rec_store[2];                 /* (one generator in the firmware: its two recordings) */
+#endif
+
 void tg_init(tg_gen *g, uint32_t seed, float sample_rate)
 {
+#if TUNA_REC_OUTSIDE
+    g->rec = tg_rec_store;
+#endif
     defaults(g);
     g->nsteps = 0;
     g->fill = false;

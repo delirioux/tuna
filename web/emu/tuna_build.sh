@@ -19,7 +19,7 @@ if command -v emcc >/dev/null 2>&1; then
     SRCS=""
     for m in $MODS; do SRCS="$SRCS firmware/src/$m.c"; done
     # shellcheck disable=SC2086
-    emcc -O2 -ffp-contract=off -std=gnu99 -w -DFELUCCA_SLICE=0 -DTUNA_PACKED_STYLES=1 "-DFELUCCA_VERSION=\"$VERSION\"" -Ibuild/gen -Ifirmware/src \
+    emcc -O2 -ffp-contract=off -std=gnu99 -w -DFELUCCA_SLICE=0 -DTUNA_PACKED_STYLES=1 -DTUNA_REC_OUTSIDE=1 "-DFELUCCA_VERSION=\"$VERSION\"" -Ibuild/gen -Ifirmware/src \
         --no-entry -sSTANDALONE_WASM -sSTACK_SIZE=1048576 -sINITIAL_MEMORY=33554432 -sFILESYSTEM=0 \
         -o "$OUT/tuna.wasm" web/emu/tuna_web.c $SRCS
 else
@@ -30,12 +30,12 @@ else
     printf '#pragma once\n#include <sys/types.h>\npid_t waitpid(pid_t, int *, int);\npid_t fork(void);\nint pipe(int[2]);\n#define WEXITSTATUS(s) (((s) >> 8) & 0xff)\n#define WIFEXITED(s) (((s) & 0x7f) == 0)\n' > "$SHIM/sys/wait.h"
     CF="--target=wasm32-wasip1 -nodefaultlibs -isystem $SHIM -isystem $R/include/wasm32-wasip1 -O2 -ffp-contract=off -w -Ibuild/gen -Ifirmware/src"
     # shellcheck disable=SC2086
-    clang $CF -std=gnu99 -D_WASI_EMULATED_PROCESS_CLOCKS -D_WASI_EMULATED_SIGNAL -DFELUCCA_SLICE=0 "-DFELUCCA_VERSION=\"$VERSION\"" \
+    clang $CF -std=gnu99 -D_WASI_EMULATED_PROCESS_CLOCKS -D_WASI_EMULATED_SIGNAL -DFELUCCA_SLICE=0 -DTUNA_REC_OUTSIDE=1 "-DFELUCCA_VERSION=\"$VERSION\"" \
         -c web/emu/tuna_web.c -o "$OUT/obj/tuna_web.o"
     OBJS="$OUT/obj/tuna_web.o"
     for m in $MODS; do
         # shellcheck disable=SC2086
-        clang $CF -std=c11 -fno-builtin -DTUNA_PACKED_STYLES=1 -c "firmware/src/$m.c" -o "$OUT/obj/$m.o"
+        clang $CF -std=c11 -fno-builtin -DTUNA_PACKED_STYLES=1 -DTUNA_REC_OUTSIDE=1 -c "firmware/src/$m.c" -o "$OUT/obj/$m.o"
         OBJS="$OBJS $OUT/obj/$m.o"
     done
     # shellcheck disable=SC2086

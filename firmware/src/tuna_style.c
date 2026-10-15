@@ -1917,6 +1917,7 @@ static const tg_style styles[TG_STYLE_COUNT] = {
         /* the heroic march: a fifth up and triplet pickups, chromatic mediants, Lydian wonder, brass,
          * snare and cymbals */
         .name = "FANFARE", .root = 10, .scale = TS_IONIAN,                     /* B-flat major */
+        .reverb = TG_REV_HALL + 1,                                                    /* (the film orchestra's hall) */
         .bpm = 104, .division = 3, .beats_per_bar = 4, .chord_beats = 2, .period_bars = 4,
         .melody_density = 0.45f, .melody_base = 62, .melody_range = 19,
         .profile = {0.09f, 0.31f, 0.48f, 0.72f}, .max_leap = 5,
@@ -1937,6 +1938,7 @@ static const tg_style styles[TG_STYLE_COUNT] = {
     [TG_STYLE_SAGA] = {
         /* the saga: a lilting pentatonic tune with Celtic turns, flat-VII chords, whistle, choir, horn */
         .name = "SAGA", .root = 2, .scale = TS_IONIAN,                       /* D major */
+        .reverb = TG_REV_HALL + 1,                                                    /* (the film orchestra's hall) */
         .bpm = 76, .division = 4, .beats_per_bar = 4, .chord_beats = 4, .period_bars = 4,
         .melody_density = 0.4f, .melody_base = 62, .melody_range = 14,
         .profile = {0.06f, 0.70f, 0.90f, 0.97f}, .max_leap = 4,
@@ -1956,6 +1958,7 @@ static const tg_style styles[TG_STYLE_COUNT] = {
     [TG_STYLE_MELANCHOLY] = {
         /* a plain melancholic waltz tune repeated, sparse chords, piano, flute, organ, choir */
         .name = "MELANCHOLY", .root = 11, .scale = TS_AEOLIAN,                         /* B minor, 3/4 */
+        .reverb = TG_REV_HALL + 1,                                                    /* (the film orchestra's hall) */
         .bpm = 84, .division = 2, .beats_per_bar = 3, .chord_beats = 3, .period_bars = 8,
         .melody_density = 0.35f, .melody_base = 62, .melody_range = 12,
         .profile = {0.08f, 0.82f, 0.94f, 0.98f}, .max_leap = 4,
@@ -1975,6 +1978,7 @@ static const tg_style styles[TG_STYLE_COUNT] = {
         /* musical theatre: a pop-rock ballad on add9 and sus chords, a rock kit, and the last chorus up a
          * semitone (and up again next time) */
         .name = "SHOWTUNE", .root = 2, .scale = TS_AEOLIAN,                      /* D minor */
+        .reverb = TG_REV_HALL + 1,                                                    /* (the film orchestra's hall) */
         .bpm = 100, .division = 2, .beats_per_bar = 4, .chord_beats = 4, .period_bars = 4,
         .melody_density = 0.45f, .melody_base = 62, .melody_range = 17,
         .profile = {0.15f, 0.60f, 0.85f, 0.95f}, .max_leap = 5,

@@ -599,7 +599,7 @@ int tp_group_free(const tp_store *s, int group)
 /* ---- the composer library by era ------------------------------------------------------------------------ */
 static const char *const era_names[TP_ERA_COUNT] = {
     "RENAISSANCE", "BAROQUE", "CLASSICAL", "EARLY ROMANTIC", "ROMANTIC", "LATE ROMANTIC", "MODERN", "MINIMAL",
-    "FILM & STAGE", "1950s", "1960s", "1970s", "1980s", "1990s", "2000s", "2010s", "2020s",
+    "FILM & STAGE", "CONTEMPORARY", "1950s", "1960s", "1970s", "1980s", "1990s", "2000s", "2010s", "2020s",
 };
 
 /* composers by era, in order of birth (year) */
@@ -634,12 +634,13 @@ static const tp_composer era7[] = {
     {TG_STYLE_RODRIGO, 1901}, {TG_STYLE_DURUFLE, 1902}, {TG_STYLE_KHACHATURIAN, 1903}, {TG_STYLE_SHOSTAKOVICH, 1906},
     {TG_STYLE_MESSIAEN, 1908}, {TG_STYLE_BARBER, 1910}, {TG_STYLE_BRITTEN, 1913}, {TG_STYLE_PIAZZOLLA, 1921}};
 static const tp_composer era8[] = {
-    {TG_STYLE_TEN_HOLT, 1923}, {TG_STYLE_GORECKI, 1933}, {TG_STYLE_TINTINNABULI, 1935}, {TG_STYLE_PHASING, 1936},
-    {TG_STYLE_ARPEGGIO, 1937}, {TG_STYLE_TAVENER, 1944}, {TG_STYLE_ANTHEM, 1945}, {TG_STYLE_BALTIC, 1946},
-    {TG_STYLE_SHIMMER, 1970}};
-static const tp_composer era9[] = {
-    {TG_STYLE_MORRICONE, 1928}, {TG_STYLE_FANFARE, 1932}, {TG_STYLE_SAGA, 1946},
-    {TG_STYLE_SHOWTUNE, 1948}, {TG_STYLE_MELANCHOLY, 1955}};
+    {TG_STYLE_TEN_HOLT, 1923}, {TG_STYLE_GORECKI, 1933}, {TG_STYLE_TAVENER, 1944}};
+static const tp_composer era9[] = {{TG_STYLE_MORRICONE, 1928}};
+/* styles named after their sound, no year: the minimal ones first, then film and stage */
+static const tp_composer era10[] = {
+    {TG_STYLE_TINTINNABULI, 0}, {TG_STYLE_PHASING, 0}, {TG_STYLE_ARPEGGIO, 0}, {TG_STYLE_ANTHEM, 0},
+    {TG_STYLE_BALTIC, 0}, {TG_STYLE_SHIMMER, 0}, {TG_STYLE_FANFARE, 0}, {TG_STYLE_SAGA, 0}, {TG_STYLE_SHOWTUNE, 0},
+    {TG_STYLE_MELANCHOLY, 0}};
 
 /* the popular genres by decade, in order of their year (tools/tuna_genres.py) */
 #define TUNA_GENRE_ERAS
@@ -649,7 +650,7 @@ static const tp_composer era9[] = {
 #define N_OF(a) ((int)(sizeof a / sizeof a[0]))
 static const struct { const tp_composer *c; int n; } eras[TP_ERA_COUNT] = {
     {era1, N_OF(era1)}, {era2, N_OF(era2)}, {era3, N_OF(era3)}, {era4, N_OF(era4)}, {era5, N_OF(era5)},
-    {era6, N_OF(era6)}, {era7, N_OF(era7)}, {era8, N_OF(era8)}, {era9, N_OF(era9)},
+    {era6, N_OF(era6)}, {era7, N_OF(era7)}, {era8, N_OF(era8)}, {era9, N_OF(era9)}, {era10, N_OF(era10)},
     {era_1950, ERA_1950_N}, {era_1960, ERA_1960_N}, {era_1970, ERA_1970_N}, {era_1980, ERA_1980_N},
     {era_1990, ERA_1990_N}, {era_2000, ERA_2000_N}, {era_2010, ERA_2010_N}, {era_2020, ERA_2020_N},
 };

@@ -430,6 +430,10 @@ static void test_eras(void)
             total++;
             CHECK(tp_style_era(st) == e, "%s: era", tg_style_get(st)->name);
             int born = tp_style_born(st);
+            if (e == TP_ERA_CONTEMPORARY) {                  /* (styles named after their sound: no year) */
+                CHECK(born == 0, "%s: born %d", tg_style_get(st)->name, born);
+                continue;
+            }
             CHECK(born >= prev && born > 1000 && born < 2100, "%s: born %d after %d", tg_style_get(st)->name, born, prev);
             prev = born;
         }

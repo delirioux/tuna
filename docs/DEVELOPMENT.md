@@ -60,7 +60,10 @@ touched only where Tuna hooks in (`felucca.c`, `main.c`, `audio.c`, `tools/build
   need nothing outside but `memcpy` and `memset`, which Felucca's `libc.c` provides. Where the compiler still asks
   for a soft-float routine (`__mulsf3` in felucca.c's unit, built for size), `tuna_libm.c` does it on the FPU.
 - **The flash: 568 KB for Felucca and Tuna together**, and 72 KB of RAM beside a larger pool. Tuna's build leaves
-  out Felucca's SLICE engine (and its break loop) and serial console; its state lives in the pool; the Marbles
+  out Felucca's SLICE engine (and its break loop), serial console and web editor (Felucca's sounds and projects;
+  updates and the installer's handshake are `ota.c`'s and stay); its state lives in the pool, but for the
+  generator's two recordings (`TUNA_REC_OUTSIDE`, in RAM), to keep Felucca's margins (4 KB of RAM, 8 KB of pool,
+  `tools/build.py`); the Marbles
   inverse CDFs are 16-bit; and the style library is packed: `tuna_styles_packed.inc`, each profile as its
   differences from a base, written from `tuna_style.c`'s table by `tests/tuna_style_pack.c`
   (`build/host/tuna_style_pack firmware/src/tuna_styles_packed.inc` after a change to the table, the genres or the

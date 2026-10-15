@@ -25,6 +25,9 @@
  * Every Marbles parameter stays reachable through gen->t, gen->x and gen->y. */
 #ifndef TUNA_GEN_H
 #define TUNA_GEN_H
+#ifndef TUNA_REC_OUTSIDE
+#define TUNA_REC_OUTSIDE 0         /* 1 (tools/build.py for the FM-1): tg_gen's two recordings live outside it */
+#endif
 
 #include <stdbool.h>
 #include <stdint.h>
@@ -277,7 +280,12 @@ typedef struct {
 
     /* sequencer (tuna_gen.c, "sequencer"): the last complete period is always recorded, so FREEZE can
      * keep what was just heard; the frozen pattern loops until UNFREEZE */
+#if TUNA_REC_OUTSIDE
+    tg_pattern *rec;              /* the two below, outside the generator: tuna_gen.c's tg_rec_store (the FM-1 build:
+                                   * RAM, the pool holding the rest of Tuna's state; one generator) */
+#else
     tg_pattern rec[2];            /* recording and the last complete period, swapped at each boundary */
+#endif
     int rec_cur;
     bool rec_valid;               /* rec[!rec_cur] holds a complete period */
     int rec_full;                 /* the tick of the recording's first note past TG_PAT_MAX (-1: it fitted) */

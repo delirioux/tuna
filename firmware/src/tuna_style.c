@@ -2128,7 +2128,11 @@ void tg_style_manner(tg_style *out, int id, int k)
 
 #if TUNA_PACKED_STYLES
 /* one profile expanded at a time: the pointer holds until the next call asks for another */
+#if TUNA_FREESTANDING
+static tg_style tgp_cache __attribute__((section(".pool")));   /* (the FM-1: the pool, RAM is the scarcer) */
+#else
 static tg_style tgp_cache;
+#endif
 static int tgp_cache_id = -1;
 const tg_style *tg_style_get(int id)
 {

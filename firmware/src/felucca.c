@@ -116,7 +116,10 @@
 #if FELUCCA_OTA
 #include "ota.c"
 #include "ota_hw.c"
+#if !FELUCCA_TUNA                /* (Tuna: no editor for Felucca's sounds and projects; its SysEx frames fall to ota.c,
+                                  * which drops them. The installer's handshake and updates are ota.c's) */
 #include "editor.c"              /* web editor SysEx (needs the OTA SysEx plumbing) */
+#endif
 #endif
 #if FELUCCA_CDC
 #include "console.c"

@@ -43,7 +43,7 @@ if command -v clang >/dev/null 2>&1 && [ -n "$LLD" ] && [ -n "$NM" ]; then
     mkdir -p $fs
     for m in tuna_gen tuna_style tuna_theory tuna_marbles tuna_marbles_tables tuna_preset tuna_app tuna_midi tuna_reso tuna_libm; do
         clang --target=riscv32 -march=rv32imf -mabi=ilp32f -Os -fno-builtin -ffreestanding -nostdinc \
-            -isystem "$(clang -print-resource-dir)/include" -DTUNA_FREESTANDING=1 -DTUNA_PACKED_STYLES=1 -Wall -Werror -Wno-unused-function \
+            -isystem "$(clang -print-resource-dir)/include" -DTUNA_FREESTANDING=1 -DTUNA_PACKED_STYLES=1 -DTUNA_REC_OUTSIDE=1 -Wall -Werror -Wno-unused-function \
             -Ifirmware/src -c firmware/src/$m.c -o $fs/$m.o
     done
     "$LLD" -r -o $fs/tuna.o $fs/tuna_*.o

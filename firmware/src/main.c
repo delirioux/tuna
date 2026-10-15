@@ -281,7 +281,9 @@ static void fm1_main(void)
             }
         }
 #if FELUCCA_OTA
+#if !FELUCCA_TUNA
         ed_service();                                   /* web editor SysEx */
+#endif
         ota_service();                                  /* M-UPGRADE handshake */
         if (usb.ota_req) {                              /* M-UPGRADE upgrade command */
             usb.ota_req = 0;
@@ -331,7 +333,7 @@ static void fm1_main(void)
 #else
             ui_input();
 #endif
-#if FELUCCA_OTA
+#if FELUCCA_OTA && !FELUCCA_TUNA
             ed_service();                       /* editor replies without waiting for the next frame */
 #endif
         }

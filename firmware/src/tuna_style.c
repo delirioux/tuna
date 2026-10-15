@@ -1740,9 +1740,9 @@ static const tg_style styles[TG_STYLE_COUNT] = {
                  {TI_HARP, TI_PIANO, TI_MARIMBA}}, .orch_n = 3,
         .orch_mode = TG_ORCH_RANDOM,
     },
-    [TG_STYLE_GLASS] = {
+    [TG_STYLE_ARPEGGIO] = {
         /* the additive process: an arpeggio growing and shrinking note by note over a four-chord cycle */
-        .name = "GLASS", .root = 9, .scale = TS_AEOLIAN,                             /* A minor */
+        .name = "ARPEGGIO", .root = 9, .scale = TS_AEOLIAN,                             /* A minor */
         .bpm = 132, .division = 2, .beats_per_bar = 4, .chord_beats = 8, .period_bars = 8,
         .melody_density = 0.2f, .melody_base = 64, .melody_range = 12,
         .profile = {0.10f, 0.80f, 0.95f, 0.99f}, .max_leap = 4,
@@ -1757,9 +1757,9 @@ static const tg_style styles[TG_STYLE_COUNT] = {
                  {TI_PIPEORGAN, TI_CHOIR, TI_PIPEORGAN}}, .orch_n = 3,
         .orch_mode = TG_ORCH_RANDOM,
     },
-    [TG_STYLE_REICH] = {
-        /* Piano Phase: one twelve-note pattern on two instruments, the second drifting a step ahead */
-        .name = "REICH", .root = 4, .scale = TS_DORIAN,                              /* on E */
+    [TG_STYLE_PHASING] = {
+        /* phasing: one twelve-note pattern on two instruments, the second drifting a step ahead */
+        .name = "PHASING", .root = 4, .scale = TS_DORIAN,                              /* on E */
         .bpm = 72, .division = 4, .beats_per_bar = 3, .chord_beats = 3, .period_bars = 4,
         .melody_density = 1.0f, .melody_base = 64, .melody_range = 12,
         .profile = {0.10f, 0.70f, 0.90f, 0.97f}, .max_leap = 4,
@@ -1773,12 +1773,12 @@ static const tg_style styles[TG_STYLE_COUNT] = {
         .orch = {{TI_CLARINET, TI_MARIMBA, TI_PIANO}, {TI_CLARINET, TI_VIBES, TI_MARIMBA},
                  {TI_EGUITAR, TI_EGUITAR, TI_EGUITAR}, {TI_PIANO, TI_GLOCKEN, TI_MARIMBA}}, .orch_n = 4,
         .orch_mode = TG_ORCH_RANDOM,
-        .drum_pat = {{TG_GM_HAND_CLAP, 50, 0x6B7}},                                       /* Clapping Music */
+        .drum_pat = {{TG_GM_HAND_CLAP, 50, 0x6B7}},                                       /* a clapped pattern */
     },
-    [TG_STYLE_PART] = {
-        /* Spiegel im Spiegel: the tintinnabuli pair, a stepwise voice and a voice on the tonic triad,
+    [TG_STYLE_TINTINNABULI] = {
+        /* the tintinnabuli pair, a stepwise voice and a voice on the tonic triad,
          * a low bell on the tonic, slow, with breaths */
-        .name = "PART", .root = 5, .scale = TS_IONIAN,                               /* F major */
+        .name = "TINTINNABULI", .root = 5, .scale = TS_IONIAN,                               /* F major */
         .bpm = 54, .division = 2, .beats_per_bar = 4, .chord_beats = 4, .period_bars = 4,
         .melody_density = 0.5f, .melody_base = 60, .melody_range = 14,
         .profile = {0.10f, 0.80f, 0.95f, 0.99f}, .max_leap = 4,
@@ -1831,10 +1831,10 @@ static const tg_style styles[TG_STYLE_COUNT] = {
                  {TI_CONTRABASS, TI_BELLTREE, TI_STRINGS}}, .orch_n = 3,
         .orch_mode = TG_ORCH_CONTRAST,
     },
-    [TG_STYLE_VASKS] = {
+    [TG_STYLE_BALTIC] = {
         /* a slow string lament: a pentatonic line in long notes over clustered chords and a pedal,
          * birdsong between */
-        .name = "VASKS", .root = 7, .scale = TS_AEOLIAN,                             /* G minor */
+        .name = "BALTIC", .root = 7, .scale = TS_AEOLIAN,                             /* G minor */
         .bpm = 54, .division = 2, .beats_per_bar = 4, .chord_beats = 4, .period_bars = 4,
         .melody_density = 0.3f, .melody_base = 62, .melody_range = 15,
         .profile = {0.05f, 0.75f, 0.92f, 0.98f}, .max_leap = 4,
@@ -1852,9 +1852,9 @@ static const tg_style styles[TG_STYLE_COUNT] = {
                  {TI_CONTRABASS, TI_CHOIR, TI_STRINGS}}, .orch_n = 3,
         .orch_mode = TG_ORCH_CONTRAST,
     },
-    [TG_STYLE_WHITACRE] = {
-        /* Lux Aurumque: close choral clusters, a slow sustained line, mediant shifts, a cluster at the end */
-        .name = "WHITACRE", .root = 1, .scale = TS_IONIAN,                           /* D-flat major */
+    [TG_STYLE_SHIMMER] = {
+        /* close choral clusters, a slow sustained line, mediant shifts, a cluster at the end */
+        .name = "SHIMMER", .root = 1, .scale = TS_IONIAN,                           /* D-flat major */
         .bpm = 52, .division = 2, .beats_per_bar = 4, .chord_beats = 4, .period_bars = 4,
         .melody_density = 0.25f, .melody_base = 63, .melody_range = 12,
         .profile = {0.05f, 0.88f, 0.97f, 0.99f}, .max_leap = 3,
@@ -1871,9 +1871,9 @@ static const tg_style styles[TG_STYLE_COUNT] = {
                  {TI_TUBA, TI_CLARINET, TI_HORN}}, .orch_n = 3,
         .orch_mode = TG_ORCH_RANDOM,
     },
-    [TG_STYLE_RUTTER] = {
+    [TG_STYLE_ANTHEM] = {
         /* a warm choral tune in a lilting 6/8, sus4 resolving, harp arpeggios, an organ, a flute line */
-        .name = "RUTTER", .root = 5, .scale = TS_IONIAN,                             /* F major, 6/8 */
+        .name = "ANTHEM", .root = 5, .scale = TS_IONIAN,                             /* F major, 6/8 */
         .bpm = 66, .division = 3, .beats_per_bar = 2, .chord_beats = 2, .period_bars = 8,
         .melody_density = 0.45f, .melody_base = 65, .melody_range = 14,
         .profile = {0.06f, 0.70f, 0.90f, 0.97f}, .max_leap = 5,
@@ -1913,10 +1913,10 @@ static const tg_style styles[TG_STYLE_COUNT] = {
         .orch_mode = TG_ORCH_RANDOM,
         .drum_pat = {{TG_GM_SIDE_STICK, 70, 0x44}, {TG_GM_BASS_DRUM, 60, 0x01}},
     },
-    [TG_STYLE_JOHN_WILLIAMS] = {
+    [TG_STYLE_FANFARE] = {
         /* the heroic march: a fifth up and triplet pickups, chromatic mediants, Lydian wonder, brass,
          * snare and cymbals */
-        .name = "JOHN WILLIAMS", .root = 10, .scale = TS_IONIAN,                     /* B-flat major */
+        .name = "FANFARE", .root = 10, .scale = TS_IONIAN,                     /* B-flat major */
         .bpm = 104, .division = 3, .beats_per_bar = 4, .chord_beats = 2, .period_bars = 4,
         .melody_density = 0.45f, .melody_base = 62, .melody_range = 19,
         .profile = {0.09f, 0.31f, 0.48f, 0.72f}, .max_leap = 5,
@@ -1934,9 +1934,9 @@ static const tg_style styles[TG_STYLE_COUNT] = {
                  {TI_PIZZ, TI_CELESTA, TI_STRINGS}, {TI_CELLO, TI_KOTO, TI_STRINGS}}, .orch_n = 4,
         .orch_mode = TG_ORCH_RANDOM,
     },
-    [TG_STYLE_HOWARD_SHORE] = {
-        /* the Shire: a lilting pentatonic tune with Celtic turns, flat-VII chords, whistle, choir, horn */
-        .name = "HOWARD SHORE", .root = 2, .scale = TS_IONIAN,                       /* D major */
+    [TG_STYLE_SAGA] = {
+        /* the saga: a lilting pentatonic tune with Celtic turns, flat-VII chords, whistle, choir, horn */
+        .name = "SAGA", .root = 2, .scale = TS_IONIAN,                       /* D major */
         .bpm = 76, .division = 4, .beats_per_bar = 4, .chord_beats = 4, .period_bars = 4,
         .melody_density = 0.4f, .melody_base = 62, .melody_range = 14,
         .profile = {0.06f, 0.70f, 0.90f, 0.97f}, .max_leap = 4,
@@ -1953,9 +1953,9 @@ static const tg_style styles[TG_STYLE_COUNT] = {
                  {TI_HARP, TI_VIOLIN, TI_STRINGS}, {TI_GUITAR, TI_DULCIMER, TI_FLUTE}}, .orch_n = 4,
         .orch_mode = TG_ORCH_RANDOM,
     },
-    [TG_STYLE_PREISNER] = {
-        /* Kieslowski's films: a plain melancholic waltz tune repeated, sparse chords, piano, flute, organ, choir */
-        .name = "PREISNER", .root = 11, .scale = TS_AEOLIAN,                         /* B minor, 3/4 */
+    [TG_STYLE_MELANCHOLY] = {
+        /* a plain melancholic waltz tune repeated, sparse chords, piano, flute, organ, choir */
+        .name = "MELANCHOLY", .root = 11, .scale = TS_AEOLIAN,                         /* B minor, 3/4 */
         .bpm = 84, .division = 2, .beats_per_bar = 3, .chord_beats = 3, .period_bars = 8,
         .melody_density = 0.35f, .melody_base = 62, .melody_range = 12,
         .profile = {0.08f, 0.82f, 0.94f, 0.98f}, .max_leap = 4,
@@ -1971,10 +1971,10 @@ static const tg_style styles[TG_STYLE_COUNT] = {
                  {TI_BASSOON, TI_VOICE, TI_PIPEORGAN}}, .orch_n = 3,
         .orch_mode = TG_ORCH_RANDOM,
     },
-    [TG_STYLE_LLOYD_WEBBER] = {
+    [TG_STYLE_SHOWTUNE] = {
         /* musical theatre: a pop-rock ballad on add9 and sus chords, a rock kit, and the last chorus up a
          * semitone (and up again next time) */
-        .name = "LLOYD WEBBER", .root = 2, .scale = TS_AEOLIAN,                      /* D minor */
+        .name = "SHOWTUNE", .root = 2, .scale = TS_AEOLIAN,                      /* D minor */
         .bpm = 100, .division = 2, .beats_per_bar = 4, .chord_beats = 4, .period_bars = 4,
         .melody_density = 0.45f, .melody_base = 62, .melody_range = 17,
         .profile = {0.15f, 0.60f, 0.85f, 0.95f}, .max_leap = 5,

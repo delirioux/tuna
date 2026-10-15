@@ -53,8 +53,8 @@ enum {
     TG_PAD_TINTI,      /* tintinnabuli: the tonic-triad note nearest below (or above) the melody */
     TG_PAD_CANON,      /* the melody again, canon_ticks later, canon_steps scale steps away */
     TG_PAD_FIGURE,     /* a figure over the chord (pad_figure, ladder steps), one note per tick */
-    TG_PAD_ADDITIVE,   /* the figure growing and shrinking by one note (Glass) */
-    TG_PAD_PHASE,      /* the melody's pattern, drifting a step ahead every phase_reps loops (Reich) */
+    TG_PAD_ADDITIVE,   /* the figure growing and shrinking by one note (ARPEGGIO) */
+    TG_PAD_PHASE,      /* the melody's pattern, drifting a step ahead every phase_reps loops (PHASING) */
     TG_PAD_NONE,       /* no third part */
     TG_PAD_RHYTHM,     /* the chord struck on a rhythm (pad_rhythm, over the groove's two bars): skanks, stabs, chops */
 };
@@ -134,10 +134,10 @@ enum {
     TG_STYLE_RODRIGO, TG_STYLE_COPLAND, TG_STYLE_KHACHATURIAN, TG_STYLE_KORNGOLD, TG_STYLE_DURUFLE,
     TG_STYLE_SHOSTAKOVICH, TG_STYLE_MESSIAEN, TG_STYLE_BRITTEN, TG_STYLE_BARBER, TG_STYLE_PIAZZOLLA,
     /* 8: minimalism and holy minimalism */
-    TG_STYLE_TEN_HOLT, TG_STYLE_GLASS, TG_STYLE_REICH, TG_STYLE_PART, TG_STYLE_GORECKI, TG_STYLE_TAVENER,
-    TG_STYLE_VASKS, TG_STYLE_WHITACRE, TG_STYLE_RUTTER,
+    TG_STYLE_TEN_HOLT, TG_STYLE_ARPEGGIO, TG_STYLE_PHASING, TG_STYLE_TINTINNABULI, TG_STYLE_GORECKI, TG_STYLE_TAVENER,
+    TG_STYLE_BALTIC, TG_STYLE_SHIMMER, TG_STYLE_ANTHEM,
     /* 9: film and musical */
-    TG_STYLE_MORRICONE, TG_STYLE_JOHN_WILLIAMS, TG_STYLE_HOWARD_SHORE, TG_STYLE_PREISNER, TG_STYLE_LLOYD_WEBBER,
+    TG_STYLE_MORRICONE, TG_STYLE_FANFARE, TG_STYLE_SAGA, TG_STYLE_MELANCHOLY, TG_STYLE_SHOWTUNE,
     /* 10..17: the popular genres, 1950s to now (tools/tuna_genres.py) */
 #define TUNA_GENRE_IDS
 #include "tuna_genres.inc"

@@ -4,7 +4,7 @@
  * knobs, the memory (deja vu), the mixer, the 16 slots. It renders the music in blocks and hands every
  * event to the sound (Felucca's engines on the FM-1, a test on the host) and the note-ons to the screen.
  *
- * The library: the 8 character presets first (group 0, "TUNA"), then the 89 composers by era and year of
+ * The library: the 8 character presets first (group 0, "TUNA"), then the 89 composers and styles by era and year of
  * birth (groups 1..9). Choosing while playing waits for the end of the period, so the music turns over
  * at a cadence; stopped, it is at once. Play starts the piece from its beginning (the same seed plays
  * the same music); OCT+ / OCT- step the seed: another piece in the same manner. */

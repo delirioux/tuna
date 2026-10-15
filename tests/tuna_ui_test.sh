@@ -22,7 +22,7 @@ for p in sorted(glob.glob(out + "/ppm/*.ppm")):
     if n.startswith("anim_"):
         continue
     Image.open(p).resize((480, 480), Image.NEAREST).save(out + "/png/" + n + ".png")
-for tag in ("debussy", "reich"):
+for tag in ("debussy", "phasing"):
     fr = [Image.open(p).resize((480, 480), Image.NEAREST) for p in sorted(glob.glob(out + "/ppm/anim_" + tag + "_*.ppm"))]
     if fr:
         fr[0].save(out + "/tuna_home_" + tag + ".gif", save_all=True, append_images=fr[1:], duration=64, loop=0)

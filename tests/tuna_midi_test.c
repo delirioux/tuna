@@ -176,7 +176,7 @@ int main(int argc, char **argv)
 
     /* the channels: every composer a minute, everything on its part's channel, every note closed by stop */
     static const int styles[] = {TG_STYLE_BACH, TG_STYLE_MOZART, TG_STYLE_MAHLER, TG_STYLE_DEBUSSY, TG_STYLE_GERSHWIN,
-                                 TG_STYLE_REICH, TG_STYLE_PART, TG_STYLE_JOHN_WILLIAMS, TG_STYLE_ORFF};
+                                 TG_STYLE_PHASING, TG_STYLE_TINTINNABULI, TG_STYLE_FANFARE, TG_STYLE_ORFF};
     for (unsigned s = 0; s < sizeof styles / sizeof styles[0]; ++s) {
         const char *nm = tg_style_get(styles[s])->name;
         nout = 0;
@@ -210,7 +210,7 @@ int main(int argc, char **argv)
 
     /* drums only on 10 */
     nout = 0;
-    ta_select(&app, item_of(TG_STYLE_LLOYD_WEBBER));
+    ta_select(&app, item_of(TG_STYLE_SHOWTUNE));
     ta_set_manner(&app, 0);                        /* (its profile: the manner the test knows) */
     ta_play(&app, true);
     run_seconds(30.0f);

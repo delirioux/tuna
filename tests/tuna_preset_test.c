@@ -259,7 +259,7 @@ static void test_pattern(void)
     CHECK(a.h == b.h && a.notes > 0, "frozen: loads play alike");
 
     /* the worst case: a full pattern and every step with three locks fits a record and a group */
-    fresh(&ga, TG_STYLE_GLASS, 3);
+    fresh(&ga, TG_STYLE_ARPEGGIO, 3);
     play(&ga, 5.0f);
     freeze_now(&ga);
     if (ga.pat.len < 2) ga.pat.len = 384;
@@ -354,7 +354,7 @@ static void test_slots(const tp_store *s, const char *what)
     CHECK(tp_slot_load(s, 0, back, 20) == TP_ERR_SPACE, "%s: small buffer", what);
 
     /* space: a full pattern takes most of a group; the group says so and keeps what it holds */
-    fresh(&ga, TG_STYLE_GLASS, 3);
+    fresh(&ga, TG_STYLE_ARPEGGIO, 3);
     play(&ga, 5.0f);
     freeze_now(&ga);
     if (ga.pat.len < 2) ga.pat.len = 384;
@@ -390,7 +390,7 @@ static void test_power_cut(void)
 {
     memset(nor, 0xFF, sizeof nor);
     uint8_t a[TP_RECORD_MAX], b[TP_RECORD_MAX], c[TP_RECORD_MAX];
-    int na = make(TG_STYLE_BACH, 1, "A", a), nb = make(TG_STYLE_RAVEL, 2, "B", b), nc = make(TG_STYLE_PART, 3, "C", c);
+    int na = make(TG_STYLE_BACH, 1, "A", a), nb = make(TG_STYLE_RAVEL, 2, "B", b), nc = make(TG_STYLE_TINTINNABULI, 3, "C", c);
     tp_slot_save(&flash, 0, a, na);
     tp_slot_save(&flash, 1, b, nb);
     uint32_t off = st_sector(OBJ_PROJECT0, 0);

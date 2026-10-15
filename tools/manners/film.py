@@ -18,10 +18,10 @@ MANNERS = {
              orch=[("CONTRABASS", "OBOE", "STRINGS"), ("CELLO", "VIOLIN", "STRINGS"), ("CONTRABASS", "STRINGS", "PIANO")],
              orch_mode="RANDOM"),
     ],
-    "JOHN WILLIAMS": [
-        # Star Wars, Raiders, Superman: the brass march
+    "FANFARE": [
+        # the brass march of the adventure film
         dict(name="MARCH"),
-        # Hedwig's Theme, Hook: the quick fairy-tale waltz-scherzo, celesta, chromatic minor
+        # the quick fairy-tale waltz-scherzo, celesta, chromatic minor
         dict(name="SCHERZO", root="E", scale="HARM_MINOR", bpm=168, division=2, beats_per_bar=3, chord_beats=3,
              period_bars=8, melody_density=0.6, mel_min_ticks=1, chromatic=True, appoggiatura=0.2, octave=0.12,
              bass_mode="BAR", pad_mode="AFTERBEAT", perc_mode="OFF", color=0.0,
@@ -30,7 +30,7 @@ MANNERS = {
              orch=[("CONTRABASS", "CELESTA", "STRINGS"), ("CELLO", "FLUTE", "STRINGS"), ("CONTRABASS", "GLOCKEN", "PIZZ")],
              orch_mode="RANDOM",
              profile=[0.09, 0.43, 0.59, 0.7], direction=0.04, melody_range=21),
-        # Schindler's List, the Angela's Ashes / Memoirs themes: the slow minor elegy for solo violin and strings
+        # the slow minor elegy for solo violin and strings
         dict(name="ELEGY", root="D", scale="AEOLIAN", bpm=60, division=2, chord_beats=4, period_bars=4,
              melody_density=0.35, mel_min_ticks=2, melody_range=23, appoggiatura=0.3, rubato=0.4, swell=0.8,
              color=0.0, octave=0.13, bass_mode="ROOT", perc_mode="OFF", reverb="HALL",
@@ -40,10 +40,10 @@ MANNERS = {
              orch_mode="RANDOM",
              profile=[0.09, 0.27, 0.46, 0.75], direction=0.2),
     ],
-    "HOWARD SHORE": [
-        # the Shire: pentatonic folk tune on whistle, lilting
+    "SAGA": [
+        # the saga's pentatonic folk tune on whistle, lilting
         dict(name="PASTORAL"),
-        # Rohan and Gondor: the noble minor-mode horn call, brass and choir, timpani, swelling
+        # the noble minor-mode horn call, brass and choir, timpani, swelling
         dict(name="EPIC", scale="DORIAN", bpm=76, division=2, swing=0.0, melody_mask=0, melody_density=0.35,
              mel_min_ticks=2, max_leap=5, octave=0.15, swell=0.9, turn=0.0, perc_mode="PERIOD", perc=[8, 2, 3, 4, 0, 0],
              reverb="HALL",
@@ -51,7 +51,7 @@ MANNERS = {
              w_minor={"i": 10, "bVII": 7, "bVI": 6, "iv": 5, "bIII": 5, "v": 4, "IV": 3, "isus4": 2, "5": 3},
              orch=[("TUBA", "HORN", "BRASS"), ("CONTRABASS", "CHOIR", "STRINGS"), ("CONTRABASS", "VIOLIN", "STRINGS"),
                    ("TUBA", "TRUMPET", "STRINGS")], orch_mode="ENERGY"),
-        # Isengard and Mordor: the 5/4 ostinato, low brass, driving strings and drums, Phrygian darkness
+        # the 5/4 ostinato, low brass, driving strings and drums, Phrygian darkness
         dict(name="BATTLE", root="C", scale="PHRYGIAN", bpm=112, division=2, beats_per_bar=5, chord_beats=5,
              period_bars=4, swing=0.0, melody_mask=0, melody_base=55, melody_range=12, melody_density=0.4,
              staccato=0.3, sforzando=0.3, max_leap=4, turn=0.0, bass_mode="OSTINATO", bass_rhythm="x..x..x.x.",
@@ -62,17 +62,17 @@ MANNERS = {
              orch=[("TUBA", "BRASS", "STRINGS"), ("CONTRABASS", "HORN", "STRINGS"), ("TUBA", "CHOIR", "BRASS")],
              orch_mode="RANDOM"),
     ],
-    "LLOYD WEBBER": [
-        # Jesus Christ Superstar, the Phantom's title song: the rock opera with kit and synths
+    "SHOWTUNE": [
+        # the rock opera: kit and synths
         dict(name="ROCK"),
-        # Memory, Music of the Night, I Don't Know How to Love Him: the 12/8 ballad, piano broken chords, the
+        # the 12/8 ballad, piano broken chords, the
         # key lifted a semitone for the last chorus
         dict(name="BALLAD", root="A#", scale="IONIAN", bpm=72, division=3, beats_per_bar=4, chord_beats=4,
              melody_density=0.4, mel_min_ticks=2, melody_range=15, octave=0.08, suspension=0.2, swell=0.9,
              bass_mode="ROOT", pad_mode="BROKEN", perc_mode="OFF", reverb="HALL",
              orch=[("PIANO", "VOICE", "PIANO"), ("CONTRABASS", "VOICE", "STRINGS"), ("CELLO", "SAX", "PIANO")],
              orch_mode="RANDOM"),
-        # Evita: the tango numbers, habanera bass, bandoneon and violin, crisp accents
+        # the tango numbers, habanera bass, bandoneon and violin, crisp accents
         dict(name="TANGO", bpm=116, division=2, beats_per_bar=4, chord_beats=4,
              melody_density=0.5, mel_min_ticks=1, staccato=0.4, sforzando=0.3, syncopation=0.3,
              bass_mode="OSTINATO", bass_rhythm="x..x..x.", bass_notes=[0, 2, 0], bass_len=3, pad_mode="AFTERBEAT",
@@ -80,16 +80,16 @@ MANNERS = {
              orch=[("CONTRABASS", "BANDONEON", "PIANO"), ("CONTRABASS", "VIOLIN", "BANDONEON"),
                    ("CONTRABASS", "VOICE", "PIZZ")], orch_mode="RANDOM"),
     ],
-    "PREISNER": [
-        # the Kieslowski waltzes (Van den Budenmayer, Decalogue, Veronique): 3/4, piano and flute
+    "MELANCHOLY": [
+        # the melancholic film waltz: 3/4, piano and flute
         dict(name="WALTZ"),
-        # Requiem for My Friend (Lacrimosa): slow D minor, choir and voice over organ or strings
+        # the requiem: slow D minor, choir and voice over organ or strings
         dict(name="REQUIEM", root="D", bpm=60, beats_per_bar=4, chord_beats=4, period_bars=4, motif_beats=4,
              melody_density=0.3, mel_min_ticks=2, pad_tones=4, bass_mode="ROOT", rubato=0.3, swell=0.8,
              reverb="CATHEDRAL",
              orch=[("PIPEORGAN", "CHOIR", "PIPEORGAN"), ("CONTRABASS", "VOICE", "STRINGS"),
                    ("CONTRABASS", "CHOIR", "STRINGS")], orch_mode="RANDOM"),
-        # Song for the Unification of Europe (Blue): the great choral hymn with brass and timpani, building
+        # the great choral hymn with brass and timpani, building
         dict(name="HYMN", bpm=72, beats_per_bar=4, chord_beats=4, period_bars=4, motif_beats=4, melody_density=0.35,
              mel_min_ticks=2, pad_tones=4, bass_mode="ROOT", swell=1.0, evolve_periods=4, evolve_depth=1.0,
              perc_mode="PERIOD", perc=[8, 0, 3, 6, 0, 0], reverb="CATHEDRAL",

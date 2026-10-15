@@ -69,7 +69,9 @@ jobs:
           cp build/felucca.fwsc "dist/tuna-${GITHUB_SHA::7}.fwsc"
           cp LICENSE LICENSING.md dist/
           cp -r LICENSES dist/
-          ls -l dist
+          mkdir -p dist/debug                 # for a crash screen: its PC in the symbols and the disassembly
+          cp build/felucca.sym dist/debug/ && gzip -c build/felucca.dis > dist/debug/felucca.dis.gz
+          ls -l dist dist/debug
 
       - uses: actions/upload-artifact@v4
         with:

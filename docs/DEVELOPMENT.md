@@ -57,8 +57,9 @@ touched only where Tuna hooks in (`felucca.c`, `main.c`, `audio.c`, `tools/build
 - **No doubles, no libm.** The AC79's FPU is single precision and the firmware links no C library. Tuna uses
   floats only, and `tuna_libm.c` supplies `exp2f`, `sinf`, `sqrtf`, `lrintf`, `fabsf` (within 5e-7 of the
   host's). The MIDI clock runs in Q16 fixed point. Compiled for a single-precision-only CPU, Tuna's modules
-  need nothing outside but `memcpy` and `memset`, which Felucca's `libc.c` provides. Where the compiler still asks
-  for a soft-float routine (`__mulsf3` in felucca.c's unit, built for size), `tuna_libm.c` does it on the FPU.
+  need nothing outside but `memcpy` and `memset`, which Felucca's `libc.c` provides. The FPU needs JieLi's
+  `-mcpu=r3 -mfprev1` (`tools/build.py` adds them to Tuna's build): without them every float operation becomes a
+  call to a soft-float routine the firmware does not have.
 - **The flash: 568 KB for Felucca and Tuna together**, and 72 KB of RAM beside a larger pool. Tuna's build leaves
   out Felucca's SLICE engine (and its break loop), serial console and web editor (Felucca's sounds and projects;
   updates and the installer's handshake are `ota.c`'s and stay); its state lives in the pool, but for the

@@ -207,6 +207,9 @@ def build_app():
         flags.append(f"-DFELUCCA_USB_LAYOUT={v}")
     if os.environ.get("FELUCCA_TUNA") == "1":
         flags.append("-DTUNA_REC_OUTSIDE=1")   # tg_gen's recordings in RAM, the rest of Tuna's state in the pool
+        # Tuna's floats on the AC79's FPU (single precision), as JieLi's SDK builds: without these the compiler
+        # calls soft-float routines the firmware does not have (github.com/zvenson/dinghy/issues/1)
+        flags += ["-mcpu=r3", "-mfprev1"]
     flags.append(f'-DFELUCCA_ID="{PRODUCT}"')
     if VERSION:
         flags.append(f'-DFELUCCA_VERSION="{VERSION}"')
@@ -249,6 +252,7 @@ def build_app():
                                ("common/bin/objdump", "-d", "-j", ".ram_text", *(("-j", ".c1_text") if CPU2 else ()),
                                 elf))
     (OUT / "felucca.dis").write_text(dis)
+    (OUT / "felucca.sym").write_text(syms)            # (a crash screen's PC: which function)
 
     def symv(name):
         return int(re.search(r"^([0-9a-f]+) .*\s" + name + r"$", syms, re.M).group(1), 16)

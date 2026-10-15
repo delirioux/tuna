@@ -22,6 +22,7 @@
 #undef main
 #define PROJ_HOST 1                             /* (trk_def_engine: engines.c, through hostsim.c) */
 #include "../firmware/src/project.c"
+#include "old_pack.h"                         /* (FUN9 / FUN8 / FUN7 as firmware before 1.2 wrote them) */
 
 static int check(const char *what, int ok)
 {
@@ -172,10 +173,12 @@ int main(void)
     int bad = 0, ok;
 
     bad += check("layout: SLICER after DETUNE, then the matrix just before P_E0",
-                 P_SLCR == P_DETUNE + 1 && P_SLDEPTH + 1 == P_M1SRC && P_M4AMT + 1 == P_FM1_ATK && P_FM4_LEVEL + 1 == P_CHRD && P_VOIC + 1 == P_E0 && P_E0 == 83 &&
-                 P_COUNT == PROJ_NP_V3 + 34u && PROJ_NP_V3 == PROJ_NP_V2 + 4u);
-    bad += check("FUN8 fits one flash object, the retained cache in NOINIT", sizeof(project_store_t) <= 4096u - 256u &&
-                 sizeof(project_store_t) == 3584u && 0xC8u + 4u * sizeof(project_store_t) <= 0x3D50u);
+                 P_SLCR == P_DETUNE + 1 && P_SLDEPTH + 1 == P_M1SRC && P_M4AMT + 1 == P_FM1_ATK && P_FM4_LEVEL + 1 == P_CHRD && P_VOIC + 1 == P_LN0 &&
+                 P_LN7 + 1 == P_LSYNC && P_LSYNC + 3 == P_SQNT && P_SQNT + 1 == P_SPRD && P_SPRD + 1 == P_ITYPE &&
+                 P_ITYPE + 4 == P_IMIX && P_IMIX + 1 == P_FTYPE && P_FTYPE + 1 == P_ESYNC && P_ESYNC + 1 == P_E0 && P_E0 == 103 &&
+                 P_COUNT == PROJ_NP_V3 + 54u && PROJ_NP_V3 == PROJ_NP_V2 + 4u);
+    bad += check("FUN10 fits one flash object, the retained cache in NOINIT", sizeof(project_store_t) <= 4096u - 256u &&
+                 sizeof(project_store_t) == 3840u && 0xC8u + 4u * sizeof(project_store_t) <= 0x3D50u);
 
     /* format 2, as written before the SLICER */
     memset(&v2, 0, sizeof v2);
@@ -281,8 +284,8 @@ int main(void)
         old.sum ^= 1u;
         bad += check("FUN5: damaged checksum refused", !proj_import(&q2, &old, sizeof old));
         q.chain.count = 2;
-        q.chain.row[0] = (chain_row_t){0, 4};
-        q.chain.row[1] = (chain_row_t){3, 16};
+        q.chain.row[0] = chain_row_of(0, 4);
+        q.chain.row[1] = chain_row_of(3, 16);
         q.sum = proj_sum(&q);
         bad += check("FUN6: chain round trip", proj_import(&q2, &q, sizeof q) &&
             !memcmp(&q.chain, &q2.chain, sizeof q.chain));
@@ -415,8 +418,8 @@ int main(void)
         project_t a, c;
         project_store_t st, st2;
         uint32_t i, zero = 1;
-        bad += check("FUN8 name at the end of the reserved tail, the FM6 patches before it, after the data",
-                     PROJ_NAME_OFF == 3568u && PROJ_FM6_OFF == 3056u && 68u + NTRK * (P_COUNT + 2u + NSTEP * 9u) +
+        bad += check("FUN10 name at the end of the reserved tail, the FM6 patches before it, after the data (16 spare)",
+                     PROJ_NAME_OFF == 3824u && PROJ_FM6_OFF == 3312u && 68u + NTRK * (P_COUNT + 2u + NSTEP * 9u) +
                      sizeof(chain_config_t) + sizeof(motion_store_t) + 16u == PROJ_FM6_OFF);
         memset(&a, 0, sizeof a);
         a.magic = PROJ_MAGIC; a.size = sizeof a; a.parts = NPART; a.phys = PROJ_PHYS;
@@ -466,26 +469,60 @@ int main(void)
         }
         memcpy(a.name, "FM SONG", 7);
         a.sum = proj_sum(&a);
-        ok = proj_pack(&st, &a) && ((uint32_t *)st.raw)[0] == 0x46554E38u && proj_import(&c, &st, sizeof st);
+        ok = proj_pack(&st, &a) && ((uint32_t *)st.raw)[0] == 0x46554E41u && proj_import(&c, &st, sizeof st);
         for (k = 0; k < NTRK; k++)
             ok &= !memcmp(c.fm6[k], FM6_FACTORY[k * 2u], FM6_PACKED) && c.t[k].engine == ENGI_FM6 &&
                   !memcmp(st.raw + PROJ_FM6_OFF + k * FM6_PACKED, FM6_FACTORY[k * 2u], FM6_PACKED);
-        bad += check("FUN8: the four FM6 patches round trip (bytes at PROJ_FM6_OFF)", ok && !memcmp(c.name, "FM SONG", 7));
+        bad += check("FUN10: the four FM6 patches round trip (bytes at PROJ_FM6_OFF)", ok && !memcmp(c.name, "FM SONG", 7));
         st.raw[PROJ_FM6_OFF + 5] ^= 1u;
-        bad += check("FUN8: a patch byte changed: the hash refuses it", !proj_import(&c, &st, sizeof st));
+        bad += check("FUN10: a patch byte changed: the hash refuses it", !proj_import(&c, &st, sizeof st));
         st.raw[PROJ_FM6_OFF + 5] ^= 1u;
-        /* the same music as FUN7 (3388 bytes, no patches): the data where it was, the name at 3372 */
-        memcpy(v7, st.raw, PROJ_STORE_V7 - 16u);
-        memset(v7 + PROJ_FM6_OFF, 0, PROJ_STORE_V7 - 16u - PROJ_FM6_OFF);
-        memcpy(v7 + PROJ_STORE_V7 - 16u, st.raw + PROJ_NAME_OFF, 12);
-        ((uint32_t *)v7)[0] = 0x46554E37u;
-        ((uint32_t *)v7)[1] = PROJ_STORE_V7;
-        sum = proj_hash(v7, PROJ_STORE_V7 - 4u);
-        memcpy(v7 + PROJ_STORE_V7 - 4u, &sum, 4);
-        ok = proj_import(&c, v7, sizeof v7);
+        {   /* FUN8 as 1.0.x wrote it (3584 bytes, 91 parameters: E0..E7 at 83..90, the patches at 3056): the DRUM
+             * lane levels 100 %, E0..E7 and their motion at today's P_E0.., the patches and the name kept */
+            static uint8_t v8[3584];
+            uint32_t pos = 68u, pos9 = 68u, j;
+            project_t e = a;
+            e.t[3].engine = ENGI_DRUM; e.t[3].p[P_E3] = 30;
+            e.motion.count = 2; e.motion.on = 8;
+            e.motion.event[0] = (motion_event_t){3u << 6 | 2u, P_E3, 99};
+            e.motion.event[1] = (motion_event_t){3u << 6 | 4u, P_REV, 50};
+            {   /* FUN10 holds parameter locks (bit 7 of the id): on a DRUM lane level and on an engine value */
+                project_t f = e, g;
+                f.motion.count = 4;
+                f.motion.event[2] = (motion_event_t){3u << 6 | 5u, (uint8_t)(P_LN2 | MOTION_LOCK), 40};
+                f.motion.event[3] = (motion_event_t){3u << 6 | 6u, (uint8_t)(P_E5 | MOTION_LOCK), -3};
+                f.sum = proj_sum(&f);
+                ok = proj_pack(&st, &f) && proj_import(&g, &st, sizeof st) && !memcmp(&f.motion, &g.motion, sizeof f.motion);
+                bad += check("FUN10 round trip: locks on a lane level (P_LN2) and an engine value (P_E5) kept", ok &&
+                             st.raw[68u + NTRK * (P_COUNT + 2u + NSTEP * 9u) + sizeof(chain_config_t) + 4u + 6u + 1u] ==
+                             (P_LN2 | MOTION_LOCK) && g.motion.event[3].param == (P_E5 | MOTION_LOCK));
+            }
+            e.motion.count = 3;   /* a FUN8 of a 1.1 development build (91 parameters) could hold a lock: its E5 then */
+            e.motion.event[2] = (motion_event_t){3u << 6 | 6u, (uint8_t)(P_E5 | MOTION_LOCK), -3};
+            e.sum = proj_sum(&e);
+            ok = old_pack(v8, &e, OLD_FUN8, 91u) == sizeof v8;   /* (its E3 at 86, its E5 lock at 88) */
+            ok = ok && proj_import(&c, v8, sizeof v8);
+            for (k = 0; ok && k < NTRK; k++) {
+                for (j = P_LN0; j <= P_LN7; j++) ok &= c.t[k].p[j] == 127;
+                ok &= !memcmp(c.fm6[k], FM6_FACTORY[k * 2u], FM6_PACKED);
+            }
+            bad += check("FUN8 of 1.0.x (91 parameters): lane levels 100 %, E0..E7 at P_E0, patches and name kept", ok &&
+                         c.t[3].engine == ENGI_DRUM && c.t[3].p[P_E3] == 30 && c.t[2].p[P_E7] == 4 &&
+                         !memcmp(c.name, "FM SONG", 7));
+            bad += check("  its motion: E3 (86 then) at P_E3, REV kept", c.motion.count == 3u &&
+                         c.motion.event[0].param == P_E3 && c.motion.event[0].value == 99 && c.motion.event[1].param == P_REV);
+            bad += check("  a lock on its E5 (88 then): at P_E5, still a lock", c.motion.event[2].param == (P_E5 | MOTION_LOCK) &&
+                         c.motion.event[2].value == -3);
+            bad += check("  one byte short: refused", !proj_import(&c, v8, sizeof v8 - 1u));
+            memset(&slot, 0xA5, sizeof slot);
+            memcpy(slot.raw, v8, sizeof v8);
+            bad += check("  in a retained (longer) slot: loads", proj_import(&c, &slot, sizeof slot) && c.t[3].p[P_E3] == 30);
+        }
+        /* the same music as FUN7 (3388 bytes, 91 parameters, no patches): the name at 3372 */
+        ok = old_pack(v7, &a, OLD_FUN7, 91u) == sizeof v7 && proj_import(&c, v7, sizeof v7);
         for (k = 0; k < NTRK; k++)
             init &= !memcmp(c.fm6[k], FM6_INIT, FM6_PACKED);
-        bad += check("FUN7 -> FUN8: the music and name kept, every track the init patch",
+        bad += check("FUN7 -> FUN10: the music and name kept, every track the init patch",
                      ok && init && c.t[2].engine == ENGI_FM6 && c.t[2].p[P_E7] == 4 && !memcmp(c.name, "FM SONG", 7));
         {   /* REVERB TYPE (id 24) of a FUN7 holding the old drum channel (10): ROOM; SPRING (1) kept */
             int16_t g24 = 10;
@@ -505,7 +542,7 @@ int main(void)
         /* the retained cache after an update: slot 1's FUN7 record, longer slot, garbage after it */
         memset(&slot, 0xA5, sizeof slot);
         memcpy(slot.raw, v7, sizeof v7);
-        bad += check("a retained 3584-byte slot holding a FUN7 record loads it", proj_import(&c, &slot, sizeof slot) &&
+        bad += check("a retained 3840-byte slot holding a FUN7 record loads it", proj_import(&c, &slot, sizeof slot) &&
                      c.t[2].p[P_E7] == 4 && !memcmp(c.fm6[0], FM6_INIT, FM6_PACKED));
         memset(&slot, 0xA5, sizeof slot);
         bad += check("a retained slot of garbage is empty", !proj_import(&c, &slot, sizeof slot));
@@ -565,14 +602,9 @@ int main(void)
                      c.motion.count == 2u && c.motion.event[0].param == P_CHOR && c.motion.event[1].place == 3u &&
                      c.motion.event[1].param == P_E4 && motion_valid(&c.motion) && proj_ok(&c));
         bad += check("  imported again: as it is (FM6 now)", proj_import(&d, &c, sizeof c) && !memcmp(&d, &c, sizeof d));
-        memcpy(v7, st.raw, PROJ_STORE_V7 - 16u);       /* the same as FUN7 (as the FUN8 block above) */
-        memset(v7 + PROJ_FM6_OFF, 0, PROJ_STORE_V7 - 16u - PROJ_FM6_OFF);
-        memset(v7 + PROJ_STORE_V7 - 16u, 0, 12);
-        ((uint32_t *)v7)[0] = 0x46554E37u;
-        ((uint32_t *)v7)[1] = PROJ_STORE_V7;
-        sum = proj_hash(v7, PROJ_STORE_V7 - 4u);
-        memcpy(v7 + PROJ_STORE_V7 - 4u, &sum, 4);
-        bad += check("FUN7 with a DIGITAL track: the same", proj_import(&c, v7, sizeof v7) && FM4_OK(c) &&
+        (void)sum;                                      /* the same as FUN7 (as the FUN8 block above) */
+        bad += check("FUN7 with a DIGITAL track: the same", old_pack(v7, &a, OLD_FUN7, 91u) == sizeof v7 &&
+                     proj_import(&c, v7, sizeof v7) && FM4_OK(c) &&
                      c.motion.count == 2u);
         memset(&a.motion, 0, sizeof a.motion);
         a.sum = proj_sum(&a);

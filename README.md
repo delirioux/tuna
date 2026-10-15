@@ -79,7 +79,8 @@ preset and let it drift, from still and ambient to driving and rhythmic.
 
 ## Building and testing
 
-On Linux or macOS with a C compiler:
+Clone with Felucca's engines (a submodule, MIT): `git clone --recurse-submodules https://github.com/delirioux/tuna.git`,
+or `git submodule update --init` in a clone made without it. Then, on Linux or macOS with a C compiler:
 
 ```
 sh tests/tuna_tests.sh            # all of Tuna's tests: theory, generator, sequencer, presets, screen, 89 composers and styles

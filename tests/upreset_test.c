@@ -167,8 +167,10 @@ int main(void)
             bad += check("UP_PUT unknown kind rejected", up_parse(g, m, &got, &slot) == 1 &&
                                                          !memcmp(&got, &keep, sizeof got));
             g[m - 17u] = 1;
-            g[m] = 0;
-            bad += check("UP_PUT trailing byte rejected", up_parse(g, m + 1u, &got, &slot) == 1 &&
+            g[m] = CAT_N;                               /* (1.2: one byte more is the category, 0..CAT_N - 1) */
+            g[m + 1u] = 0;
+            bad += check("UP_PUT trailing byte rejected (no category; two bytes)", up_parse(g, m + 1u, &got, &slot) == 1 &&
+                                                         up_parse(g, m + 2u, &got, &slot) == 1 &&
                                                          !memcmp(&got, &keep, sizeof got));
         }
         up_parse(g, m, &got, &slot);
@@ -280,7 +282,8 @@ int main(void)
         r.p[i] = (int16_t)(2000 + i);
     up_params(&r, v, def);
     ok = P_SLCR == 45 && P_SLDEPTH + 1 == P_M1SRC && P_M4AMT + 1 == P_FM1_ATK && P_FM4_LEVEL + 1 == P_CHRD &&
-         P_VOIC + 1 == P_E0 && P_E0 == 83 && P_COUNT == 91;
+         P_VOIC + 1 == P_LN0 && P_LN7 + 1 == P_LSYNC && P_SQNT + 1 == P_SPRD && P_SPRD + 1 == P_ITYPE &&
+         P_IMIX + 1 == P_FTYPE && P_ESYNC + 1 == P_E0 && P_E0 == 103 && P_COUNT == 111;
     for (i = 0; i < 45u; i++)
         ok &= v[i] == (int16_t)(2000 + i);
     for (i = P_SLCR; i < P_E0; i++)
@@ -302,15 +305,16 @@ int main(void)
     for (i = 0; i < 8u; i++)
         ok &= v[P_E0 + i] == (int16_t)(3000 + 49 + i);
     bad += check("old record (np 57): SLICER kept, matrix defaults, E0..E7 kept", ok);
-    /* records of versions 4 (packed bytes) and 5 (a drum grid) saved before the chord keys (P_COUNT 89, P_E0
-     * 81) and before the FM operator ENVs (69, P_E0 61): their engine values land on today's E0..E7 (83..90),
-     * the chord keys take their defaults (OFF, CLOSE), the operator parameters too for 69 */
+    /* records of versions 4 (packed bytes) and 5 (a drum grid) saved before the DRUM lane levels (1.0.x: P_COUNT 91,
+     * P_E0 83), before the chord keys (89, P_E0 81) and before the FM operator ENVs (69, P_E0 61): their engine
+     * values land on today's E0..E7 (91..98), the lane levels (100 %) and the chord keys their defaults (OFF, CLOSE), the
+     * operator parameters too for 69 */
     {
-        static const uint8_t VERS[2] = {UP_VER, UP_VER_GRID}, NPS[2] = {89, 69};
+        static const uint8_t VERS[2] = {UP_VER, UP_VER_GRID}, NPS[3] = {91, 89, 69};
         uint32_t a, b;
         ok = 1;
         for (a = 0; a < 2u; a++)
-            for (b = 0; b < 2u; b++) {
+            for (b = 0; b < 3u; b++) {
                 uint32_t np = NPS[b];
                 up_rec_t o;
                 memset(&o, 0, sizeof o);
@@ -327,7 +331,7 @@ int main(void)
                 for (i = 0; i < 8u; i++)
                     ok &= v[P_E0 + i] == (int16_t)((np - 8u + i) % 100u - 30);
             }
-        bad += check("v4 / v5 records of 89 and 69 parameters: E0..E7 at 83..90, the chord keys their defaults", ok);
+        bad += check("v4 / v5 records of 91, 89 and 69 parameters: E0..E7 at P_E0, lane levels and chord keys defaults", ok);
     }
     r.ver = UP_VER;
     r.np = P_COUNT;
@@ -354,6 +358,40 @@ int main(void)
         memset(st, 0, sizeof st);
         up_pat_from(&r, st);
         bad += check("empty sequencer -> empty pattern", up_pat_empty(&r));
+    }
+    {   /* 1.2 (Discussion #90): the category, the record's last byte (UP_CAT_AT), outside its values; UP_PUT's optional
+         * last byte; through a bank's flash round trip; a record of before reads its engine's; versions 2 / 3 converted */
+        n = put_frame(a, 17, 0, "CAT", 0);
+        a[n++] = 0;
+        for (i = 0; i < 16u; i++) a[n++] = 0;
+        a[n++] = CAT_KEYS;
+        ok = !up_parse(a, n, &r, &slot) && up_cat_of(&r) == CAT_KEYS && UP_CAT_AT >= P_COUNT && r.np == P_COUNT;
+        a[n - 1u] = CAT_N;
+        ok &= up_parse(a, n, &got, &slot) == 1;
+        n = put_frame(a, 17, ENGI_DRUM, "KIT", 0);
+        ok &= !up_parse(a, n, &got, &slot) && up_cat_of(&got) == CAT_DRUM && !got.packed[UP_CAT_AT];
+        bad += check("category: UP_PUT's last byte, none = the engine's", ok);
+        memset(&up_bank[1], 0, sizeof up_bank[1]);
+        up_bank[1].magic = UP_BANK_MAGIC; up_bank[1].rsize = sizeof(up_rec_t); up_bank[1].nslot = UP_PER_BANK;
+        up_bank[1].r[1] = r;
+        st_save(OBJ_UPRESET0 + 1, &up_bank[1], sizeof up_bank[1]);
+        memset(&up_bank[1], 0, sizeof up_bank[1]);
+        up_bank_check(1, st_load(OBJ_UPRESET0 + 1, &up_bank[1], sizeof up_bank[1]));
+        bad += check("category: kept through the bank on flash", up_used(17) && up_cat_of(up_rec(17)) == CAT_KEYS);
+        memset(&r, 0, sizeof r);
+        r.used = UP_USED; r.ver = 3; r.engine = ENGI_DRUM; r.np = 60;
+        memcpy(r.name, "GRID", 4);
+        for (i = 0; i < 60u; i++) r.p[i] = (int16_t)(i * 3u) - 64;
+        r.note[0] = 0x81; r.flags[0] = 0x80;
+        got = r;
+        up_set_cat(&got, CAT_FX);
+        ok = got.ver == UP_VER_GRID && up_cat_of(&got) == CAT_FX && got.note[0] == 0x81 && up_valid(&got);
+        for (i = 0; i < 60u; i++) ok &= up_value(&got, i) == r.p[i];
+        r.p[7] = 200;                                   /* a value a byte cannot hold: stays version 3, no category */
+        got = r;
+        up_set_cat(&got, CAT_FX);
+        bad += check("category: a version 3 grid -> 5 with it, values kept; one that cannot be packed keeps none",
+                     ok && got.ver == 3u && up_cat_of(&got) == CAT_DRUM && !memcmp(&got, &r, sizeof r));
     }
     printf("%s\n", bad ? "USER PRESET TEST FAILED" : "user preset test passed");
     return bad != 0;

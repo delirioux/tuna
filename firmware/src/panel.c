@@ -56,9 +56,13 @@ static uint32_t panel_btn_of(uint32_t matrix_id)        /* label of a matrix but
 }
 
 /* steps of a role, + = clockwise */
+static uint8_t panel_moved;                     /* a knob turned since ui.c scr_input last looked (SCREEN OFF) */
 static int32_t panel_enc(uint32_t role)
 {
-    return fm1_enc_take(panel.enc[role]) * panel.dir[role];
+    int32_t s = fm1_enc_take(panel.enc[role]) * panel.dir[role];
+    if (s)
+        panel_moved = 1;
+    return s;
 }
 
 /* Keep the retained settings layout fixed. palette: the index into UI_PALETTES (SET3 held an index
@@ -109,6 +113,7 @@ static uint32_t leds_step(uint32_t m, int32_t s)
     return LEDS_MENU[i];
 }
 
+static void palette_apply(void);               /* (ui.c: the palette in use, CUSTOM or a built-in one) */
 static void settings_init(void)
 {
     if (settings.magic == SETTINGS_MAGIC_OLD && settings.palette < 20u) {
@@ -121,6 +126,6 @@ static void settings_init(void)
         settings.lowcut = 0;
         settings.zoom = 0;                     /* (retired: the LEDS setting, settings_persist.c) */
     }
-    palette_set(settings.palette);
+    palette_apply();
     fx_lowcut = (uint8_t)(settings.lowcut % 3u);
 }

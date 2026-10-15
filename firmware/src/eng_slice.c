@@ -61,7 +61,8 @@ typedef struct {
 static const slc_src_t SLC_BREAK = SLC_BREAK_INIT;
 static const slc_src_t SLC_PIANO = SLC_PIANO_INIT;
 static slc_src_t slc_usr[SMP_USER_SLOTS];
-static int16_t slc_rbuf[NPART][NVOICE][SLC_RB];       /* reverse windows, one per part voice */
+typedef int16_t slc_rbuf_t[NVOICE][SLC_RB];           /* reverse windows, one per part voice (the part's eng_mem) */
+ENG_MEM_FITS("SLICE", sizeof(slc_rbuf_t));
 /* append-only: stored sounds keep their SRC numbers (1.0.4 added PIANO) */
 static const char *const N_SLC_SRC[] = {"BREAK", "USR1", "USR2", "USR3", "PIANO"};
 #define SLC_SRC_PIANO 4u
@@ -254,7 +255,10 @@ static void slc_scan(slc_src_t *s, uint32_t len)
     }
 }
 
-/* smp_user_scan (eng_sample.c): valid 0 = the slot changes (SLICE voices on it stop), 1 = it is valid */
+/* smp_user_scan (eng_sample.c): valid 0 = the slot changes (SLICE voices on it stop), 1 = it is valid.
+ * The material is at most what the slot can hold (SLC_USR_MAX samples): zones over different (overlapping) data
+ * past that are left out, so a crafted header cannot make the scan (at boot too) run long */
+#define SLC_USR_MAX (2u * (SMP_USER_SIZE - SMP_USER_DATA))
 static void slc_user_scan(uint32_t k, int valid)
 {
     slc_src_t *s = &slc_usr[k];
@@ -271,6 +275,8 @@ static void slc_user_scan(uint32_t k, int valid)
             ;
         if (j < i || !z->n)
             continue;                                   /* the same data under another key range: once */
+        if (z->n > SLC_USR_MAX - at)
+            break;
         s->seg[s->nseg].off = z->off;
         s->seg[s->nseg].at = at;
         s->seg[s->nseg++].n = z->n;
@@ -427,7 +433,7 @@ static int slc_man_restore(uint32_t k, uint32_t n, uint32_t end, const uint32_t 
 static int16_t *slc_rb(track_t *t, voice_t *v)
 {
     uint32_t p = (uint32_t)(t - trk), i = (uint32_t)(v - t->v);
-    return p < NPART && i < NVOICE ? slc_rbuf[p][i] : 0;
+    return p < NPART && i < NVOICE ? (*(slc_rbuf_t *)ENG_MEM(p))[i] : 0;
 }
 
 static void slice_note_on(track_t *t, voice_t *v)
@@ -637,4 +643,5 @@ static const engine_t ENG_SLICE = {
     .sampled = 1,
     .keys = slice_keys,
     .amp = slice_amp,
+    .mem = sizeof(slc_rbuf_t),
 };

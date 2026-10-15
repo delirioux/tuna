@@ -33,8 +33,8 @@
  * user presets saved before say so (project.c, upreset.c) and load DUST as MODAL bowed, its nearest
  * kin (random hits into resonators): phys_legacy.
  *
- * Polyphony 3 per part (engine_t.poly): each part's voices 0..2 own a state slot in the pool
- * section (phys_slot: SYMP's, the largest: the string's 512 + 128 sample lines, Q20, and three
+ * Polyphony 3 per part (engine_t.poly): each part's voices 0..2 own a state slot in the part's engine
+ * memory (engines.c eng_mem; phys_slot_of: SYMP's, the largest: the string's 512 + 128 sample lines, Q20, and three
  * 256-sample sympathetic lines, 16-bit), 12 slots in all. Voice amplitude: the track's ADSR as for every
  * engine; the presets hold SUS at 127 so the model's own decay is heard and REL damps it after the key.
  * Cost (host, 8 notes asked = 3 voices): see the README and cpu_baseline.txt. */
@@ -56,7 +56,7 @@ typedef struct {
     } u;
 } phys_slot_t;
 
-static phys_slot_t phys_slot[NPART][PHYS_POLY] __attribute__((section(".pool")));
+ENG_MEM_FITS("PHYS", sizeof(phys_slot_t) * PHYS_POLY);   /* (it sets ENG_MEM_PART) */
 
 static const char *const N_PHYS_MODEL[] = {"MODAL", "STRNG", "MEMB", "SYMP"};
 static const char *const N_PHYS_CHORD[] = {"OCT", "5TH", "4TH", "MAJ", "MIN", "SUS", "7TH", "ROOT", 0};
@@ -98,10 +98,17 @@ static phys_slot_t *phys_slot_of(track_t *t, voice_t *v)
     if (t < &trk[0] || t >= &trk[NPART])
         return 0;
     i = (uint32_t)(v - t->v);
-    return i < PHYS_POLY ? &phys_slot[t - trk][i] : 0;
+    return i < PHYS_POLY ? (phys_slot_t *)ENG_MEM(t - trk) + i : 0;
 }
 
 /* a clean state for model md */
+#if FELUCCA_CPU2
+_Static_assert(NTRK == 4, "phys_nz: a seed per part");
+static int32_t phys_nz[NTRK] = {0x6A09E667, 0x6A09E667, 0x6A09E667, 0x6A09E667};   /* phys_render's reset seeds */
+#define PHYS_RSEED(t) noise32(&phys_nz[(uint32_t)((t) - trk) % NTRK])   /* the part's own (not rng(), shared) */
+#else
+#define PHYS_RSEED(t) rng()                             /* (one core: as up to 1.6) */
+#endif
 static void phys_reset(phys_slot_t *S, uint32_t md, uint32_t seed)
 {
     uint32_t i, *w = (uint32_t *)&S->u;
@@ -168,7 +175,7 @@ static void phys_render(track_t *t, voice_t *v, int32_t *out, uint32_t n, const 
     if (n > CTL)
         n = CTL;
     if (S->model != md)                                  /* MODEL changed under a sounding note */
-        phys_reset(S, md, rng());
+        phys_reset(S, md, PHYS_RSEED(t));
     switch (md) {
     case PM_MODAL: {
         px_modal_blk_t B;
@@ -248,4 +255,5 @@ static const engine_t ENG_PHYS = {
     .knob = {P_E1, P_E2, P_E3, P_E4},
     .poly = PHYS_POLY,
     .desc = phys_desc,
+    .mem = sizeof(phys_slot_t) * PHYS_POLY,
 };

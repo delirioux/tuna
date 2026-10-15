@@ -13,6 +13,8 @@ static uint8_t fx_lowcut;
 static void fm1_led_key(unsigned k, int on) { (void)k; (void)on; }
 static int fm1_enc_take(unsigned k) { (void)k; return 0; }
 static void lcd_sync(void) {}
+static void lcd_power(uint32_t s) { (void)s; }   /* (MENU > SCREEN OFF: lcd.c) */
+static void lcd_wake_now(void) {}
 static void lcd_blit(uint32_t x, uint32_t y, uint32_t w, uint32_t h, const uint16_t *p)
 { (void)x; (void)y; (void)w; (void)h; (void)p; }
 #include "../firmware/src/gfx.c"
@@ -140,7 +142,73 @@ int main(void)
         settings_leds = LEDS_INV;
         assert(settings_import(&p, 8 + sizeof(panel_t)) == 2 && settings_leds == LEDS_DIM);
     }
+#ifdef FELUCCA_FAVORITES
+    {   /* 1.1 CLICK / CLICK LEVEL / COUNT-IN (ui.c ui_rec_prefs, favorites.factory[15][28]): 0 in every older record
+         * (the defaults: OFF / MID / OFF); each field 0..2 kept, 3 (no value) back to 0, bits 6-7 kept; twice the same */
+        persist_t q;
+        uint32_t b;
+        p = original; p.magic = 0x50455233u;            /* PER3 (no favorites): 0 */
+        assert(settings_import(&p, sizeof p - sizeof p.favorites) == 2 && favorites.factory[15][28] == 0u);
+        for (b = 0; b < 256u; b++) {
+            uint32_t f, want = b;
+            for (f = 0; f < 3u; f++)
+                if (((b >> (2u * f)) & 3u) == 3u) want &= ~(3u << (2u * f));
+            p = original; p.favorites.factory[15][28] = (uint8_t)b;
+            assert(settings_import(&p, sizeof p) == 1 && favorites.factory[15][28] == want && p.favorites.factory[15][28] == want);
+            q = p; assert(settings_import(&q, sizeof q) == 1 && !memcmp(&q, &p, sizeof q));
+            settings_export(&q); assert(q.favorites.factory[15][28] == want);
+        }
+        p = original; assert(settings_import(&p, sizeof p) == 1);
+    }
+    {   /* 1.2 RESTORE LAST (ui.c PREF_RESTORE_OFF, bit 7 of MENU's flags, favorites.factory[15][30]): clear in every
+         * older record = ON; set = OFF, kept as saved with the other flags */
+        persist_t q;
+        p = original; p.magic = 0x50455233u;
+        assert(settings_import(&p, sizeof p - sizeof p.favorites) == 2 && !(favorites.factory[15][30] & 128u));
+        p = original; p.favorites.factory[15][30] = 128u | 64u | 1u;
+        assert(settings_import(&p, sizeof p) == 1 && favorites.factory[15][30] == (128u | 64u | 1u));
+        q = p; settings_export(&q); assert(q.favorites.factory[15][30] == (128u | 64u | 1u));
+        p = original; assert(settings_import(&p, sizeof p) == 1);
+    }
+    {   /* 1.2 the FX layer's key map (ui_layer.c fx_keys, favorites.factory[15][14..23], 16 x 5 bits, 0 = the key's
+         * default): 0 in every older record; any bytes kept as saved (codes of a later firmware too), the bytes around
+         * them untouched; twice the same */
+        persist_t q;
+        uint32_t i;
+        p = original; p.magic = 0x50455233u;
+        assert(settings_import(&p, sizeof p - sizeof p.favorites) == 2);
+        for (i = 14; i < 24u; i++) assert(favorites.factory[15][i] == 0u);
+        p = original;
+        for (i = 14; i < 24u; i++) p.favorites.factory[15][i] = (uint8_t)(i * 37u + 5u);
+        assert(settings_import(&p, sizeof p) == 1);
+        for (i = 14; i < 24u; i++) assert(favorites.factory[15][i] == (uint8_t)(i * 37u + 5u));
+        assert(favorites.factory[15][13] == original.favorites.factory[15][13] && favorites.factory[15][24] == original.favorites.factory[15][24]);
+        memset(&q, 0, sizeof q); settings_export(&q); assert(!memcmp(&q.favorites, &p.favorites, sizeof q.favorites));
+        assert(settings_import(&q, sizeof q) == 1);
+        for (i = 14; i < 24u; i++) assert(favorites.factory[15][i] == (uint8_t)(i * 37u + 5u));
+        p = original; assert(settings_import(&p, sizeof p) == 1);
+    }
+    {   /* 1.5 MIDI LEARN's map (midi_control.c, favorites.factory[14], no engine's): 0 = nothing learned in every older
+         * record; kept as saved, byte for byte (an entry of a later firmware too), the rows around it untouched; an
+         * export / import round trip and importing twice change nothing */
+        persist_t q;
+        uint32_t i;
+        p = original; p.magic = 0x50455233u;
+        assert(settings_import(&p, sizeof p - sizeof p.favorites) == 2);
+        for (i = 0; i < 32u; i++) assert(favorites.factory[14][i] == 0u);
+        p = original;
+        for (i = 0; i < 32u; i++) p.favorites.factory[14][i] = (uint8_t)(i * 29u + 3u);
+        assert(settings_import(&p, sizeof p) == 1);
+        for (i = 0; i < 32u; i++) assert(favorites.factory[14][i] == (uint8_t)(i * 29u + 3u));
+        assert(!memcmp(favorites.factory[13], original.favorites.factory[13], 32) &&
+               !memcmp(favorites.factory[15], original.favorites.factory[15], 32));
+        memset(&q, 0, sizeof q); settings_export(&q); assert(!memcmp(&q.favorites, &p.favorites, sizeof q.favorites));
+        assert(settings_import(&q, sizeof q) == 1 && settings_import(&q, sizeof q) == 1);
+        for (i = 0; i < 32u; i++) assert(favorites.factory[14][i] == (uint8_t)(i * 29u + 3u));
+        p = original; assert(settings_import(&p, sizeof p) == 1);
+    }
+#endif
     assert(settings_import(&p, 3) == 0 && settings_import(&p, -1) == 0);
     assert(settings_import(&p, sizeof p - 1) == 0);
-    puts("Settings: PER1/PER2/PER3 migration, palette ids, calibration, HOLD, LEDS and independent feature preservation passed.");
+    puts("Settings: PER1/PER2/PER3 migration, palette ids, calibration, HOLD, LEDS, CLICK / COUNT-IN, the FX key map, MIDI LEARN's map and independent feature preservation passed.");
 }

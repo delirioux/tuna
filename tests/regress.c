@@ -24,6 +24,9 @@
  *    selected track changes, the keys while the selected track changes, with ARP and the voice modes).
  * env: GOLDEN_UPDATE=1 rewrites GOLDEN_FILE, BUDGET_UPDATE=1 rewrites CPU_FILE (on purpose: review the
  * diff), VERBOSE=1 prints every render's numbers, JOBS=n children at once (default 8). */
+#ifdef C1_HOST
+#include "c1_host.h"              /* a thread as the second core, every split of the parts in turn (run_tests.sh) */
+#endif
 #define main hostsim_main
 #include "hostsim.c"
 #undef main
@@ -357,7 +360,11 @@ static void job_cpu(const job_t *j)
                     trk_note_on(&trk[p], KIT[i], 100);
         if (drums_on && (k * CTL) % (FS / 8u) < CTL)
             drum_hit((k * CTL) / (FS / 8u));
+        if (j->e == 0xFE && clk.env <= 0)
+            click_req = 2;                              /* idle_click: the metronome sounding all the time */
         mix_block(last_out, CTL);
+        if (j->e == 0xFE)
+            click_render(last_out, CTL);                /* (audio.c audio_block: after the master) */
     }
     R.ns = (double)(now_ns() - t0) / (nb * CTL);
     R.ipc = i0 ? (double)(instr_now() - i0) / (nb * CTL) : 0;
@@ -1137,6 +1144,10 @@ int main(int argc, char **argv)
         cpu_parts[ncpu][3][0] = ENGI_DRUM, cpu_parts[ncpu][3][1] = 0, cpu_parts[ncpu][3][2] = DRUM_HITS;
         j->parts = (const uint8_t (*)[3])cpu_parts[ncpu++];
         j->e = 0xFF;
+        j = add(J_CPU, "cpu/mix/idle_click");          /* idle + the metronome's click (click.c) never silent */
+        memset(cpu_parts[ncpu], 0, sizeof cpu_parts[ncpu]);
+        j->parts = (const uint8_t (*)[3])cpu_parts[ncpu++];
+        j->e = 0xFE;
     }
     c1 = nj;
     run_jobs(J + c0, c1 - c0, 1);
@@ -1230,8 +1241,8 @@ int main(int argc, char **argv)
     /* a preset's own cost: its count less the idle mix's (the mix alone is half of a light preset's),
      * so +25 % means 25 % more engine work; the mixes as they are */
     nc = load_kv(cpath, cpu, MAXJ);
-    idle_now = J[c1 - 3u].r.ipc;
-    idle_base = kv_get(cpu, nc, J[c1 - 3u].name) ? atof(kv_get(cpu, nc, J[c1 - 3u].name)) : 0;
+    idle_now = J[c1 - 4u].r.ipc;
+    idle_base = kv_get(cpu, nc, J[c1 - 4u].name) ? atof(kv_get(cpu, nc, J[c1 - 4u].name)) : 0;
     for (i = c0; i < c1; i++) {
         const job_t *j = &J[i];
         const char *want = kv_get(cpu, nc, j->name);
@@ -1249,6 +1260,10 @@ int main(int argc, char **argv)
         }
         if (!j->r.ipc || cupd)
             continue;
+#ifdef C1_HOST
+        continue;                                   /* (a thread as core 1: its handing over costs the host, not the
+                                                     * firmware; the plain build checks the budget) */
+#endif
         if (!want)
             printf("regress: CPU %s: %.0f instructions / sample, no baseline (BUDGET_UPDATE=1 adds it)\n", j->name, ipc);
         else if (ipc > b * (1 + CPU_TOL) && ipc > b + CPU_SLACK) {
@@ -1261,6 +1276,9 @@ int main(int argc, char **argv)
             c_warn++;
         }
     }
+#ifdef C1_HOST
+    printf("regress: CPU: not checked with a thread as the second core (C1_HOST)\n");
+#endif
     if (!J[c0].r.ipc)
         printf("regress: CPU: no instruction counter on this host (proc_pid_rusage); the budget is not checked\n");
     else if (cupd) {
@@ -1282,7 +1300,7 @@ int main(int argc, char **argv)
         if (eng_ok(e))
             printf("regress:   %-8s %-14s %6.0f instr  %6.1f ns\n", ENGINES[e]->name, ENGINES[e]->presets[heavy_p[e]].name,
                    heavy[e], heavy_ns[e]);
-    for (i = c1 - 3u; i < c1; i++)
+    for (i = c1 - 4u; i < c1; i++)
         printf("regress:   %-23s %6.0f instr  %6.1f ns\n", J[i].name + 8, J[i].r.ipc, J[i].r.ns);
 
     printf("regress: %u golden renders (%u changed, %u gone), %u health failures, %u voice / routing checks failed, "

@@ -112,8 +112,8 @@ static int32_t tu_icon_mid(int32_t x, int32_t cy, uint32_t size, uint32_t id, ui
         y1 = (int32_t)(v >> 12 & 15u) + 1;
     }
     int32_t y = cy - HALF_UP(y1 - y0) - y0;
-    cv_alpha(x, y, sz, sz, (sz == 24u ? AI24_DATA : sz == 16u ? AI16_DATA : AI12_DATA) + (uint32_t)k * (sz * sz / 2u),
-             ramp(fg, bg));
+    cv_alpha_hc(x, y, sz, sz, sz == 24u ? AI24_DATA + AI24_OFF[k] : sz == 16u ? AI16_DATA + AI16_OFF[k] :
+                AI12_DATA + AI12_OFF[k], AI_HC, ramp(fg, bg));         /* (Felucca 1.6: the cells Huffman-coded) */
     GFX_HOOK_TEXT(x, y + cv_oy, x + (int32_t)sz, y + cv_oy + (int32_t)sz, "icon", 4u);
     return (int32_t)sz;
 }

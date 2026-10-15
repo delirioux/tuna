@@ -6,9 +6,9 @@
 // the lights and any changed flash go out. After X0X's web/emu/worklet.js (charlesvestal/fm1-x0x, GPL-3.0).
 
 // The flash the page keeps: storage.c's areas (projects, user presets and their FM6 patches, the user sample
-// slots 0x97000..0xDFFFF; the settings and the second FM6 copy 0xFC000..0xFFFFF), only the sectors that hold
-// something (an erased sector is all 0xFF). {offset: bytes}
-export const STORE_AREAS = [[0x97000, 0xE0000], [0xFC000, 0x100000]];
+// slots 0x97000..0xDFFFF; the autosave 0xE5000..0xE6FFF (1.2) and FM6's voice bank 0xE7000 (1.4.1); the settings and
+// the second FM6 copy 0xFC000..0xFFFFF), only the sectors that hold something (an erased sector is all 0xFF). {offset: bytes}
+export const STORE_AREAS = [[0x97000, 0xE0000], [0xE5000, 0xE8000], [0xFC000, 0x100000]];
 export function storeSectors(nor) {
   const out = {};
   for (const [a, b] of STORE_AREAS)
@@ -27,6 +27,28 @@ export function restoreSectors(nor, sectors) {
 }
 
 export const HOLD_MS = 24;
+
+// The panel's knobs from a MIDI controller (the page's Web MIDI in): CC 20..26 turn SELECT, ALGORITHM, PRESETS,
+// KNOB 1..4 (the encoder roles), a detent a step; CC 27 sets MASTER (a pot on the FM-1: absolute in every mode). The
+// firmware's CC map (midi_control.c) has none of them, so they stay here. mode, as the controller sends a turn:
+//   abs  absolute (the default): by how far the value moves, so it takes over from anywhere without a jump; last:
+//        the value each knob CC sent before (the first one only takes its place)
+//   bin  relative, 64 +- n (65 = +1, 63 = -1)
+//   twos relative, two's complement (1 = +1, 127 = -1)
+//   sign relative, sign bit (1 = +1, 65 = -1)
+// -> {role, n} | {master: 0..1023} | null (not one of them: on to the firmware)
+export const KNOB_CC = 20, MASTER_CC = 27, KNOB_MODES = ["abs", "bin", "twos", "sign"];
+export function midiKnob(last, cc, value, mode = "abs") {
+  if (cc === MASTER_CC) return { master: Math.round(value * 1023 / 127) };
+  const role = cc - KNOB_CC;
+  if (role < 0 || role >= 7) return null;
+  if (mode === "bin") return { role, n: value - 64 };
+  if (mode === "twos") return { role, n: value < 64 ? value : value - 128 };
+  if (mode === "sign") return { role, n: value < 64 ? value : 64 - value };
+  const was = last[role];
+  last[role] = value;
+  return { role, n: was === undefined ? 0 : value - was };
+}
 
 if (typeof registerProcessor === "function") {
   const clock = globalThis.performance ? () => globalThis.performance.now() : () => Date.now();
@@ -78,11 +100,14 @@ if (typeof registerProcessor === "function") {
       const ex = this.ex, mem = ex.memory.buffer;
       const msg = { type: "frame" };
       const leds = [ex.web_lit_buttons(), ex.web_lit_keys(), ex.web_dim_buttons(), ex.web_dim_keys(), ex.web_dim_level(),
-                    ex.web_breath_buttons(), ex.web_breath_keys()];
-      const key = leds.join(",");
+                    ex.web_breath_buttons(), ex.web_breath_keys(), ex.web_mid_keys ? ex.web_mid_keys() : 0];
+      const an = ex.web_anim_levels ? ex.web_anim_levels() : 0;   // the power-on sweep: each LED's level
+      const anim = an ? Array.from(new Uint8Array(mem, an, 41)) : null;
+      const key = leds.join(",") + (anim ? ";" + anim.join(",") : "");
       if (key !== this.sentLeds) {
         this.sentLeds = key;
         msg.leds = leds;
+        msg.anim = anim;
       }
       if (this.frames >= 44100) {                     // the share of real time spent running the device
         msg.load = this.busy / (this.frames / 44.1);

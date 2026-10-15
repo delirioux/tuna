@@ -1,0 +1,49 @@
+# SPDX-License-Identifier: GPL-3.0-only
+# Tuna's firmware package for the FM-1, built on GitHub's Linux runners: JieLi's toolchain and three files of the
+# JieLi AC79 SDK (Apache-2.0) come from JieLi's own servers, as BUILDING.md describes. The package is the run's
+# artifact "tuna-firmware" (Actions > the run > Artifacts): install it with the web installer, or tools/fm1_install.py.
+name: Firmware
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true            # firmware/engines: Felucca-Engines (MIT)
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Python packages (the UI font and icons are rasterised at build time)
+        run: pip install Pillow fonttools
+
+      - name: JieLi toolchain (clang 4.0.1 for pi32v2)
+        run: sh tools/get_toolchain.sh
+
+      - name: JieLi AC79 SDK (three of its files go into the package)
+        run: |
+          git clone --depth 1 --branch AC79NN_SDK_V1.2.1_2023-12-13 \
+              https://gitee.com/Jieli-Tech/fw-AC79_AIoT_SDK.git "$HOME/fw-AC79_AIoT_SDK"
+
+      - name: Build Tuna
+        run: FELUCCA_TUNA=1 ./build.sh
+
+      - name: Name the package
+        run: |
+          mkdir -p dist
+          cp build/felucca.fwsc "dist/tuna-${GITHUB_SHA::7}.fwsc"
+          cp LICENSE LICENSING.md dist/
+          cp -r LICENSES dist/
+          ls -l dist
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: tuna-firmware
+          path: dist/

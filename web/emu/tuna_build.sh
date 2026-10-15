@@ -49,7 +49,7 @@ grep -q "wasi_snapshot_preview1" "$OUT/worklet.js" || { echo "tuna emu: the work
 sed -e "s/@VERSION@/$VERSION/g" -e "s/@PREVIEW@/ (Tuna preview)/g" \
     -e 's|<title>Felucca</title>|<title>Tuna</title>|' \
     -e 's|content="Felucca, the multi-engine synth firmware for the FM-1, running in your browser: the same code the instrument runs."|content="Tuna, generative music firmware for the FM-1 on Felucca, running in your browser: the same code the instrument runs."|' \
-    -e 's|const STORE = "felucca-emu-flash";|const STORE = "tuna-emu-flash";|' \
+    -e 's|const STORE = "felucca-emu-flash"|const STORE = "tuna-emu-flash"|' -e 's|"felucca-emu-knobs"|"tuna-emu-knobs"|' -e 's|"felucca-emu-knobmode"|"tuna-emu-knobmode"|' \
     -e 's|fetch("felucca.wasm")|fetch("tuna.wasm")|' -e 's|felucca.wasm: |tuna.wasm: |' \
     -e 's|  Felucca by Leo Kuroshita, Hügelton Instruments|  Tuna on Felucca · Felucca by Leo Kuroshita, Hügelton Instruments · Marbles by Emilie Gillet (MIT)|' \
     -e 's|  <nav><a href="../installer/">Install</a><a href="../editor/">Editor</a><a href="https://github.com/hugelton/Felucca">Source</a></nav>|  <nav><a href="https://github.com/delirioux/tuna">Tuna source</a><a href="https://github.com/hugelton/Felucca">Felucca source</a></nav>|' \

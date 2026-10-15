@@ -48,7 +48,7 @@ const char *ta_lib_name(int item)
     if (item < 0 || item >= ta_lib_count())
         return "";
     int st = ta_lib_style(item);
-    return st >= 0 ? tg_style_get(st)->name : tp_character_name(item);
+    return st >= 0 ? tg_style_name(st) : tp_character_name(item);
 }
 
 const char *ta_group_name(int group) { return group == 0 ? "TUNA" : tp_era_name(group - 1); }

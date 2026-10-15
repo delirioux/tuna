@@ -86,3 +86,30 @@ float sinf(float x)
     p = p * r2 - 1.6666666667e-1f;
     return r + r * r2 * p;
 }
+
+#if TUNA_FREESTANDING
+/* The soft-float calls the compiler may emit where it does not use the FPU (felucca.c's unit, built for size through
+ * LLVM IR: the first FM-1 build asked for __mulsf3 from tuna_ui.c). Here they are done by the FPU itself (these
+ * modules are built with it). Taken and given as bit patterns, so they read the arguments where an integer
+ * calling convention puts them (as the soft-float routines' callers do), whatever the float one is. */
+typedef uint32_t tl_sf;
+static float tl_f(tl_sf u) { tl_bits b; b.u = u; return b.f; }
+static tl_sf tl_u(float f) { tl_bits b = {f}; return b.u; }
+tl_sf __addsf3(tl_sf a, tl_sf b) { return tl_u(tl_f(a) + tl_f(b)); }
+tl_sf __subsf3(tl_sf a, tl_sf b) { return tl_u(tl_f(a) - tl_f(b)); }
+tl_sf __mulsf3(tl_sf a, tl_sf b) { return tl_u(tl_f(a) * tl_f(b)); }
+tl_sf __divsf3(tl_sf a, tl_sf b) { return tl_u(tl_f(a) / tl_f(b)); }
+tl_sf __negsf2(tl_sf a) { return a ^ 0x80000000u; }
+tl_sf __floatsisf(int32_t i) { return tl_u((float)i); }
+tl_sf __floatunsisf(uint32_t i) { return tl_u((float)i); }
+int32_t __fixsfsi(tl_sf a) { return (int32_t)tl_f(a); }
+uint32_t __fixunssfsi(tl_sf a) { return (uint32_t)tl_f(a); }
+/* comparisons as libgcc gives them: unordered (a NaN) is "not equal", "greater" for < and <=, "less" for > and >= */
+int __unordsf2(tl_sf a, tl_sf b) { float x = tl_f(a), y = tl_f(b); return x != x || y != y; }
+int __eqsf2(tl_sf a, tl_sf b) { float x = tl_f(a), y = tl_f(b); return x == y ? 0 : 1; }
+int __nesf2(tl_sf a, tl_sf b) { return __eqsf2(a, b); }
+int __ltsf2(tl_sf a, tl_sf b) { float x = tl_f(a), y = tl_f(b); return x < y ? -1 : x == y ? 0 : 1; }
+int __lesf2(tl_sf a, tl_sf b) { return __ltsf2(a, b); }
+int __gtsf2(tl_sf a, tl_sf b) { float x = tl_f(a), y = tl_f(b); return x > y ? 1 : x == y ? 0 : -1; }
+int __gesf2(tl_sf a, tl_sf b) { return __gtsf2(a, b); }
+#endif

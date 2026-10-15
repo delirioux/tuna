@@ -57,7 +57,14 @@ touched only where Tuna hooks in (`felucca.c`, `main.c`, `audio.c`, `tools/build
 - **No doubles, no libm.** The AC79's FPU is single precision and the firmware links no C library. Tuna uses
   floats only, and `tuna_libm.c` supplies `exp2f`, `sinf`, `sqrtf`, `lrintf`, `fabsf` (within 5e-7 of the
   host's). The MIDI clock runs in Q16 fixed point. Compiled for a single-precision-only CPU, Tuna's modules
-  need nothing outside but `memcpy` and `memset`, which Felucca's `libc.c` provides.
+  need nothing outside but `memcpy` and `memset`, which Felucca's `libc.c` provides. Where the compiler still asks
+  for a soft-float routine (`__mulsf3` in felucca.c's unit, built for size), `tuna_libm.c` does it on the FPU.
+- **The flash: 568 KB for Felucca and Tuna together**, and 72 KB of RAM beside a larger pool. Tuna's build leaves
+  out Felucca's SLICE engine (and its break loop) and serial console; its state lives in the pool; the Marbles
+  inverse CDFs are 16-bit; and the style library is packed: `tuna_styles_packed.inc`, each profile as its
+  differences from a base, written from `tuna_style.c`'s table by `tests/tuna_style_pack.c`
+  (`build/host/tuna_style_pack firmware/src/tuna_styles_packed.inc` after a change to the table, the genres or the
+  manners' profiles; `tests/tuna_tests.sh` checks it is up to date and expands to the table byte for byte).
 - **The generator runs in the audio interrupt** at a quarter of the audio rate (11 kHz). The panel's actions
   run with the audio interrupt off; sound changes that load presets are deferred to the main loop.
 - **Saving only while stopped.** Felucca runs from flash (XIP); writing it while playing would stall the

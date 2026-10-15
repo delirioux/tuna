@@ -198,6 +198,8 @@ def build_app():
                  "FELUCCA_UART", "FELUCCA_UAC", "FELUCCA_UAC_TONE", "FELUCCA_UAC_48K", "FELUCCA_ICONS", "FELUCCA_SLICE", "FELUCCA_FM4",
                  "FELUCCA_CDC_DEFAULT", "FELUCCA_UAC_AS_FIRST", "FELUCCA_CPU2", "FELUCCA_TUNA"):
         v = os.environ.get(flag)    # unset: the default in firmware/src/felucca.c
+        if v is None and os.environ.get("FELUCCA_TUNA") == "1" and flag in ("FELUCCA_SLICE", "FELUCCA_CDC"):
+            v = "0"                 # Tuna: no SLICE engine (and its BREAK) and no serial console: the flash it needs
         if v in ("0", "1"):
             flags.append(f"-D{flag}={v}")
     v = os.environ.get("FELUCCA_USB_LAYOUT")   # firmware/src/usb.c: how the USB composite presents itself (#67), 0..3
@@ -229,7 +231,7 @@ def build_app():
     if os.environ.get("FELUCCA_TUNA") == "1":
         for m in TUNA_MODULES:
             tuna.append(OUT / f"{m}.o")
-        tc_all(*[("cc", *flags, "-DTUNA_FREESTANDING=1", "-c", FW / "src" / f"{m}.c", "-o", OUT / f"{m}.o") for m in TUNA_MODULES])
+        tc_all(*[("cc", *flags, "-DTUNA_FREESTANDING=1", "-DTUNA_PACKED_STYLES=1", "-c", FW / "src" / f"{m}.c", "-o", OUT / f"{m}.o") for m in TUNA_MODULES])
     elf = OUT / "felucca.elf"
     tc("pi32v2/bin/ld", "-T", FW / "app.ld", OUT / "crt0.o", OUT / "fm1_vec.o", OUT / "fm1_isr.o",
        *([OUT / "fm1_cpu1.o"] if CPU2 else []), OUT / "felucca.o", *tuna, "-o", elf)

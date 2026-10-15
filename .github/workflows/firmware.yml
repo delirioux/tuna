@@ -35,6 +35,30 @@ jobs:
       - name: Build Tuna
         run: FELUCCA_TUNA=1 ./build.sh
 
+      - name: Sizes (each object's code, constants and RAM, its largest symbols; also when the link fails)
+        if: always()
+        run: |
+          NM=$(find "$HOME/.jieli/toolchain/" -name "*nm" -type f -perm -u+x | head -1)
+          echo "nm: $NM"
+          for o in build/felucca.o build/tuna_*.o; do
+            [ -f "$o" ] || continue
+            "$NM" --size-sort -S "$o" > "$o.sizes" || continue
+            python3 - "$o" <<'PY'
+          import sys
+          tot = {}
+          rows = []
+          for line in open(sys.argv[1] + ".sizes"):
+              f = line.split()
+              if len(f) == 4:
+                  k = {"t": "code", "r": "const", "d": "data", "b": "bss", "s": "bss"}.get(f[2].lower(), f[2])
+                  tot[k] = tot.get(k, 0) + int(f[1], 16)
+                  rows.append((int(f[1], 16), k, f[3]))
+          print("==", sys.argv[1], "  ".join(f"{k} {v}" for k, v in sorted(tot.items())))
+          for n, k, name in sorted(rows)[-15:][::-1]:
+              print(f"   {n:7d} {k:5s} {name}")
+          PY
+          done
+
       - name: Name the package
         run: |
           mkdir -p dist

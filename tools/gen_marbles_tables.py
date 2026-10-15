@@ -2,8 +2,10 @@
 # SPDX-License-Identifier: MIT
 """Extract the lookup tables TUNA's Marbles port needs from Mutable Instruments' sources.
 
-Copies the float literals verbatim, so the C port reads bit-identical values:
-  marbles/resources.cc  lut_logit, lut_raised_cosine, dist_icdf_*, distributions_table (pointers)
+Copies the float literals verbatim, so the C port reads bit-identical values, but for the inverse CDFs:
+  marbles/resources.cc  lut_logit, lut_raised_cosine, distributions_table (pointers)
+                        dist_icdf_* (0..1) as 16-bit fractions of 65535 (half the flash of the floats, 35 KB less
+                        on the FM-1; one part in 65535 of the 0..1 range, far below any pitch or timing step)
   stmlib/dsp/units.cc   lut_pitch_ratio_high, lut_pitch_ratio_low
 
 Usage: gen_marbles_tables.py EURORACK_DIR STMLIB_DIR OUT.c
@@ -59,11 +61,18 @@ def main() -> None:
     unique = sorted(set(dist_names) | {"dist_icdf_4_3"})
 
     parts = [HEADER]
-    for name in ["lut_logit", "lut_raised_cosine"] + unique:
+    for name in ["lut_logit", "lut_raised_cosine"]:
         parts.append(f"\nconst float tm_{name}[] = {{{array(res, name)}}};\n")
+    for name in unique:
+        vals = [float(v.rstrip("f")) for v in re.findall(r"-?\d+\.\d*(?:e[-+]?\d+)?f?", array(res, name))]
+        if min(vals) < 0.0 or max(vals) > 1.0:
+            sys.exit(f"{name}: values outside 0..1")
+        q = [round(v * 65535.0) for v in vals]
+        rows = ",\n".join("    " + ", ".join(str(x) for x in q[i:i + 16]) for i in range(0, len(q), 16))
+        parts.append(f"\nconst uint16_t tm_{name}[] = {{\n{rows},\n}};\n")
     for name in ["lut_pitch_ratio_high", "lut_pitch_ratio_low"]:
         parts.append(f"\nconst float tm_{name}[] = {{{array(units, name)}}};\n")
-    parts.append("\nconst float *const tm_distributions_table[] = {\n")
+    parts.append("\nconst uint16_t *const tm_distributions_table[] = {\n")
     parts.extend(f"    tm_{n},\n" for n in dist_names)
     parts.append("};\n")
     out.write_text("".join(parts))

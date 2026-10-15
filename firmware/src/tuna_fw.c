@@ -21,7 +21,7 @@
 
 #define TF_DIV 4                                   /* Tuna at a quarter of the audio rate (11 kHz) */
 
-static tuna_app tf_app;
+static tuna_app tf_app __attribute__((section(".pool")));   /* (42 KB: in the pool, zeroed at boot; RAM holds 72 KB in all) */
 static tuna_ui tf_ui;
 
 /* ---- Tuna's instrument families on Felucca's sounds: tuna_sounds.h (shared with tests/tuna_felucca.c) ---- */

@@ -21,8 +21,8 @@ preset and let it drift, from still and ambient to driving and rhythmic.
   reggae, punk and Bronx block parties, house, techno and new jack swing, grunge, jungle and trance, dubstep and
   grime, trap, drill, amapiano and hyperpop, phonk and Jersey club. Each has its own drum groove and kit, bass line,
   chord loop, comping and instruments; vocal genres play as their beat, bass, chords and a lead line.
-- **89 composers and styles in 9 eras**, from Hildegard von Bingen to the film fanfare: Renaissance, Baroque,
-  Classical, Early Romantic, Romantic, Late Romantic, Modern, Minimal, Film & Stage. Each has its
+- **89 composers and styles in 10 eras**, from Hildegard von Bingen to today: Renaissance, Baroque,
+  Classical, Early Romantic, Romantic, Late Romantic, Modern, Minimal, Film & Stage, Contemporary. Each has its
   own harmony, melody, rhythm, form and instrumentation: chant on a drone, Bach's counterpoint,
   Satie's parallel chords, Debussy's whole tones, Gershwin's jazz chords, phasing patterns,
   tintinnabuli bells, Messiaen's octatonic modes and birdsong.

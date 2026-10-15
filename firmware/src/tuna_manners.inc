@@ -1455,22 +1455,21 @@ static const tg_delta TGM_85_2[] = {   /* FANFARE ELEGY */
     {TGF_root, 0, 2}, {TGF_scale, 0, 5}, {TGF_bpm, 0, 6000}, {TGF_division, 0, 2}, {TGF_chord_beats, 0, 4},
     {TGF_melody_density, 0, 35}, {TGF_mel_min_ticks, 0, 2}, {TGF_melody_range, 0, 23}, {TGF_appoggiatura, 0, 30},
     {TGF_rubato, 0, 40}, {TGF_swell, 0, 80}, {TGF_color, 0, 0}, {TGF_octave, 0, 13}, {TGF_bass_mode, 0, 1},
-    {TGF_perc_mode, 0, 0}, {TGF_reverb, 0, 4}, {TGF_w_minor, 3, 7}, {TGF_w_minor, 4, 0}, {TGF_w_minor, 6, 5},
-    {TGF_w_minor, 8, 0}, {TGF_w_minor, 9, 0}, {TGF_w_minor, 10, 0}, {TGF_w_minor, 13, 2}, {TGF_w_minor, 14, 0},
-    {TGF_w_minor, 15, 2}, {TGF_w_minor, 16, 0}, {TGF_w_minor, 17, 0}, {TGF_w_minor, 18, 0}, {TGF_w_minor, 21, 0},
-    {TGF_w_minor, 23, 0}, {TGF_profile, 1, 27}, {TGF_profile, 2, 46}, {TGF_profile, 3, 75}, {TGF_direction, 0, 20}
+    {TGF_perc_mode, 0, 0}, {TGF_w_minor, 3, 7}, {TGF_w_minor, 4, 0}, {TGF_w_minor, 6, 5}, {TGF_w_minor, 8, 0},
+    {TGF_w_minor, 9, 0}, {TGF_w_minor, 10, 0}, {TGF_w_minor, 13, 2}, {TGF_w_minor, 14, 0}, {TGF_w_minor, 15, 2},
+    {TGF_w_minor, 16, 0}, {TGF_w_minor, 17, 0}, {TGF_w_minor, 18, 0}, {TGF_w_minor, 21, 0}, {TGF_w_minor, 23, 0},
+    {TGF_profile, 1, 27}, {TGF_profile, 2, 46}, {TGF_profile, 3, 75}, {TGF_direction, 0, 20}
 };
 static const tg_delta TGM_86_1[] = {   /* SAGA EPIC */
     {TGF_scale, 0, 1}, {TGF_division, 0, 2}, {TGF_swing, 0, 0}, {TGF_melody_mask, 0, 0},
     {TGF_melody_density, 0, 35}, {TGF_mel_min_ticks, 0, 2}, {TGF_max_leap, 0, 5}, {TGF_octave, 0, 15},
     {TGF_swell, 0, 90}, {TGF_turn, 0, 0}, {TGF_perc_mode, 0, 1}, {TGF_perc, 0, 8}, {TGF_perc, 1, 2},
-    {TGF_perc, 2, 3}, {TGF_perc, 3, 4}, {TGF_reverb, 0, 4}, {TGF_w_major, 1, 0}, {TGF_w_major, 2, 0},
-    {TGF_w_major, 3, 5}, {TGF_w_major, 4, 0}, {TGF_w_major, 5, 4}, {TGF_w_major, 10, 3}, {TGF_w_major, 12, 3},
-    {TGF_w_major, 13, 7}, {TGF_w_major, 14, 6}, {TGF_w_major, 15, 5}, {TGF_w_major, 16, 0}, {TGF_w_major, 17, 0},
-    {TGF_w_major, 18, 0}, {TGF_w_minor, 1, 0}, {TGF_w_minor, 2, 0}, {TGF_w_minor, 3, 5}, {TGF_w_minor, 4, 0},
-    {TGF_w_minor, 5, 4}, {TGF_w_minor, 6, 0}, {TGF_w_minor, 7, 0}, {TGF_w_minor, 9, 0}, {TGF_w_minor, 10, 3},
-    {TGF_w_minor, 12, 3}, {TGF_w_minor, 13, 7}, {TGF_w_minor, 14, 6}, {TGF_w_minor, 15, 5}, {TGF_w_minor, 16, 0},
-    {TGF_w_minor, 17, 0}
+    {TGF_perc, 2, 3}, {TGF_perc, 3, 4}, {TGF_w_major, 1, 0}, {TGF_w_major, 2, 0}, {TGF_w_major, 3, 5},
+    {TGF_w_major, 4, 0}, {TGF_w_major, 5, 4}, {TGF_w_major, 10, 3}, {TGF_w_major, 12, 3}, {TGF_w_major, 13, 7},
+    {TGF_w_major, 14, 6}, {TGF_w_major, 15, 5}, {TGF_w_major, 16, 0}, {TGF_w_major, 17, 0}, {TGF_w_major, 18, 0},
+    {TGF_w_minor, 1, 0}, {TGF_w_minor, 2, 0}, {TGF_w_minor, 3, 5}, {TGF_w_minor, 4, 0}, {TGF_w_minor, 5, 4},
+    {TGF_w_minor, 6, 0}, {TGF_w_minor, 7, 0}, {TGF_w_minor, 9, 0}, {TGF_w_minor, 10, 3}, {TGF_w_minor, 12, 3},
+    {TGF_w_minor, 13, 7}, {TGF_w_minor, 14, 6}, {TGF_w_minor, 15, 5}, {TGF_w_minor, 16, 0}, {TGF_w_minor, 17, 0}
 };
 static const tg_delta TGM_86_2[] = {   /* SAGA BATTLE */
     {TGF_root, 0, 0}, {TGF_scale, 0, 2}, {TGF_bpm, 0, 11200}, {TGF_division, 0, 2}, {TGF_beats_per_bar, 0, 5},
@@ -1478,13 +1477,13 @@ static const tg_delta TGM_86_2[] = {   /* SAGA BATTLE */
     {TGF_melody_range, 0, 12}, {TGF_staccato, 0, 30}, {TGF_sforzando, 0, 30}, {TGF_turn, 0, 0},
     {TGF_bass_mode, 0, 7}, {TGF_bass_rhythm, 0, 329}, {TGF_bass_len, 0, 4}, {TGF_bass_notes, 2, 2},
     {TGF_bass_len, 0, 4}, {TGF_pad_mode, 0, 7}, {TGF_perc_mode, 0, 1}, {TGF_perc, 0, 9}, {TGF_perc, 1, 6},
-    {TGF_perc, 2, 6}, {TGF_perc, 3, 5}, {TGF_reverb, 0, 4}, {TGF_w_major, 1, 0}, {TGF_w_major, 2, 0},
-    {TGF_w_major, 3, 4}, {TGF_w_major, 4, 0}, {TGF_w_major, 5, 3}, {TGF_w_major, 8, 6}, {TGF_w_major, 10, 5},
-    {TGF_w_major, 11, 3}, {TGF_w_major, 13, 0}, {TGF_w_major, 14, 5}, {TGF_w_major, 16, 0}, {TGF_w_major, 17, 0},
-    {TGF_w_major, 18, 0}, {TGF_w_minor, 1, 0}, {TGF_w_minor, 2, 0}, {TGF_w_minor, 3, 4}, {TGF_w_minor, 4, 0},
-    {TGF_w_minor, 5, 3}, {TGF_w_minor, 6, 0}, {TGF_w_minor, 7, 0}, {TGF_w_minor, 8, 6}, {TGF_w_minor, 9, 0},
-    {TGF_w_minor, 10, 5}, {TGF_w_minor, 11, 3}, {TGF_w_minor, 12, 0}, {TGF_w_minor, 13, 0}, {TGF_w_minor, 14, 5},
-    {TGF_w_minor, 15, 0}, {TGF_w_minor, 16, 0}, {TGF_w_minor, 17, 0}
+    {TGF_perc, 2, 6}, {TGF_perc, 3, 5}, {TGF_w_major, 1, 0}, {TGF_w_major, 2, 0}, {TGF_w_major, 3, 4},
+    {TGF_w_major, 4, 0}, {TGF_w_major, 5, 3}, {TGF_w_major, 8, 6}, {TGF_w_major, 10, 5}, {TGF_w_major, 11, 3},
+    {TGF_w_major, 13, 0}, {TGF_w_major, 14, 5}, {TGF_w_major, 16, 0}, {TGF_w_major, 17, 0}, {TGF_w_major, 18, 0},
+    {TGF_w_minor, 1, 0}, {TGF_w_minor, 2, 0}, {TGF_w_minor, 3, 4}, {TGF_w_minor, 4, 0}, {TGF_w_minor, 5, 3},
+    {TGF_w_minor, 6, 0}, {TGF_w_minor, 7, 0}, {TGF_w_minor, 8, 6}, {TGF_w_minor, 9, 0}, {TGF_w_minor, 10, 5},
+    {TGF_w_minor, 11, 3}, {TGF_w_minor, 12, 0}, {TGF_w_minor, 13, 0}, {TGF_w_minor, 14, 5}, {TGF_w_minor, 15, 0},
+    {TGF_w_minor, 16, 0}, {TGF_w_minor, 17, 0}
 };
 static const tg_delta TGM_87_1[] = {   /* MELANCHOLY REQUIEM */
     {TGF_root, 0, 2}, {TGF_bpm, 0, 6000}, {TGF_beats_per_bar, 0, 4}, {TGF_chord_beats, 0, 4},
@@ -1500,7 +1499,7 @@ static const tg_delta TGM_87_2[] = {   /* MELANCHOLY HYMN */
 static const tg_delta TGM_88_1[] = {   /* SHOWTUNE BALLAD */
     {TGF_root, 0, 10}, {TGF_scale, 0, 0}, {TGF_bpm, 0, 7200}, {TGF_division, 0, 3}, {TGF_melody_density, 0, 40},
     {TGF_mel_min_ticks, 0, 2}, {TGF_melody_range, 0, 15}, {TGF_octave, 0, 8}, {TGF_suspension, 0, 20},
-    {TGF_swell, 0, 90}, {TGF_bass_mode, 0, 1}, {TGF_pad_mode, 0, 3}, {TGF_perc_mode, 0, 0}, {TGF_reverb, 0, 4}
+    {TGF_swell, 0, 90}, {TGF_bass_mode, 0, 1}, {TGF_pad_mode, 0, 3}, {TGF_perc_mode, 0, 0}
 };
 static const tg_delta TGM_88_2[] = {   /* SHOWTUNE TANGO */
     {TGF_bpm, 0, 11600}, {TGF_melody_density, 0, 50}, {TGF_mel_min_ticks, 0, 1}, {TGF_staccato, 0, 40},
@@ -1785,15 +1784,15 @@ static const tg_manner TG_MANNER[TG_MANNERS > 0 ? TG_MANNERS : 1] = {
     {"ROMANZA", TGM_84_1, 42, {{TI_CONTRABASS, TI_OBOE, TI_STRINGS}, {TI_CELLO, TI_VIOLIN, TI_STRINGS}, {TI_CONTRABASS, TI_STRINGS, TI_PIANO}}, 3, TG_ORCH_RANDOM},   /* MORRICONE */
     {"MARCH", 0, 0, {{0}}, 0, TG_ORCH_RANDOM},   /* FANFARE */
     {"SCHERZO", TGM_85_1, 36, {{TI_CONTRABASS, TI_CELESTA, TI_STRINGS}, {TI_CELLO, TI_FLUTE, TI_STRINGS}, {TI_CONTRABASS, TI_GLOCKEN, TI_PIZZ}}, 3, TG_ORCH_RANDOM},   /* FANFARE */
-    {"ELEGY", TGM_85_2, 34, {{TI_CONTRABASS, TI_VIOLIN, TI_STRINGS}, {TI_CELLO, TI_VIOLIN, TI_PIANO}, {TI_CONTRABASS, TI_CLARINET, TI_STRINGS}}, 3, TG_ORCH_RANDOM},   /* FANFARE */
+    {"ELEGY", TGM_85_2, 33, {{TI_CONTRABASS, TI_VIOLIN, TI_STRINGS}, {TI_CELLO, TI_VIOLIN, TI_PIANO}, {TI_CONTRABASS, TI_CLARINET, TI_STRINGS}}, 3, TG_ORCH_RANDOM},   /* FANFARE */
     {"PASTORAL", 0, 0, {{0}}, 0, TG_ORCH_RANDOM},   /* SAGA */
-    {"EPIC", TGM_86_1, 44, {{TI_TUBA, TI_HORN, TI_BRASS}, {TI_CONTRABASS, TI_CHOIR, TI_STRINGS}, {TI_CONTRABASS, TI_VIOLIN, TI_STRINGS}, {TI_TUBA, TI_TRUMPET, TI_STRINGS}}, 4, TG_ORCH_ENERGY},   /* SAGA */
-    {"BATTLE", TGM_86_2, 55, {{TI_TUBA, TI_BRASS, TI_STRINGS}, {TI_CONTRABASS, TI_HORN, TI_STRINGS}, {TI_TUBA, TI_CHOIR, TI_BRASS}}, 3, TG_ORCH_RANDOM},   /* SAGA */
+    {"EPIC", TGM_86_1, 43, {{TI_TUBA, TI_HORN, TI_BRASS}, {TI_CONTRABASS, TI_CHOIR, TI_STRINGS}, {TI_CONTRABASS, TI_VIOLIN, TI_STRINGS}, {TI_TUBA, TI_TRUMPET, TI_STRINGS}}, 4, TG_ORCH_ENERGY},   /* SAGA */
+    {"BATTLE", TGM_86_2, 54, {{TI_TUBA, TI_BRASS, TI_STRINGS}, {TI_CONTRABASS, TI_HORN, TI_STRINGS}, {TI_TUBA, TI_CHOIR, TI_BRASS}}, 3, TG_ORCH_RANDOM},   /* SAGA */
     {"WALTZ", 0, 0, {{0}}, 0, TG_ORCH_RANDOM},   /* MELANCHOLY */
     {"REQUIEM", TGM_87_1, 13, {{TI_PIPEORGAN, TI_CHOIR, TI_PIPEORGAN}, {TI_CONTRABASS, TI_VOICE, TI_STRINGS}, {TI_CONTRABASS, TI_CHOIR, TI_STRINGS}}, 3, TG_ORCH_RANDOM},   /* MELANCHOLY */
     {"HYMN", TGM_87_2, 16, {{TI_TUBA, TI_CHOIR, TI_BRASS}, {TI_CONTRABASS, TI_CHOIR, TI_STRINGS}, {TI_PIPEORGAN, TI_TRUMPET, TI_PIPEORGAN}}, 3, TG_ORCH_ENERGY},   /* MELANCHOLY */
     {"ROCK", 0, 0, {{0}}, 0, TG_ORCH_RANDOM},   /* SHOWTUNE */
-    {"BALLAD", TGM_88_1, 14, {{TI_PIANO, TI_VOICE, TI_PIANO}, {TI_CONTRABASS, TI_VOICE, TI_STRINGS}, {TI_CELLO, TI_SAX, TI_PIANO}}, 3, TG_ORCH_RANDOM},   /* SHOWTUNE */
+    {"BALLAD", TGM_88_1, 13, {{TI_PIANO, TI_VOICE, TI_PIANO}, {TI_CONTRABASS, TI_VOICE, TI_STRINGS}, {TI_CELLO, TI_SAX, TI_PIANO}}, 3, TG_ORCH_RANDOM},   /* SHOWTUNE */
     {"TANGO", TGM_88_2, 15, {{TI_CONTRABASS, TI_BANDONEON, TI_PIANO}, {TI_CONTRABASS, TI_VIOLIN, TI_BANDONEON}, {TI_CONTRABASS, TI_VOICE, TI_PIZZ}}, 3, TG_ORCH_RANDOM},   /* SHOWTUNE */
 };
 static const uint16_t TG_MANNER_FIRST[175] = {

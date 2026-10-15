@@ -136,7 +136,7 @@ enum {
     /* 8: minimalism and holy minimalism */
     TG_STYLE_TEN_HOLT, TG_STYLE_ARPEGGIO, TG_STYLE_PHASING, TG_STYLE_TINTINNABULI, TG_STYLE_GORECKI, TG_STYLE_TAVENER,
     TG_STYLE_BALTIC, TG_STYLE_SHIMMER, TG_STYLE_ANTHEM,
-    /* 9: film and musical */
+    /* 9: film and musical; 10: contemporary (styles named after their sound) */
     TG_STYLE_MORRICONE, TG_STYLE_FANFARE, TG_STYLE_SAGA, TG_STYLE_MELANCHOLY, TG_STYLE_SHOWTUNE,
     /* 10..17: the popular genres, 1950s to now (tools/tuna_genres.py) */
 #define TUNA_GENRE_IDS

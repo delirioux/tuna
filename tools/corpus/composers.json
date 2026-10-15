@@ -4165,7 +4165,7 @@
    "scores": 0,
    "all": null
   },
-  "GLASS": {
+  "ARPEGGIO": {
    "scores": 5,
    "all": {
     "n": 5,
@@ -4192,7 +4192,7 @@
    "bpm": null,
    "manners": {}
   },
-  "REICH": {
+  "PHASING": {
    "scores": 1,
    "all": {
     "n": 1,
@@ -4218,7 +4218,7 @@
    "bpm": null,
    "manners": {}
   },
-  "PART": {
+  "TINTINNABULI": {
    "scores": 1,
    "all": {
     "n": 1,
@@ -4252,15 +4252,15 @@
    "scores": 0,
    "all": null
   },
-  "VASKS": {
+  "BALTIC": {
    "scores": 0,
    "all": null
   },
-  "WHITACRE": {
+  "SHIMMER": {
    "scores": 1,
    "all": null
   },
-  "RUTTER": {
+  "ANTHEM": {
    "scores": 10,
    "all": {
     "n": 7,
@@ -4334,7 +4334,7 @@
    "bpm": 60,
    "manners": {}
   },
-  "JOHN WILLIAMS": {
+  "FANFARE": {
    "scores": 16,
    "all": {
     "n": 16,
@@ -4381,7 +4381,7 @@
     }
    }
   },
-  "HOWARD SHORE": {
+  "SAGA": {
    "scores": 6,
    "all": {
     "n": 6,
@@ -4407,7 +4407,7 @@
    "bpm": 76,
    "manners": {}
   },
-  "PREISNER": {
+  "MELANCHOLY": {
    "scores": 1,
    "all": {
     "n": 1,
@@ -4433,7 +4433,7 @@
    "bpm": null,
    "manners": {}
   },
-  "LLOYD WEBBER": {
+  "SHOWTUNE": {
    "scores": 5,
    "all": {
     "n": 5,

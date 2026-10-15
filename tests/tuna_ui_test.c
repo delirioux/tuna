@@ -775,7 +775,7 @@ int main(int argc, char **argv)
     test_every_composer();
     for (int i = 0; i < ta_lib_count(); ++i) {
         if (ta_lib_style(i) == TG_STYLE_DEBUSSY) anim(i, "debussy");
-        if (ta_lib_style(i) == TG_STYLE_REICH) anim(i, "reich");
+        if (ta_lib_style(i) == TG_STYLE_PHASING) anim(i, "phasing");
     }
     CHECK(lint_findings == 0, "%d layout findings", lint_findings);
     printf("tuna_ui: %d checks, %d failed, %d frames written\n", checks, fails, frames_written);

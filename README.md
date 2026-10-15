@@ -21,11 +21,11 @@ preset and let it drift, from still and ambient to driving and rhythmic.
   reggae, punk and Bronx block parties, house, techno and new jack swing, grunge, jungle and trance, dubstep and
   grime, trap, drill, amapiano and hyperpop, phonk and Jersey club. Each has its own drum groove and kit, bass line,
   chord loop, comping and instruments; vocal genres play as their beat, bass, chords and a lead line.
-- **89 composers in 9 eras**, from Hildegard von Bingen to Eric Whitacre: Renaissance, Baroque,
+- **89 composers and styles in 9 eras**, from Hildegard von Bingen to the film fanfare: Renaissance, Baroque,
   Classical, Early Romantic, Romantic, Late Romantic, Modern, Minimal, Film & Stage. Each has its
   own harmony, melody, rhythm, form and instrumentation: chant on a drone, Bach's counterpoint,
-  Satie's parallel chords, Debussy's whole tones, Gershwin's jazz chords, Reich's phasing, Pärt's
-  tintinnabuli, Messiaen's octatonic modes and birdsong.
+  Satie's parallel chords, Debussy's whole tones, Gershwin's jazz chords, phasing patterns,
+  tintinnabuli bells, Messiaen's octatonic modes and birdsong.
 - **Tuned from the scores**: the melodies of 45 composers lean toward what 3,486 public-domain scores of theirs
   measure: how often a line repeats a note, steps or leaps, how wide and how high it goes, how busy it is.
 - **285 manners**: most composers wrote in several ways, and Tuna plays them all: Bach's fugues, chorales and
@@ -82,7 +82,7 @@ preset and let it drift, from still and ambient to driving and rhythmic.
 On Linux or macOS with a C compiler:
 
 ```
-sh tests/tuna_tests.sh            # all of Tuna's tests: theory, generator, sequencer, presets, screen, 89 composers
+sh tests/tuna_tests.sh            # all of Tuna's tests: theory, generator, sequencer, presets, screen, 89 composers and styles
 sh tests/tuna_ui_test.sh          # the screen alone: every page as PNG, two GIFs of HOME playing (build/tuna_ui)
 sh tests/tuna_felucca.sh out 60   # render every composer through Felucca's engines to WAV
 ```
@@ -100,7 +100,7 @@ on hardware so far.
 
 ## Documentation
 
-- [docs/SPEC.md](docs/SPEC.md): the specification and all 89 composers, era by era
+- [docs/SPEC.md](docs/SPEC.md): the specification and all 89 composers and styles, era by era
 - [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md): the working notes: agreements, workflow, design decisions, risks,
   and the steps for the first build on the FM-1
 

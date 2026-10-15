@@ -1,7 +1,7 @@
 # Developing Tuna
 
 The working notes behind Tuna: the agreements, how the work flows, why the code is shaped as it is, where it
-stands, and what happens when the FM-1 arrives. The specification and the 89 composers are in
+stands, and what happens when the FM-1 arrives. The specification and the 89 composers and styles are in
 [SPEC.md](SPEC.md); what Tuna is and how to play it is in the [README](../README.md).
 
 Status: 7 October 2026. Phases 1 to 7 done, phase 8 prepared; the FM-1 is on its way.

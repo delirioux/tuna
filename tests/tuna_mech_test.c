@@ -1143,8 +1143,8 @@ static void test_hands_parts(void)
         CHECK(all.h_all == mac.h_all && parts_hanging == 0, "%s: the macro is not the three knobs together", nm);
     }
     /* the other modes (figures, drones, ostinatos, lines): wild and sparse, nothing hangs, nothing off key */
-    static const int other[] = {TG_STYLE_MOZART, TG_STYLE_HILDEGARD, TG_STYLE_GLASS, TG_STYLE_PURCELL, TG_STYLE_REICH,
-                                TG_STYLE_PART, TG_STYLE_DEBUSSY, TG_STYLE_BACH};
+    static const int other[] = {TG_STYLE_MOZART, TG_STYLE_HILDEGARD, TG_STYLE_ARPEGGIO, TG_STYLE_PURCELL, TG_STYLE_PHASING,
+                                TG_STYLE_TINTINNABULI, TG_STYLE_DEBUSSY, TG_STYLE_BACH};
     for (unsigned si = 0; si < sizeof other / sizeof other[0]; ++si) {
         int st = other[si];
         const char *nm = tg_style_get(st)->name;
@@ -1205,7 +1205,7 @@ static hand_stat hands_run(int style, uint32_t seed, float r, float p, float d, 
 
 static void test_hands(void)
 {
-    static const int styles[] = {TG_STYLE_MOZART, TG_STYLE_DEBUSSY, TG_STYLE_BACH, TG_STYLE_JOHN_WILLIAMS};
+    static const int styles[] = {TG_STYLE_MOZART, TG_STYLE_DEBUSSY, TG_STYLE_BACH, TG_STYLE_FANFARE};
     for (unsigned si = 0; si < sizeof styles / sizeof styles[0]; ++si) {
         int st = styles[si];
         const char *nm = tg_style_get(st)->name;

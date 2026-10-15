@@ -274,7 +274,7 @@ static void web_power_on(void)
     settings_init();
     usb_serial_apply();
     lcd_init();
-    draw_splash();                        /* main.c: the splash (ui_draw.c, Tuna's lines) */
+    tf_splash();                          /* main.c: Tuna's logo (tuna_fw.c) */
     memset(&felucca_dbg, 0, sizeof felucca_dbg);
     felucca_dbg.magic = DBG_MAGIC;
     fm1_input_init();
@@ -285,7 +285,7 @@ static void web_power_on(void)
     kb_boot_hold = 1;                     /* main.c (#137): the keys silent under the splash */
     audio_init();
     boot_leds();                          /* main.c: the power-on LED sweep, from the scan's start */
-    web_boot_ms = fm1_ms + 430u;         /* main.c: 30 + 400 ms before the first frame */
+    web_boot_ms = fm1_ms + TF_SPLASH_MS;  /* main.c: Tuna's logo, 0.75 s before the first frame */
     web_booted = 1;
 }
 

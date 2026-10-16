@@ -44,8 +44,18 @@ preset and let it drift, from still and ambient to driving and rhythmic.
   conditions and up to 3 parameter locks per step; an evolution timer that builds an energy arc
   and modulates.
 - **16 slots** that save the whole state and play back exactly the music that was saved.
+- **Seeds sorted by the type of work**: each composer's 256 pieces in a block per manner, so OCT+ walks through
+  the fugues, then the chorales, then the gigues, the screen saying where you are ("FUGUE 17/86").
+- **Favourites**: hold REC on a piece you like; they wait below TUNA in the library (up to 48), kept across power-offs.
+- **Share codes**: every piece has a code, `BACH-FUGUE-17`, the same piece on any FM-1 and in the browser. A link
+  plays it: `https://delirioux.github.io/tuna/try/?piece=BACH-FUGUE-17`.
+- **Radio**: after a few minutes (1 to 30) another piece, from the same era or the whole library, coming in at a
+  cadence.
+- **MOOD**: one knob from calm to busy, every part at once: fewer or more notes, softer or louder, a little slower or
+  faster; the pitch stays the composer's.
 - **MIDI out**, every part on its own channel (bass 1, melody 2, pad 3, timpani 4, drums 10), with General MIDI
   programs for the instruments, the sound locks as controllers, historical tunings as pitch bend, and clock.
+- **MIDI clock in**: Tuna follows another device's tempo, start and stop.
 - **A resonator**: sympathetic strings on the mix in the manner of Rings, tuned to the chord, the key or the
   root, retuning as the harmony moves.
 
@@ -56,13 +66,13 @@ preset and let it drift, from still and ambient to driving and rhythmic.
 | PLAY | start / stop; always from the top (the same seed plays the same music) |
 | SELECT / MASTER | tempo / volume |
 | PRESETS / ALGORITHM | the library: piece by piece, or a whole era (or decade) at a time; playing, the new piece comes in at the next half of the period. Each piece brings its own tempo, key, percussion, evolution and reverb type, and a new random seed |
-| KNOB 1–4 | the page's four cards; on HOME the chaos knobs: RHYTHM, PITCH, DENSITY and MACRO (0 is the composer exactly), on melody, bass and pad, each in its own way |
+| KNOB 1–4 | the page's four cards; on HOME the chaos knobs RHYTHM, PITCH, DENSITY (0 is the composer exactly, on melody, bass and pad, each in its own way) and MOOD, calm to busy |
 | keys | tap one: the root (from the next chord); hold several: that chord, while held; on SAVE / LOAD the 16 white keys are the slots |
-| OCT− / OCT+ | the seed (256, a new one at every power-on): another piece in the same manner, playing from the next half of the period; on SAVE, LOAD and SEQ: back / do it |
-| REC | memory: the phrase locked (deja vu) / the composer's own |
-| HOME | the falling notes; held: the menu (colour, style) |
-| FX · SCL · EDIT · ARP · SEQ · GLO · SAVE | library · key, scale, tuning, memory · time, then the parts, then which parts follow the chaos knobs · evolution · freeze · mix, then reverb (send, size, damping, type: BATHROOM, ROOM, HALL, CATHEDRAL, SPRING) · save, then load |
-| ENV · LFO | MIDI out · the resonator |
+| OCT− / OCT+ | the seed (256, a new one at every power-on, sorted by the type of work): the next piece, playing from the next half of the period; on SAVE, LOAD and SEQ: back / do it |
+| REC | memory: the phrase locked (deja vu) / the composer's own; held: the piece a favourite (held again: no longer) |
+| HOME | the falling notes; held: the menu (colour, style, radio and its minutes) |
+| FX · SCL · EDIT · ARP · SEQ · GLO · SAVE | library (ERA turned below TUNA: the favourites; K4 the manner; the share code under the list) · key, scale, tuning, memory · time, then the parts, then which parts follow the chaos knobs · evolution · freeze · mix, then reverb (send, size, damping, type: BATHROOM, ROOM, HALL, CATHEDRAL, SPRING) · save, then load |
+| ENV · LFO | MIDI out, and CLOCK: off, out or in · the resonator |
 
 ## Roadmap
 
@@ -76,7 +86,13 @@ preset and let it drift, from still and ambient to driving and rhythmic.
 | 6 | Screen and controls | done |
 | 7 | MIDI out per part, resonator | done |
 | 8 | On the FM-1: firmware, web installer, boot logo | done |
-| 9 | After 1.0: measure CPU on the FM-1, then fine-tune every composer from their music | next |
+| 9 | The player: seeds sorted by the type of work, favourites, share codes, radio, MOOD, MIDI clock in | done, untested on the FM-1 |
+| 10 | 1.0 on the FM-1: CPU measured, every era played | next |
+| 11 | Consonant by default: dissonance only where it is the composer's signature | |
+| 12 | Longer form: half and full cadences, themes that return, sections, an arc over minutes | |
+| 13 | Hands on the instruments: the knobs on one part (level, brightness, envelope, instrument), mute and solo | |
+| 14 | Synth session: a button held, the keys play in the key | |
+| 15 | Sound: Felucca's HALL reverb, the second core, a lighter choir | |
 
 ## Building and testing
 

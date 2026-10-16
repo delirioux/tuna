@@ -28,6 +28,7 @@
 #define TP_NAME 12
 #define TP_RECORD_MAX 3800                /* the largest record (a full pattern and all 64 steps) */
 #define TP_TRACKS 4
+#define TP_PREFS_GROUP TP_GROUPS        /* the store's object for the player's preferences (tuna_app.c), beside the slots' */
 
 enum {
     TP_OK = 0,

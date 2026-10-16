@@ -113,8 +113,8 @@ static void write_ppm(const char *name)
 }
 
 /* ---- an in-memory slot store ----------------------------------------------------------------------------- */
-static uint8_t mem[TP_GROUPS][TP_GROUP_MAX];
-static int mem_n[TP_GROUPS];
+static uint8_t mem[TP_GROUPS + 1][TP_GROUP_MAX];   /* (the slots' groups, and the preferences: TP_PREFS_GROUP) */
+static int mem_n[TP_GROUPS + 1];
 static int mem_load(void *ctx, int g, uint8_t *b, int max)
 {
     (void)ctx;
@@ -625,60 +625,202 @@ static void test_scale_order(void)
     tu_goto_page(&ui, TU_PG_HOME);
 }
 
-/* a composer's manners: the seed picks one (each seed its own), LIBRARY's K4 fixes one, a slot keeps it */
+/* a composer's manners: the 256 seeds sorted by them (a block each, in the manners' order), LIBRARY's K4 jumps to the
+ * next block, OCT walks through them, a slot keeps its manner */
 static void test_manners(void)
 {
     ta_play(&app, false);
     int bach = -1;
     for (int i = 0; i < ta_lib_count() && bach < 0; ++i)
         if (ta_lib_style(i) == TG_STYLE_BACH) bach = i;
-    int n = tg_manner_count(TG_STYLE_BACH);
+    const int B = TG_STYLE_BACH, n = tg_manner_count(B);
     CHECK(bach >= 0 && n >= 2, "Bach has manners (%d)", n);
     ta_select(&app, bach);
     unsigned seen = 0;
+    int prev = 0, unsorted = 0, off = 0;
     for (int s = 0; s < 256; ++s) {
         ta_set_seed(&app, (uint32_t)s);
         seen |= 1u << app.g.manner;
+        unsorted += app.g.manner < prev;
+        off += app.g.manner != ta_seed_manner(B, (uint32_t)s);
+        prev = app.g.manner;
     }
-    CHECK(seen == (1u << n) - 1, "over the 256 seeds every manner comes (%x)", seen);
+    CHECK(seen == (1u << n) - 1 && !unsorted && !off, "the 256 seeds: every manner, in blocks in order (%x, %d, %d)", seen,
+          unsorted, off);
+    uint32_t sum = 0;
+    for (int m = 0; m < n; ++m) {
+        sum += ta_manner_size(B, m);
+        CHECK(ta_manner_size(B, m) + 1u >= 256u / (uint32_t)n, "block %d: %u seeds", m, ta_manner_size(B, m));
+        CHECK(ta_seed_manner(B, ta_manner_first(B, m)) == m && (m == 0 || ta_seed_manner(B, ta_manner_first(B, m) - 1u) == m - 1),
+              "block %d starts at %u", m, ta_manner_first(B, m));
+    }
+    CHECK(sum == 256u, "the blocks hold the 256 seeds (%u)", sum);
     ta_set_seed(&app, 7);
     int m7 = app.g.manner;
     ta_set_seed(&app, 8);
     ta_set_seed(&app, 7);
     CHECK(app.g.manner == m7, "the same seed, the same manner (%d)", app.g.manner);
-    /* fixed on K4 */
+    /* K4: the first seed of the next manner's block */
     tu_goto_page(&ui, TU_PG_LIB);
-    while (app.manner_fix > -1) tu_knob(&ui, TU_K4, -1);
+    ta_set_seed(&app, 0);
     tu_knob(&ui, TU_K4, 1);
-    CHECK(app.manner_fix == 0 && app.g.manner == 0, "K4: AUTO, then the first manner (%d)", app.g.manner);
-    tu_knob(&ui, TU_K4, 1);
-    const tg_style *base = tg_style_get(TG_STYLE_BACH);
-    CHECK(app.g.manner == 1 && !strcmp(ta_manner_name(&app), tg_manner_name(TG_STYLE_BACH, 1)),
-          "K4 again: the second, %s (%d)", ta_manner_name(&app), app.g.manner);
+    const tg_style *base = tg_style_get(B);
+    CHECK(app.g.manner == 1 && app.seed == ta_manner_first(B, 1) && !strcmp(ta_manner_name(&app), tg_manner_name(B, 1)),
+          "K4: the second manner, %s, from its first seed (%u)", ta_manner_name(&app), app.seed);
     CHECK(app.g.style != base && app.g.style->name == base->name, "it plays the profile with its changes");
-    for (int s = 0; s < 20; ++s) {
-        ta_set_seed(&app, (uint32_t)s);
-        if (app.g.manner != 1) break;
-    }
-    CHECK(app.g.manner == 1, "fixed: the seed no longer changes it (%d)", app.g.manner);
+    char lb[32], want[32];
+    ta_seed_label(&app, lb, sizeof lb);
+    snprintf(want, sizeof want, "%s 1/%u", tg_manner_name(B, 1), ta_manner_size(B, 1));
+    CHECK(!strcmp(lb, want), "the label: %s (%s)", lb, want);
+    tu_knob(&ui, TU_K4, -1);
+    CHECK(app.g.manner == 0 && app.seed == 0, "K4 back: the first manner's first seed (%u)", app.seed);
+    /* OCT+ at a block's last seed: the next manner */
+    ta_set_seed(&app, ta_manner_first(B, 1) - 1u);
+    tu_goto_page(&ui, TU_PG_HOME);
+    press(TU_B_OCTUP);
+    CHECK(app.g.manner == 1 && !strncmp(ui.msg, tg_manner_name(B, 1), strlen(tg_manner_name(B, 1))),
+          "OCT+ past the fugues: the next manner (%d, %s)", app.g.manner, ui.msg);
+    tu_goto_page(&ui, TU_PG_LIB);
     lint_where = "manner";
     all_palettes("lib_manner");
     CHECK(ta_slot_save(&app, 8) == TP_OK, "saved slot 9");
-    tu_knob(&ui, TU_K4, -5);
-    CHECK(app.manner_fix == -1, "K4 down to AUTO (%d)", app.manner_fix);
+    ta_set_seed(&app, 0);
     CHECK(ta_slot_load(&app, 8) == TP_OK && app.g.manner == 1, "the slot brings the manner back (%d)", app.g.manner);
     /* playing: a manner chosen comes in at the next half period */
-    ta_set_manner(&app, 0);
+    ta_set_seed(&app, 0);
     ta_play(&app, true);
     run_ms(200);
-    ta_set_manner(&app, 2 < n ? 2 : 1);
-    CHECK(app.g.manner == 0 && app.pending == app.item, "playing: it waits (%d, pending %d)", app.g.manner, app.pending);
+    int target = 2 < n ? 2 : 1;
+    ta_set_manner(&app, target);
+    CHECK(app.g.manner == 0 && app.seed_req == (int)ta_manner_first(B, target), "playing: it waits (%d, seed %d)",
+          app.g.manner, app.seed_req);
     long guard = 0;
-    while (app.pending >= 0 && guard++ < 20000)
+    while ((app.pending >= 0 || app.seed_req >= 0) && guard++ < 20000)
         ta_process(&app, 64);
-    CHECK(app.g.manner == (2 < n ? 2 : 1), "and comes in (%d)", app.g.manner);
+    CHECK(app.g.manner == target, "and comes in (%d)", app.g.manner);
     ta_play(&app, false);
-    ta_set_manner(&app, -1);
+    ta_select(&app, 0);
+    tu_goto_page(&ui, TU_PG_HOME);
+}
+
+/* favourites (REC held), the share code, the radio, MOOD, the clock in */
+static void test_player(void)
+{
+    ta_play(&app, false);
+    int bach = -1, reggae = -1;
+    for (int i = 0; i < ta_lib_count(); ++i) {
+        if (ta_lib_style(i) == TG_STYLE_BACH) bach = i;
+        if (!strcmp(ta_lib_name(i), "REGGAE")) reggae = i;
+    }
+    CHECK(bach >= 0 && reggae >= 0, "Bach and reggae in the library");
+    /* the share code */
+    const int B = TG_STYLE_BACH;
+    char code[TA_CODE], want[TA_CODE];
+    ta_code_of(bach, ta_manner_first(B, 1) + 16u, code, sizeof code);
+    snprintf(want, sizeof want, "BACH-%s-17", tg_manner_name(B, 1));
+    CHECK(!strcmp(code, want), "Bach's code: %s (%s)", code, want);
+    ta_code_of(reggae, 147, code, sizeof code);
+    CHECK(!strcmp(code, "REGGAE-148"), "a genre's code: %s", code);
+    int bad = 0;
+    for (int i = 0; i < ta_lib_count(); ++i)
+        for (uint32_t s = 0; s < 256; s += 37) {
+            ta_code_of(i, s, code, sizeof code);
+            if (ta_code_go(&app, code) != 0 || app.item != i || app.seed != s) {
+                if (!bad++) printf("  code %s: item %d seed %u (want %d %u)\n", code, app.item, app.seed, i, s);
+            }
+        }
+    CHECK(bad == 0, "every code plays its piece (%d not)", bad);
+    snprintf(want, sizeof want, "bach %s 17", tg_manner_name(B, 1));
+    for (char *c = want; *c; ++c) if (*c >= 'A' && *c <= 'Z') *c = (char)(*c + 32);
+    CHECK(ta_code_go(&app, want) == 0 && app.item == bach && app.seed == ta_manner_first(B, 1) + 16u,
+          "typed by hand: %s", want);
+    CHECK(ta_code_go(&app, "NOBODY-1") < 0 && ta_code_go(&app, "BACH-FUGUE-999") < 0, "not a code: refused");
+    /* favourites: REC held */
+    tu_goto_page(&ui, TU_PG_HOME);
+    ta_select_seed(&app, bach, 40);
+    int deja = app.deja;
+    tu_button(&ui, TU_B_REC, true);
+    for (int t = 0; t < 1000; t += 16) tu_tick(&ui, 16);
+    tu_button(&ui, TU_B_REC, false);
+    CHECK(app.fav_n == 1 && app.deja == deja && ta_fav_find(&app, bach, 40) == 0, "REC held: a favourite, memory as it was");
+    ta_select_seed(&app, reggae, 3);
+    tu_button(&ui, TU_B_REC, true);
+    for (int t = 0; t < 1000; t += 16) tu_tick(&ui, 16);
+    tu_button(&ui, TU_B_REC, false);
+    CHECK(app.fav_n == 2, "a second favourite (%d)", app.fav_n);
+    CHECK(app.prefs_dirty, "kept to be written");
+    for (int t = 0; t < 2500; t += 16) tu_tick(&ui, 16);
+    CHECK(!app.prefs_dirty && mem_n[TP_PREFS_GROUP] > 0, "written, stopped, after 2 s");
+    /* the favourites on LIBRARY: ERA below TUNA */
+    tu_goto_page(&ui, TU_PG_LIB);
+    ta_select(&app, 3);
+    ui.browse = 3;
+    tu_knob(&ui, TU_K1, -1);
+    CHECK(ui.fav_browse == 0 && app.item == bach && app.seed == 40, "ERA below TUNA: the favourites, the first plays");
+    shot("lib_favs");
+    tu_knob(&ui, TU_K2, 1);
+    CHECK(ui.fav_browse == 1 && app.item == reggae && app.seed == 3, "PIECE: the next favourite");
+    tu_knob(&ui, TU_K1, 1);
+    CHECK(ui.fav_browse < 0 && ta_lib_group(app.item) == 0, "ERA up: TUNA again");
+    /* taken out again, REC held once more */
+    ta_select_seed(&app, bach, 40);
+    tu_button(&ui, TU_B_REC, true);
+    for (int t = 0; t < 1000; t += 16) tu_tick(&ui, 16);
+    tu_button(&ui, TU_B_REC, false);
+    CHECK(app.fav_n == 1 && ta_fav_find(&app, bach, 40) < 0, "REC held on a favourite: taken out");
+    /* the preferences come back from the store */
+    ta_radio_set(&app, TA_RADIO_ERA, 7);
+    for (int t = 0; t < 2500; t += 16) tu_tick(&ui, 16);
+    static tuna_app app2;
+    ta_init(&app2, SR, 3);
+    ta_set_store(&app2, &store);
+    CHECK(app2.fav_n == 1 && ta_fav_item(&app2, 0) == reggae && app2.fav[0].seed == 3 && app2.radio == TA_RADIO_ERA &&
+              app2.radio_min == 7, "the favourites and the radio after a restart");
+    /* the radio: another piece of the era after its minutes, at a cadence */
+    ta_radio_set(&app, TA_RADIO_ERA, 1);
+    ta_select(&app, bach);
+    int from = app.item;
+    ta_play(&app, true);
+    long guard = 0;
+    while (app.item == from && guard++ < 400000)
+        ta_process(&app, 64);
+    CHECK(app.item != from && ta_lib_group(app.item) == ta_lib_group(from), "the radio: the next piece, the same era (%s)",
+          ta_lib_name(app.item));
+    CHECK(app.blocks > 0 && (float)guard * 64.0f / SR >= 60.0f, "after its minute (%.0f s)", (double)guard * 64.0 / SR);
+    ta_play(&app, false);
+    ta_radio_set(&app, TA_RADIO_OFF, 5);
+    /* MOOD: the card */
+    tu_goto_page(&ui, TU_PG_HOME);
+    tu_knob(&ui, TU_K4, 10);
+    CHECK(app.g.chaos_macro > 0.5f, "K4 on HOME: MOOD up (%.2f)", (double)app.g.chaos_macro);
+    shot("home_mood");
+    tu_knob(&ui, TU_K4, -10);
+    /* the clock in: CLOCK on ENV to IN, the tempo and the start from the clock */
+    tu_goto_page(&ui, TU_PG_MIDI);
+    tu_knob(&ui, TU_K3, 1);
+    tu_knob(&ui, TU_K3, 1);
+    CHECK(app.clock_in && !app.midi.clock, "CLOCK: IN (and nothing sent)");
+    shot("midi_clock_in");
+    ta_select(&app, bach);
+    uint32_t fr = 0, per = (uint32_t)(SR * 60.0 / 100.0 / 24.0);   /* 100 BPM */
+    ta_clock_msg(&app, 0xFA, fr);
+    CHECK(app.playing, "Start: it plays");
+    long ticks0 = app.g.ticks;
+    for (int p = 0; p < 24 * 16; ++p) {                 /* 16 beats */
+        ta_clock_msg(&app, 0xF8, fr);
+        ta_process(&app, (int)per);
+        fr += per;
+    }
+    float beats = (float)(app.g.ticks - ticks0) / (float)app.g.division;
+    CHECK(app.g.bpm > 99.0f && app.g.bpm < 101.0f, "the clock's tempo: %.1f", (double)app.g.bpm);
+    CHECK(beats > 15.5f && beats < 16.5f, "16 beats of clock, %.2f of Tuna", (double)beats);
+    ta_clock_msg(&app, 0xFC, fr);
+    CHECK(!app.playing, "Stop: it stops");
+    ta_clock_msg(&app, 0xFA, fr);
+    for (int i = 0; i < 20; ++i) ta_process(&app, 1024);   /* no pulses: the clock lost */
+    CHECK(!app.playing, "the clock lost: it stops");
+    tu_knob(&ui, TU_K3, -2);
+    CHECK(!app.clock_in && !app.midi.clock, "CLOCK: OFF");
     ta_select(&app, 0);
     tu_goto_page(&ui, TU_PG_HOME);
 }
@@ -773,6 +915,7 @@ int main(int argc, char **argv)
     test_reverb_page();
     test_scale_order();
     test_manners();
+    test_player();
     test_every_composer();
     for (int i = 0; i < ta_lib_count(); ++i) {
         if (ta_lib_style(i) == TG_STYLE_DEBUSSY) anim(i, "debussy");

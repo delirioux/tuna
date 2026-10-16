@@ -1137,10 +1137,17 @@ static void test_hands_parts(void)
               "%s: pad voicing span %.1f <= %.1f < %.1f", nm, mean_spread(&pp0), mean_spread(&base), mean_spread(&pp1));
         CHECK(pd0.off_key[2] + pd1.off_key[2] + pr1.off_key[2] + pp1.off_key[2] + pp0.off_key[2] == 0, "%s: pad off key",
               nm);
-        /* the macro: all three knobs at once, every part */
-        part_stat all = parts_run(st, TG_CHAOS_ALL, 1.0f, 1.0f, 1.0f, 0.5f, 60.0f);
-        part_stat mac = parts_run(st, TG_CHAOS_ALL, 0.5f, 0.5f, 0.5f, 1.0f, 60.0f);
-        CHECK(all.h_all == mac.h_all && parts_hanging == 0, "%s: the macro is not the three knobs together", nm);
+        /* MOOD: every part, even where none follows the knobs: busier up, calmer down, nothing left hanging */
+        part_stat busy = parts_run(st, 0, 0.5f, 0.5f, 0.5f, 1.0f, 60.0f);
+        long busy_hanging = parts_hanging;
+        part_stat calm = parts_run(st, 0, 0.5f, 0.5f, 0.5f, 0.0f, 60.0f);
+        long calm_hanging = parts_hanging;
+        part_stat mid = parts_run(st, 0, 0.5f, 0.5f, 0.5f, 0.5f, 60.0f);
+        long nb = busy.notes[0] + busy.notes[1] + busy.notes[2], nc = calm.notes[0] + calm.notes[1] + calm.notes[2],
+             nm0 = mid.notes[0] + mid.notes[1] + mid.notes[2];
+        CHECK(busy_hanging == 0 && calm_hanging == 0 && nc < nm0 && nm0 < nb, "%s: MOOD calm %ld < %ld < %ld busy notes",
+              nm, nc, nm0, nb);
+        CHECK(busy.off_key[0] + busy.off_key[2] + calm.off_key[0] + calm.off_key[2] == 0, "%s: MOOD off key", nm);
     }
     /* the other modes (figures, drones, ostinatos, lines): wild and sparse, nothing hangs, nothing off key */
     static const int other[] = {TG_STYLE_MOZART, TG_STYLE_HILDEGARD, TG_STYLE_ARPEGGIO, TG_STYLE_PURCELL, TG_STYLE_PHASING,
@@ -1236,12 +1243,16 @@ static void test_hands(void)
         hand_stat r1 = hands_run(st, 7, 1.0f, 0.5f, 0.5f, 0.5f, 120.0f);
         CHECK(r0.notes < base.notes, "%s: rhythm down: longer notes (%ld, the composer %ld)", nm, r0.notes, base.notes);
         CHECK(r1.h != base.h && r1.notes > r0.notes, "%s: rhythm up: another rhythm (%ld notes)", nm, r1.notes);
-        /* the macro moves all three alike */
-        hand_stat all = hands_run(st, 7, 1.0f, 1.0f, 1.0f, 0.5f, 60.0f);
-        hand_stat mac = hands_run(st, 7, 0.5f, 0.5f, 0.5f, 1.0f, 60.0f);
-        CHECK(all.h == mac.h, "%s: the macro is not the three knobs together", nm);
+        /* MOOD: the melody calmer down, busier up */
+        hand_stat busy = hands_run(st, 7, 0.5f, 0.5f, 0.5f, 1.0f, 60.0f);
+        hand_stat calm = hands_run(st, 7, 0.5f, 0.5f, 0.5f, 0.0f, 60.0f);
+        hand_stat mid = hands_run(st, 7, 0.5f, 0.5f, 0.5f, 0.5f, 60.0f);
+        /* (a melody already in running notes, Bach's, cannot get busier: the other parts do, test_hands_parts) */
+        CHECK(calm.notes < mid.notes && busy.h != mid.h && busy.notes > calm.notes, "%s: MOOD melody %ld < %ld, busy %ld",
+              nm, calm.notes, mid.notes, busy.notes);
         /* in key at every extreme */
-        long off = d0.off_key + d1.off_key + p0.off_key + p1.off_key + r0.off_key + r1.off_key + all.off_key;
+        long off = d0.off_key + d1.off_key + p0.off_key + p1.off_key + r0.off_key + r1.off_key + busy.off_key +
+                   calm.off_key;
         CHECK(off == 0, "%s: %ld melody notes off key at the extremes", nm, off);
         hand_stat lo = hands_run(st, 3, 0.0f, 0.0f, 0.0f, 0.0f, 60.0f);
         CHECK(lo.off_key == 0 && lo.notes > 0, "%s: all chaos off: %ld notes, %ld off key", nm, lo.notes, lo.off_key);

@@ -20,6 +20,7 @@
 #define TU_HOT_MS 700
 #define TU_BROWSE_MS 2500
 #define TU_MENU_HOLD_MS 600
+#define TU_FAV_HOLD_MS 800
 
 /* ---- small helpers ------------------------------------------------------------------------------------ */
 static int tu_clampi(int v, int lo, int hi) { return v < lo ? lo : v > hi ? hi : v; }
@@ -247,27 +248,37 @@ static void tu_page_cards(tuna_ui *u, tu_card *c)
         tu_card_chaos(&c[0], "RHYTHM", g->chaos_rhythm);
         tu_card_chaos(&c[1], "PITCH", g->chaos_pitch);
         tu_card_chaos(&c[2], "DENSITY", g->chaos_density);
-        tu_card_chaos(&c[3], "MACRO", g->chaos_macro);
+        tu_card_chaos(&c[3], "MOOD", g->chaos_macro);
         break;
     case TU_PG_LIB: {
         int item = a->pending >= 0 ? a->pending : a->item, gr = item >= 0 ? ta_lib_group(item) : 0;
         char t[8];
         tu_fmt_int(t, gr);
-        tu_card_text(&c[0], "ERA", gr == 0 ? "TUNA" : t, gr * 1000 / (TA_GROUPS - 1));
+        if (u->fav_browse >= 0)
+            tu_card_text(&c[0], "ERA", "FAVS", 0);
+        else
+            tu_card_text(&c[0], "ERA", gr == 0 ? "TUNA" : t, gr * 1000 / (TA_GROUPS - 1));
         tu_card_text(&c[1], "PIECE", item >= 0 ? ta_lib_name(item) : "SLOT", -1);
         c[1].name = true;
-        tu_card_int(&c[2], "SEED", a->seed_req >= 0 ? a->seed_req : (int)(a->seed % TA_SEEDS), 0, -1);
-        c[2].ratio = -1;
-        /* the composer's manner: chosen, or the seed's (AUTO) */
+        /* the seed: its number in its manner's block (sorted seeds), and the manner */
+        uint32_t seed = a->seed_req >= 0 ? (uint32_t)a->seed_req : a->seed;
         int st = item >= 0 ? ta_lib_style(item) : -1, nm = tg_manner_count(st);
-        if (nm > 1 && item == a->item) {
-            tu_card_text(&c[3], a->manner_fix < 0 ? "AUTO" : "MANNER", ta_manner_name(a),
-                         (g->manner + 1) * 1000 / nm);
+        if (nm > 1 && !(a->manner_fix >= 0 && a->pending < 0)) {
+            char sn[8];
+            int m = ta_seed_manner(st, seed);
+            tu_fmt_int(sn, (int)(seed - ta_manner_first(st, m) + 1u));
+            tu_card_text(&c[2], "SEED", sn, (int)((seed - ta_manner_first(st, m)) * 1000u / ta_manner_size(st, m)));
+            tu_card_text(&c[3], "MANNER", tg_manner_name(st, m), (m + 1) * 1000 / nm);
             c[3].name = true;
-        } else if (nm > 1) {
-            tu_card_text(&c[3], "MANNER", a->manner_fix < 0 ? "AUTO" : tg_manner_name(st, a->manner_fix), -1);
         } else {
-            c[3].off = true;
+            tu_card_int(&c[2], "SEED", (int)seed, 0, -1);
+            c[2].ratio = -1;
+            if (nm > 1) {
+                tu_card_text(&c[3], "MANNER", ta_manner_name(a), (g->manner + 1) * 1000 / nm);
+                c[3].name = true;
+            } else {
+                c[3].off = true;
+            }
         }
         break;
     }
@@ -347,7 +358,8 @@ static void tu_page_cards(tuna_ui *u, tu_card *c)
     case TU_PG_MIDI:
         tu_card_text(&c[0], "OUT", a->midi.on ? "ON" : "OFF", a->midi.on ? 1000 : 0);
         tu_card_text(&c[1], "SOUND", a->local ? "ON" : "OFF", a->local ? 1000 : 0);
-        tu_card_text(&c[2], "CLOCK", a->midi.clock ? "ON" : "OFF", a->midi.clock ? 1000 : 0);
+        tu_card_text(&c[2], "CLOCK", a->clock_in ? "IN" : a->midi.clock ? "OUT" : "OFF",
+                     a->clock_in ? 1000 : a->midi.clock ? 500 : 0);
         tu_card_text(&c[3], "BEND", a->midi.bend ? "ON" : "OFF", a->midi.bend ? 1000 : 0);
         break;
     case TU_PG_RESO: {
@@ -361,7 +373,15 @@ static void tu_page_cards(tuna_ui *u, tu_card *c)
     case TU_PG_MENU:
         tu_card_text(&c[0], "COLOR", UI_PALETTES[u->palette % NPALETTES].name, u->palette * 1000 / (NPALETTES - 1));
         tu_card_text(&c[1], "STYLE", u->style ? "LINE" : "FLAT", u->style * 1000);
-        c[2].off = c[3].off = true;
+        {
+            static const char *const RN[TA_RADIO_COUNT] = {"OFF", "ERA", "ALL"};
+            char mn[8];
+            tu_card_text(&c[2], "RADIO", RN[a->radio % TA_RADIO_COUNT], a->radio * 500);
+            tu_fmt_int(mn, a->radio_min);
+            tu_cat(mn, " MIN", sizeof mn);
+            tu_card_text(&c[3], "EVERY", mn, (a->radio_min - 1) * 1000 / 29);
+            c[3].off = !a->radio;
+        }
         break;
     }
 }
@@ -531,10 +551,71 @@ static void tu_panel_home(tuna_ui *u)
     }
 }
 
+static void tu_panel_code(tuna_ui *u);
+
+/* the favourites (ERA turned below TUNA): name, manner and number; the one playing marked */
+static void tu_panel_favs(tuna_ui *u)
+{
+    tuna_app *a = u->app;
+    int n = a->fav_n, sel_i = tu_clampi(u->fav_browse, 0, n > 0 ? n - 1 : 0);
+    char t[16], c[8];
+    cv_text_on(10, 4, &AF_S, "FAVOURITES", T_THEME, T_SURF);
+    tu_fmt_int(t, n ? sel_i + 1 : 0);
+    tu_cat(t, "/", sizeof t);
+    tu_fmt_int(c, n);
+    tu_cat(t, c, sizeof t);
+    cv_text_r(230, 4, &AF_S, t, T_MID, T_SURF);
+    if (!n) {
+        cv_text_on(10, 40, &AF_S, "HOLD REC ON A PIECE YOU LIKE", T_MID, T_SURF);
+        return;
+    }
+    const int rows = 4, rh = 20, y0 = 20;
+    int top = tu_clampi(sel_i - rows / 2, 0, n > rows ? n - rows : 0);
+    for (int r = 0; r < rows && top + r < n; ++r) {
+        int i = top + r, item = ta_fav_item(a, i);
+        int32_t y = y0 + r * rh;
+        bool sel = i == sel_i;
+        uint16_t bg = sel ? T_SEL : T_SURF, fg = sel ? T_INK : item < 0 ? T_DIM : T_TEXT;
+        if (sel)
+            cv_rrect(6, y, 228, rh - 2, 3, T_SEL, T_SURF);
+        if (item >= 0 && item == a->item && a->fav[i].seed == (uint8_t)a->seed)
+            tu_icon_mid(10, y + (rh - 2) / 2, 16, a->playing ? ICON_X_PLAY : ICON_X_STOP, sel ? T_INK : T_THEME, bg);
+        cv_free_text(30, y + CAP_IN(M, rh - 2), &AF_M, a->fav[i].name, fg, bg, 120);
+        /* its manner and number (or its seed), from its code's end */
+        char code[TA_CODE];
+        const char *tail = "";
+        if (item >= 0) {
+            ta_code_of(item, a->fav[i].seed, code, sizeof code);
+            int k = 0, cut = 0;
+            for (const char *w = ta_lib_name(item); *w; ++w)
+                cut += (*w >= 'A' && *w <= 'Z') || (*w >= 'a' && *w <= 'z') || (*w >= '0' && *w <= '9') ? 1 : 0;
+            for (int letters = 0; code[k] && letters < cut; ++k)   /* past the piece's own letters and digits */
+                letters += code[k] != '-';
+            tail = code[k] == '-' ? code + k + 1 : code + k;
+        }
+        cv_text_r(228, y + CAP_IN(S, rh - 2), &AF_S, tail, sel ? T_INK : T_MID, bg);
+    }
+    tu_panel_code(u);
+}
+
+/* the share code of the piece playing (or coming), under the list: the same piece on any FM-1, in the browser */
+static void tu_panel_code(tuna_ui *u)
+{
+    char code[TA_CODE];
+    ta_code(u->app, code, sizeof code);
+    cv_rect(8, 101, 224, 1, T_LINE);
+    cv_text_on(10, 106 + CAP_IN(S, 12) - 6, &AF_S, "CODE", T_DIM, T_SURF);
+    cv_free_text(48, 106 + CAP_IN(S, 12) - 6, &AF_S, code, T_MID, T_SURF, 182);
+}
+
 /* the library list (the PRESETS knob, the LIBRARY page) */
 static void tu_panel_browse(tuna_ui *u)
 {
     tuna_app *a = u->app;
+    if (u->fav_browse >= 0) {
+        tu_panel_favs(u);
+        return;
+    }
     int item = u->browse, gr = ta_lib_group(item), first = ta_lib_first(gr);
     int n = (gr + 1 < TA_GROUPS ? ta_lib_first(gr + 1) : ta_lib_count()) - first;
     char t[16], c[8];
@@ -544,7 +625,7 @@ static void tu_panel_browse(tuna_ui *u)
     tu_fmt_int(c, n);
     tu_cat(t, c, sizeof t);
     cv_text_r(230, 4, &AF_S, t, T_MID, T_SURF);
-    const int rows = 5, rh = 20, y0 = 20;
+    const int rows = 4, rh = 20, y0 = 20;
     int top = item - first - rows / 2;
     top = tu_clampi(top, 0, n > rows ? n - rows : 0);
     for (int r = 0; r < rows && top + r < n; ++r) {
@@ -564,6 +645,7 @@ static void tu_panel_browse(tuna_ui *u)
             cv_text_r(228, y + CAP_IN(S, rh - 2), &AF_S, t, sel ? T_INK : T_MID, bg);
         }
     }
+    tu_panel_code(u);
 }
 
 /* KEY: one octave of keys, the scale's notes marked, the tonic and the chord sounding */
@@ -680,7 +762,7 @@ static void tu_panel_chaos(tuna_ui *u)
         cv_text_on(24, y + CAP_IN(S, 16), &AF_S, P[i], T_MID, T_SURF);
         cv_text_on(100, y + CAP_IN(M, 16), &AF_M, on ? "THE KNOBS" : "AS WRITTEN", on ? T_TEXT : T_DIM, T_SURF);
     }
-    cv_text_in(3, 92, 234, &AF_S, "HOME: RHYTHM PITCH DENSITY MACRO", T_MID, T_SURF);
+    cv_text_in(3, 92, 234, &AF_S, "HOME: RHYTHM PITCH DENSITY MOOD", T_MID, T_SURF);
 }
 
 /* EVOLVE: the energy arc over the cycle, the period now */
@@ -970,6 +1052,7 @@ void tu_init(tuna_ui *u, tuna_app *a)
     u->rnd = 0x7475u;
     u->batt = 3;
     u->browse = a->item >= 0 ? a->item : 0;
+    u->fav_browse = -1;
     u->slots_dirty = true;
     u->force = true;
     ux.style = (uint8_t)u->style;
@@ -1019,8 +1102,27 @@ static void tu_lib_turn(tuna_ui *u, int d, bool era)
     int from = u->browse_ms > 0 || u->page == TU_PG_LIB ? u->browse : (a->pending >= 0 ? a->pending : a->item);
     if (from < 0) from = 0;
     int to;
+    if (u->fav_browse >= 0 && !era) {             /* in the favourites: the next one */
+        u->fav_browse = a->fav_n ? tu_wrap(u->fav_browse + d, a->fav_n) : 0;
+        u->browse_ms = TU_BROWSE_MS;
+        ta_fav_play(a, u->fav_browse);
+        int it = ta_fav_item(a, u->fav_browse);
+        u->browse = it >= 0 ? it : u->browse;
+        return;
+    }
     if (era) {
-        int gr = tu_wrap(ta_lib_group(from) + d, TA_GROUPS);
+        /* the eras, and below TUNA the favourites (when there are any) */
+        int lo = a->fav_n ? -1 : 0, gr = u->fav_browse >= 0 ? -1 : ta_lib_group(from);
+        gr = lo + tu_wrap(gr - lo + d, TA_GROUPS - lo);
+        if (gr < 0) {
+            u->fav_browse = 0;
+            u->browse_ms = TU_BROWSE_MS;
+            ta_fav_play(a, 0);
+            int it = ta_fav_item(a, 0);
+            u->browse = it >= 0 ? it : u->browse;
+            return;
+        }
+        u->fav_browse = -1;
         to = ta_lib_first(gr);
     } else {
         to = tu_wrap(from + d, ta_lib_count());
@@ -1056,7 +1158,12 @@ void tu_knob(tuna_ui *u, int k, int d)
         if (c == 0) tu_lib_turn(u, d, true);
         else if (c == 1) tu_lib_turn(u, d, false);
         else if (c == 2) ta_seed_step(a, d);
-        else ta_set_manner(a, a->manner_fix + d);  /* AUTO, then each manner */
+        else {                                    /* the manner: the first seed of the next (or last) one's block */
+            int it = a->pending >= 0 ? a->pending : a->item, st = it >= 0 ? ta_lib_style(it) : -1;
+            uint32_t seed = a->seed_req >= 0 ? (uint32_t)a->seed_req : a->seed;
+            int m = a->manner_fix >= 0 && a->pending < 0 ? a->manner_fix : ta_seed_manner(st, seed);
+            ta_set_manner(a, m + (d > 0 ? 1 : -1));
+        }
         break;
     case TU_PG_KEY:
         if (c == 0) ta_set_root(a, (g->root_req >= 0 ? g->root_req : g->root) + d);
@@ -1124,7 +1231,11 @@ void tu_knob(tuna_ui *u, int k, int d)
     case TU_PG_MIDI:
         if (c == 0) ta_midi_set(a, d > 0, a->midi.clock, a->midi.bend);
         else if (c == 1) a->local = d > 0;
-        else if (c == 2) ta_midi_set(a, a->midi.on, d > 0, a->midi.bend);
+        else if (c == 2) {                        /* CLOCK: OFF, OUT, IN */
+            int ck = tu_clampi((a->clock_in ? 2 : a->midi.clock ? 1 : 0) + d, 0, 2);
+            ta_clock_in_set(a, ck == 2);
+            ta_midi_set(a, a->midi.on, ck == 1, a->midi.bend);
+        }
         else ta_midi_set(a, a->midi.on, a->midi.clock, d > 0);
         break;
     case TU_PG_RESO: {
@@ -1144,6 +1255,10 @@ void tu_knob(tuna_ui *u, int k, int d)
             ux.style = (uint8_t)u->style;
             palette_set((uint32_t)u->palette);
             u->force = true;
+        } else if (c == 2) {
+            ta_radio_set(a, a->radio + d, a->radio_min);
+        } else if (a->radio) {
+            ta_radio_set(a, a->radio, a->radio_min + d);
         }
         break;
     }
@@ -1188,6 +1303,20 @@ void tu_button(tuna_ui *u, int b, bool down)
 {
     tuna_app *a = u->app;
     tg_gen *g = &a->g;
+    if (b == TU_B_REC) {                          /* a tap: the memory; held: a favourite (tu_tick) */
+        if (down) {
+            u->rec_down = true;
+            u->rec_done = false;
+            u->rec_ms = 0;
+        } else if (u->rec_down) {
+            u->rec_down = false;
+            if (!u->rec_done) {
+                ta_set_deja(a, a->deja == TA_DV_LOCK ? TA_DV_STYLE : TA_DV_LOCK);
+                tu_msg(u, a->deja == TA_DV_LOCK ? "MEMORY: THE PHRASE LOCKED" : "MEMORY: THE COMPOSER'S OWN");
+            }
+        }
+        return;
+    }
     if (b == TU_B_HOME) {
         if (down) {
             u->home_down = true;
@@ -1207,10 +1336,6 @@ void tu_button(tuna_ui *u, int b, bool down)
         for (int i = 0; i < TU_PARTICLES; ++i)
             if (!a->playing) u->pt[i].life = 0;
         break;
-    case TU_B_REC:
-        ta_set_deja(a, a->deja == TA_DV_LOCK ? TA_DV_STYLE : TA_DV_LOCK);
-        tu_msg(u, a->deja == TA_DV_LOCK ? "MEMORY: THE PHRASE LOCKED" : "MEMORY: THE COMPOSER'S OWN");
-        break;
     case TU_B_OCTUP: case TU_B_OCTDN: {
         int d = b == TU_B_OCTUP ? 1 : -1;
         if (u->page == TU_PG_SAVE || u->page == TU_PG_LOAD) {
@@ -1227,15 +1352,14 @@ void tu_button(tuna_ui *u, int b, bool down)
         } else if (u->page == TU_PG_MENU) {
             if (d < 0) tu_goto_page(u, TU_PG_HOME);
         } else {
-            char m[24];
+            char m[32];
             ta_seed_step(a, d);
-            tu_cpy(m, "SEED ", sizeof m);
-            tu_fmt_int(m + 5, a->seed_req >= 0 ? a->seed_req : (int)(a->seed % TA_SEEDS));
+            ta_seed_label(a, m, sizeof m);            /* "FUGUE 3/40", or "SEED 147" */
             tu_msg(u, m);
         }
         break;
     }
-    case TU_B_FX: tu_goto_page(u, TU_PG_LIB); u->browse = a->pending >= 0 ? a->pending : a->item >= 0 ? a->item : 0; break;
+    case TU_B_FX: tu_goto_page(u, TU_PG_LIB); u->fav_browse = -1; u->browse = a->pending >= 0 ? a->pending : a->item >= 0 ? a->item : 0; break;
     case TU_B_SCL: tu_goto_page(u, TU_PG_KEY); break;
     case TU_B_EDIT: tu_goto_page(u, u->page == TU_PG_TIME ? TU_PG_PARTS : u->page == TU_PG_PARTS ? TU_PG_CHAOS : TU_PG_TIME); break;
     case TU_B_ARP: tu_goto_page(u, TU_PG_EVOLVE); break;
@@ -1357,6 +1481,31 @@ void tu_tick(tuna_ui *u, int ms)
         u->force = true;
     }
     if (u->msg_ms > 0) u->msg_ms -= ms;
+    /* the favourites and the radio: written while stopped, once the knob has rested 2 s (flash wears) */
+    if (u->app->prefs_dirty && !u->app->playing) {
+        if ((u->prefs_ms += ms) >= 2000) {
+            ta_prefs_flush(u->app);
+            u->prefs_ms = 0;
+        }
+    } else {
+        u->prefs_ms = 0;
+    }
+    if (u->rec_down && !u->rec_done && (u->rec_ms += ms) >= TU_FAV_HOLD_MS) {
+        tuna_app *ap = u->app;
+        int r = ta_fav_toggle(ap);
+        char m[32], n[8];
+        u->rec_done = true;
+        if (r > 0) {
+            tu_cpy(m, "FAVOURITE ", sizeof m);
+            tu_fmt_int(n, r);
+            tu_cat(m, n, sizeof m);
+        } else {
+            tu_cpy(m, r == 0 ? "NO LONGER A FAVOURITE" : "FAVOURITES FULL", sizeof m);
+        }
+        tu_msg(u, m);
+        if (u->fav_browse >= ap->fav_n)
+            u->fav_browse = ap->fav_n ? ap->fav_n - 1 : -1;
+    }
     if (u->home_down) {
         u->home_ms += ms;
         if (u->home_ms >= TU_MENU_HOLD_MS && u->page != TU_PG_MENU) {

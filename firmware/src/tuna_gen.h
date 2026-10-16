@@ -330,11 +330,14 @@ typedef struct {
     bool perc_quiet;              /* evolution: the kit waits for the energy to build */
 
     /* the player's hands (the UI): chaos around the composer's own settings, a root from a key, a chord
-     * held on the keys. Chaos 0.5 is the composer exactly; the macro moves all three together. */
+     * held on the keys. Chaos 0.5 is the composer exactly; MOOD makes every part calmer or busier. */
     float chaos_rhythm;           /* 0..1: on the beat .. syncopated, varied rhythm */
     float chaos_pitch;            /* 0..1: steps and repeats .. leaps */
     float chaos_density;          /* 0..1: sparse .. busy (the melody, x0.35 .. x2.8) */
-    float chaos_macro;            /* 0..1: added to the three (0.5: nothing) */
+    float chaos_macro;            /* MOOD 0..1: calm .. busy, every part (0.5: nothing): density and rhythm, loudness,
+                                     a little tempo; never pitch */
+    bool ext_clock;               /* MIDI clock in: bpm * tempo_trim, no rubato, no MOOD tempo (tuna_app.c) */
+    float tempo_trim;             /* the clock's phase kept by a trim on its tempo (1: none) */
     uint8_t chaos_parts;          /* bit p: part p (TG_PART_BASS, _MELODY, _PAD) follows the chaos knobs */
     /* chaos on bass and pad (a filter on their events): the note asked for -> the note sent (-1 dropped),
      * the tick's facts, the notes it adds */

@@ -9,16 +9,19 @@
  *   ALGORITHM  the library, a whole era at a time
  *   KNOB 1..4  the four cards of the page
  *   PLAY       start / stop (always from the top: the same seed, the same music)
- *   REC        memory: the phrase locked (deja vu) / the composer's own
- *   OCT- OCT+  the seed: the piece before / after, in the same manner; on SAVE, LOAD and SEQ: back / do it
+ *   REC        memory: the phrase locked (deja vu) / the composer's own; held: the piece a favourite (or not)
+ *   OCT- OCT+  the seed: the piece before / after (sorted by the type of work: the fugues, then the chorales ...);
+ *              on SAVE, LOAD and SEQ: back / do it
  *   keys       one key tapped: the root (from the next chord); keys held together: that chord, while held;
  *              on SAVE and LOAD the 16 white keys are the 16 slots
- *   HOME       the chaos page (the notes falling); held: the menu (colour, style)
- *   FX         the library page        SCL   key, scale, tuning, memory
+ *   HOME       the chaos page (the notes falling; RHYTHM PITCH DENSITY MOOD); held: the menu (colour, style, radio)
+ *   FX         the library page (ERA turned below TUNA: the favourites; the piece's share code under the list)
+ *              SCL   key, scale, tuning, memory
  *   EDIT       time (meter, swing, humanize, percussion), again: the parts (melody, bass, pad, harmony)
  *   ARP        evolution               SEQ   freeze the period into a loop, transpose it
  *   GLO        the mix (four levels), again: reverb       SAVE  save to a slot, again: load
- *   ENV        MIDI out: on, the FM-1's own sound, clock, tunings as bend; the channels and what they play
+ *   ENV        MIDI out: on, the FM-1's own sound, clock (off, out, in: following another device's), tunings as
+ *              bend; the channels and what they play
  *   LFO        the resonator: amount, decay, brightness, what its strings are tuned to */
 #ifndef TUNA_UI_H
 #define TUNA_UI_H
@@ -64,6 +67,10 @@ typedef struct {
     bool slots_dirty;
     int home_ms;                          /* HOME held: the menu at 600 ms */
     bool home_down;
+    int rec_ms;                           /* REC held: a favourite at TU_FAV_HOLD_MS */
+    bool rec_down, rec_done;
+    int fav_browse;                       /* browsing the favourites: the one pointed at, -1: the library */
+    int prefs_ms;                         /* the preferences changed and stopped: written after 2 s of quiet */
     uint32_t keys_down;                   /* bit (note - TU_KEY_LO) */
     int key_gesture;                      /* keys pressed since all were up: 1 = a tap sets the root */
     int key_first;

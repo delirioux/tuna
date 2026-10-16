@@ -169,6 +169,15 @@ static void tf_midi_out(void)
     }
 }
 
+/* MIDI clock in (seq.c, the audio ISR, as each real-time message comes): to Tuna in its frames, 11.025 a
+ * millisecond (no 64-bit division: there is no library for it; only differences of these are used, and they stay
+ * right through the wraps) */
+_Static_assert(FS / TF_DIV == 11025, "tf_midi_rt: Tuna's rate");
+static void tf_midi_rt(uint32_t status, uint32_t ms)
+{
+    ta_clock_msg(&tf_app, (uint8_t)status, ms * 11u + ms / 40u);
+}
+
 /* before Felucca's mix: Tuna for this block */
 static void tf_audio_pre(uint32_t n)
 {
@@ -196,17 +205,20 @@ static void tf_audio_post(int32_t *out, uint32_t n)
         out[i] = out[i] > 32767 ? 32767 : out[i] < -32768 ? -32768 : out[i];
 }
 
-/* ---- the slots: Felucca's flash objects of the projects, a group of four slots each ---------------------- */
+/* ---- the slots: Felucca's flash objects of the projects, a group of four slots each; the preferences
+ * (favourites, the radio: TP_PREFS_GROUP) in the autosave's object, which Tuna does not use otherwise (Felucca
+ * takes it back as its own: it reads no project in it, so restores nothing, and writes its own over it) ---------- */
 #if FELUCCA_FLASH
+static uint32_t tf_obj(int group) { return group == TP_PREFS_GROUP ? OBJ_AUTOSAVE : OBJ_PROJECT0 + (uint32_t)group; }
 static int tf_store_load(void *ctx, int group, uint8_t *buf, int max)
 {
     (void)ctx;
-    return st_load(OBJ_PROJECT0 + (uint32_t)group, buf, (uint32_t)max);
+    return st_load(tf_obj(group), buf, (uint32_t)max);
 }
 static int tf_store_save(void *ctx, int group, const uint8_t *buf, int n)
 {
     (void)ctx;
-    return st_save(OBJ_PROJECT0 + (uint32_t)group, buf, (uint32_t)n);
+    return st_save(tf_obj(group), buf, (uint32_t)n);
 }
 static const tp_store tf_store = {tf_store_load, tf_store_save, 0};
 #endif

@@ -187,7 +187,7 @@ GENRES = [
          pad=dict(mode="BLOCK", base=55, tones=4),
          groove="G10_LOFI",
          orch=[("UPRIGHT", "FLUGELHORN", "EPIANO"), ("FRETLESS", "VIBES", "REEDEP"),
-               ("UPRIGHT", "KALIMBA", "EGUITAR"), ("EBASS", "SHAKUHACHI", "REEDEP")]),
+               ("UPRIGHT", "KALIMBA", "EGUITAR"), ("EBASS", "SHAKUHACHI", "RAIN")]),   # (RAIN: the record's crackle)
     dict(id="VAPORWAVE", name="VAPORWAVE", decade=2010, year=2011, reverb="HALL",
          comment="Macintosh Plus' Floral Shoppe, Saint Pepsi: 80s smooth jazz and mall muzak slowed down and "
                  "chopped, a DX7 piano stuttering on lush major sevenths, a lonely sax in a loop",
@@ -199,7 +199,7 @@ GENRES = [
          pad=dict(mode="RHYTHM", rhythm="x.x.x.....x.x...x.x.x.......x.x.", gate=2, base=57, tones=4),
          groove="G10_VAPOR",
          orch=[("FRETLESS", "SAX", "EPIANO"), ("SLAPBASS", "MARIMBA", "SYNBRASS"),
-               ("WAVEBASS", "SINEKEY", "FROZEN")]),
+               ("WAVEBASS", "SINEKEY", "FROZEN"), ("FRETLESS", "SINEKEY", "RAIN")]),
     dict(id="AFROBEATS", name="AFROBEATS", decade=2010, year=2012,
          comment="Wizkid, Davido, Burna Boy: a mid-tempo Lagos groove, rim clave and shaker, a bouncing bass, "
                  "highlife guitar picking and a bright synth or flute hook",

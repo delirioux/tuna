@@ -334,9 +334,22 @@ class Builder:
         cut = len(blob)
         if self.brk and self.brk["off"] + (self.brk["n"] + 1) // 2 == len(blob):
             cut = self.brk["off"]
+        # Tuna (FELUCCA_TUNA=1) keeps only the PIANO: its flute and sax are FM6 patches of its own (tuna_fm6.py),
+        # so the sets after PIANO leave their bytes out and play the PIANO's zones there
+        first = sets[0] if sets and sets[0][0] == "PIANO" else None
+        tcut = cut
+        if first:
+            later = [zones[z]["off"] for _, z0, nz in sets if (z0, nz) != (first[1], first[2]) for z in range(z0, z0 + nz)]
+            if later and min(later) >= max(zones[z]["off"] + (zones[z]["n"] + 1) // 2 for z in range(first[1], first[1] + first[2])):
+                tcut = min(later)
         L.append("static const uint8_t SMP_DATA[] = {")
-        for i in range(0, cut, 32):
-            L.append("    " + ",".join(map(str, blob[i:min(i + 32, cut)])) + ",")
+        for i in range(0, tcut, 32):
+            L.append("    " + ",".join(map(str, blob[i:min(i + 32, tcut)])) + ",")
+        if tcut < cut:
+            L.append("#if !defined(FELUCCA_TUNA) || !FELUCCA_TUNA   /* the other sets (Tuna: the PIANO only) */")
+            for i in range(tcut, cut, 32):
+                L.append("    " + ",".join(map(str, blob[i:min(i + 32, cut)])) + ",")
+            L.append("#endif")
         if cut < len(blob):
             L.append("#if !defined(FELUCCA_SLICE) || FELUCCA_SLICE   /* SLICE's BREAK */")
             for i in range(cut, len(blob), 32):
@@ -355,7 +368,14 @@ class Builder:
         L.append("};")
         L.append("static const smp_set_t SMP_SETS[] = {")
         for name, z0, nz in sets:
-            L.append(f'    {{"{name}", {z0}, {nz}}},')
+            if tcut < cut and zones[z0]["off"] >= tcut:
+                L.append("#if defined(FELUCCA_TUNA) && FELUCCA_TUNA")
+                L.append(f'    {{"{name}", {first[1]}, {first[2]}}},   /* (Tuna: the PIANO\'s zones; its own bytes left out) */')
+                L.append("#else")
+                L.append(f'    {{"{name}", {z0}, {nz}}},')
+                L.append("#endif")
+            else:
+                L.append(f'    {{"{name}", {z0}, {nz}}},')
         if not sets:
             L.append('    {"NONE", 0, 1},')
         L.append("};")

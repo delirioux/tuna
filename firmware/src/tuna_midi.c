@@ -65,6 +65,7 @@ int tmi_gm_program(int f)
         [TI_PIPEORGAN] = 19, [TI_REEDEP] = 4, [TI_SLAPBASS] = 36, [TI_SYNBRASS] = 62, [TI_HARMONICA] = 22,
         [TI_PANFLUTE] = 75, [TI_SHAKUHACHI] = 77, [TI_ERHU] = 110, [TI_MUTETRUMPET] = 59, [TI_FLUGELHORN] = 56,
         [TI_TOYPIANO] = 8, [TI_FRETLESS] = 35, [TI_ENGLISHHORN] = 69, [TI_UPRIGHT] = 32,
+        [TI_WIND] = 122, [TI_RAIN] = 96,   /* (GM: Seashore, FX 1 rain) */
     };
     return f >= 0 && f < TI_COUNT ? GM[f] : 0;
 }

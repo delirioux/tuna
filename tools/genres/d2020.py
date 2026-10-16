@@ -154,7 +154,7 @@ GENRES = [
          pad=dict(mode="BLOCK", base=52, tones=3, spread=True),
          groove="G20_SLOWED", swing=0.3, swing16=True, orch_mode="CYCLE",
          orch=[("FRETLESS", "SHIMMER", "SINEKEY"), ("FRETLESS", "FROZEN", "EPIANO"),
-               ("FRETLESS", "MUSICBOX", "STRMACH")]),
+               ("FRETLESS", "MUSICBOX", "STRMACH"), ("FRETLESS", "SHIMMER", "WIND")]),
     dict(id="BEDROOM_POP", name="BEDROOM POP", decade=2020, year=2020, reverb="BATHROOM",
          comment="Clairo, beabadoobee, Rex Orange County, Steve Lacy: home-made pop, a jangly strummed guitar, "
                  "major sevenths, a soft bass and a cheap drum machine",

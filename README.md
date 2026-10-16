@@ -32,11 +32,13 @@ preset and let it drift, from still and ambient to driving and rhythmic.
   gigues, Chopin's nocturnes, mazurkas, polonaises and études, Mozart's sonatas, arias, serenades and masses,
   Verdi's arias, choruses and Requiem. The seed picks the manner (each seed its own); LIBRARY's fourth knob fixes
   one.
-- **93 instruments** on Felucca's engines, each composer and genre with sets of its own: besides the orchestra,
+- **95 instruments** on Felucca's engines, each composer and genre with sets of its own: besides the orchestra,
   piano and band, a pipe organ and harmonium, harpsichord and lute, cimbalom and koto, sitar and oud, erhu and
   shakuhachi, pan flute and harmonica, accordion and bandoneon, vibraphone, glockenspiel and tubular bells, music box
-  and toy piano, upright, slap and fretless bass, string machine, synth brass and a handful of 8-bit leads. Their levels are
-  evened out, so any of them sits right in the mix.
+  and toy piano, upright, slap and fretless bass, string machine, synth brass and a handful of 8-bit leads; WIND and
+  RAIN on Felucca's NOISE engine (wind through the chords, a record's crackle). Their levels are evened out, so any of
+  them sits right in the mix. Only the piano is sampled; Tuna's flute and sax are FM patches of its own, which leaves
+  the flash room for the rest.
 - **Odd meters and grouped beats**: 3+3+2, 5/4, 7/8 and the like.
 - **Tunings**: equal, meantone, Werckmeister, Pythagorean, just, and user-defined.
 - **8 character presets** without a composer, from STILL to DRIVE.

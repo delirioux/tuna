@@ -61,9 +61,20 @@ sed -e 's|WebAssembly.instantiate(m.wasm, {})|WebAssembly.instantiate(m.wasm, { 
 \1}\
 &|' \
     -e 's/if (msg.leds || msg.fb || msg.sectors || msg.load !== undefined) this.port.postMessage/if (msg.leds || msg.fb || msg.sectors || msg.code || msg.load !== undefined) this.port.postMessage/' \
+    -e 's|^\( *\)this.port.postMessage({ type: "ready", rate: ex.web_sample_rate() });|\1const families = [];               // Tuna: the instrument tester'"'"'s list\
+\1if (ex.web_family_count) for (let f = 1; f < ex.web_family_count(); f++) {\
+\1  const b = new Uint8Array(ex.memory.buffer, ex.web_family_name(f), 12);\
+\1  let t = "";\
+\1  for (let i = 0; i < 12 \&\& b[i]; i++) t += String.fromCharCode(b[i]);\
+\1  families.push(t);\
+\1}\
+\1this.port.postMessage({ type: "ready", rate: ex.web_sample_rate(), families });|' \
+    -e 's|^\( *\)else if (m.type === "visible") this.period = m.on ? 1 / 30 : 1 / 4;|&\
+\1else if (m.type === "audition" \&\& ex.web_tuna_audition) ex.web_tuna_audition(m.fam \| 0, m.part \| 0);|' \
     web/emu/worklet.js > "$OUT/worklet.js"
 grep -q "wasi_snapshot_preview1" "$OUT/worklet.js" || { echo "tuna emu: the worklet's instantiate line moved"; exit 1; }
-grep -q "web_tuna_code_go()" "$OUT/worklet.js" && grep -q "msg.code = this.sentCode" "$OUT/worklet.js" && grep -q "msg.code ||" "$OUT/worklet.js" ||
+grep -q "web_tuna_code_go()" "$OUT/worklet.js" && grep -q "msg.code = this.sentCode" "$OUT/worklet.js" && grep -q "msg.code ||" "$OUT/worklet.js" &&
+    grep -q "families });" "$OUT/worklet.js" && grep -q "web_tuna_audition(m.fam" "$OUT/worklet.js" ||
     { echo "tuna emu: the worklet's seed, frame or post line moved"; exit 1; }
 sed -e "s/@VERSION@/$VERSION/g" -e "s/@PREVIEW@/ (Tuna preview)/g" \
     -e 's|<title>Felucca</title>|<title>Tuna</title>|' \
@@ -77,10 +88,14 @@ sed -e "s/@VERSION@/$VERSION/g" -e "s/@PREVIEW@/ (Tuna preview)/g" \
     -e 's|^<div class="device" id="device">|<img src="tuna-logo.png" alt="Tuna" width="128" height="128" style="display:block;margin:0 auto 12px;border-radius:50%">\n&|' \
     -e 's|^\( *\)if (m.fb) drawScreen(m.fb);|&\
 \1if (m.code) tunaCode(m.code);|' \
+    -e 's|^const send = (m) => { if (node) node.port.postMessage(m); };|&\
+window.tunaSend = send;   // Tuna: the instrument tester sends through it|' \
+    -e 's|^\( *\)if (m.type === "ready") res();|\1if (m.type === "ready") { if (m.families) tunaFamilies(m.families); res(); }|' \
     -e 's|seed }, \[wasm\]);|seed, code: new URLSearchParams(location.search).get("piece") \|\| "" }, [wasm]);|' \
     -e 's|^\( *\)if (d.length < 2 \|\| d\[0\] < 0x80 \|\| d\[0\] >= 0xF0) return;|\1if (d[0] === 0xF8 \|\| d[0] === 0xFA \|\| d[0] === 0xFB \|\| d[0] === 0xFC) { send({ type: "midi", data: [d[0], 0, 0] }); return; }   // Tuna: the clock\
 &|' \
     -e 's|^<footer>|<p class="keys" id="tuna-code" hidden>This piece: <code id="tuna-code-v"></code> <button id="tuna-link" type="button">Copy link</button></p>\
+<p class="keys" id="tuna-aud" hidden>Hear an instrument: <select id="tuna-aud-f"></select> <select id="tuna-aud-p"><option value="1">as melody</option><option value="2">as chords</option><option value="0">as bass</option></select> <button id="tuna-aud-go" type="button">Play</button></p>\
 &|' \
     -e 's|^</body>|<script>\
 // Tuna: the share code of the piece playing, and a link that plays it (index.html?piece=CODE)\
@@ -88,6 +103,15 @@ function tunaCode(c) {\
   document.getElementById("tuna-code-v").textContent = c;\
   document.getElementById("tuna-code").hidden = !c;\
 }\
+function tunaFamilies(list) {\
+  const s = document.getElementById("tuna-aud-f");\
+  list.forEach((n, i) => { const o = document.createElement("option"); o.value = i + 1; o.textContent = n; s.append(o); });\
+  const w = list.indexOf("WIND"); if (w >= 0) s.value = w + 1;\
+  document.getElementById("tuna-aud").hidden = false;\
+}\
+document.getElementById("tuna-aud-go").addEventListener("click", () => {\
+  window.tunaSend({ type: "audition", fam: +document.getElementById("tuna-aud-f").value, part: +document.getElementById("tuna-aud-p").value });\
+});\
 document.getElementById("tuna-link").addEventListener("click", () => {\
   const c = document.getElementById("tuna-code-v").textContent, u = new URL(location.href);\
   u.search = "?piece=" + encodeURIComponent(c);\
@@ -100,7 +124,7 @@ document.getElementById("tuna-link").addEventListener("click", () => {\
 cp web/emu/fonts/DotGothic16-subset.woff web/emu/fonts/OFL.txt "$OUT/fonts/"
 cp web/emu/tuna-logo.png "$OUT/"
 grep -q 'src="tuna-logo.png"' "$OUT/index.html" || { echo "tuna emu: the page's device line moved"; exit 1; }
-for w in 'tunaCode(m.code)' 'get("piece")' 'Tuna: the clock' 'id="tuna-code"' 'function tunaCode'; do
+for w in 'tunaCode(m.code)' 'get("piece")' 'Tuna: the clock' 'id="tuna-code"' 'function tunaCode' 'tunaFamilies(m.families)' 'id="tuna-aud"' 'window.tunaSend = send'; do
     grep -q "$w" "$OUT/index.html" || { echo "tuna emu: the page's line for $w moved"; exit 1; }
 done
 echo "tuna emu: $OUT ($(wc -c < "$OUT/tuna.wasm" | tr -d ' ') B wasm, on Felucca $VERSION)"

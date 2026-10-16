@@ -308,9 +308,60 @@ static float ring[RING * 2];
 static uint32_t ring_w, ring_r, web_samples_due;
 
 /* one millisecond of the device: the clock, the audio halves due by now, the main loop */
+/* the page's instrument tester: one family on its part's track, Tuna stopped, a phrase over C Am F G (twice, a
+ * second a chord): the bass on the roots, the melody a line, the third part the chords */
+static int web_aud_fam = -1, web_aud_part;
+static uint32_t web_aud_ms;
+static uint8_t web_aud_on[8], web_aud_n;
+static void web_aud_send(int part, int note, int vel, bool on)
+{
+    tg_event e = {(uint8_t)part, (uint8_t)note, (uint8_t)vel, on, 0, TG_EV_NOTE, 0, 0};
+    tf_sound(0, &e);
+}
+static void web_aud_off(void)
+{
+    while (web_aud_n)
+        web_aud_send(web_aud_part, web_aud_on[--web_aud_n], 0, false);
+}
+static void web_aud_step(void)
+{
+    static const uint8_t CH[4][4] = {{48, 52, 55, 60}, {45, 52, 57, 60}, {41, 48, 53, 57}, {43, 50, 55, 59}};
+    static const uint8_t LINE[16] = {72, 74, 76, 79, 76, 72, 69, 72, 77, 76, 74, 72, 71, 74, 79, 77};
+    if (web_aud_fam < 0)
+        return;
+    uint32_t t = web_aud_ms++;
+    if (t < 200u)
+        return;                                   /* (the engine's fade to the new sound) */
+    t -= 200u;
+    if (t >= 8000u) {
+        web_aud_off();
+        web_aud_fam = -1;
+        return;
+    }
+    int c = (int)(t / 1000u) % 4;
+    if (web_aud_part == TG_PART_PAD && t % 1000u == 0) {
+        web_aud_off();
+        for (int k = 0; k < 4; ++k) {
+            web_aud_on[web_aud_n++] = (uint8_t)(CH[c][k] + 12);
+            web_aud_send(TG_PART_PAD, CH[c][k] + 12, 90, true);
+        }
+    } else if (web_aud_part == TG_PART_BASS && t % 500u == 0) {
+        web_aud_off();
+        int n = CH[c][0] - 12 + (t % 1000u ? 7 : 0);
+        web_aud_on[web_aud_n++] = (uint8_t)n;
+        web_aud_send(TG_PART_BASS, n, 100, true);
+    } else if (web_aud_part == TG_PART_MELODY && t % 500u == 0) {
+        web_aud_off();
+        int n = LINE[(t / 500u) % 16u];
+        web_aud_on[web_aud_n++] = (uint8_t)n;
+        web_aud_send(TG_PART_MELODY, n, 96, true);
+    }
+}
+
 static void web_ms(void)
 {
     fm1_ms++;
+    web_aud_step();
     web_ticks += 1000u * FM1_TICKS_PER_US;
     web_samples_due += FS;
     while (web_samples_due >= 1000u * HALF_FRAMES) {      /* an I2S half: the audio ISR renders it */
@@ -477,6 +528,20 @@ EXPORT void web_tuna_seed(uint32_t s)
     tf_seed_boot = tf_app.seed;
 }
 EXPORT uint32_t web_tuna_seed_now(void) { return tf_app.seed; }
+/* the instrument tester: the families' names, and one played (part: 0 bass, 1 melody, 2 the third part) */
+EXPORT uint32_t web_family_count(void) { return TI_COUNT; }
+EXPORT const char *web_family_name(uint32_t f) { return tg_family_name((int)f); }
+EXPORT void web_tuna_audition(int32_t fam, int32_t part)
+{
+    if (fam <= TI_DEFAULT || fam >= TI_COUNT || part < 0 || part > 2)
+        return;
+    web_aud_off();
+    ta_play(&tf_app, false);
+    web_aud_part = part;
+    tf_load_family((uint32_t)part, fam);
+    web_aud_fam = fam;
+    web_aud_ms = 0;
+}
 /* the share code: the page writes one (?piece=BACH-FUGUE-17) and plays it; and reads the one playing */
 static char web_code_in[TA_CODE], web_code_out[TA_CODE];
 EXPORT char *web_tuna_code_buf(void) { return web_code_in; }

@@ -5,12 +5,14 @@
   index.html                  the start page: the logo, Install, Try, Source
   install/index.html          web/tuna_installer.html, self-contained (fm1pkg.js and fm1ota.js inlined, as
                               Felucca's web/make_site.py does for its installer)
-  firmware/tuna-VER.fwsc      the package (+ LICENSE, LICENSING.md, LICENSES/: it holds JieLi SDK files under
+  firmware/tuna-X.Y-VER.fwsc  the package (+ LICENSE, LICENSING.md, LICENSES/: it holds JieLi SDK files under
                               Apache-2.0, see LICENSING.md)
   try/                        the browser build (build/tuna_emu), when it was built
   tuna-logo.png
 
   web/tuna_make_site.py build/felucca.fwsc VERSION OUT_DIR
+
+VERSION is the build's (the commit); Tuna's own (X.Y) is TUNA_VERSION in firmware/src/tuna_version.h.
 
 The package must be one made by tools/fm1pkg_make.py (Felucca's own loader, no vendor files); its identity
 (FM-1_9xx) is what the FM-1 must report after the install.
@@ -32,7 +34,13 @@ def felucca_version():
     return m[1] if m else "?"
 
 
-def main(pkg, version, out):
+def tuna_version():
+    m = re.search(r'#define TUNA_VERSION "([^"]*)"', (ROOT / "firmware/src/tuna_version.h").read_text(encoding="utf-8"))
+    return m[1] if m else "?"
+
+
+def main(pkg, build, out):
+    version = f"{tuna_version()} ({build})"
     pkg, out = Path(pkg), Path(out)
     raw = pkg.read_bytes()
     product = product_of(raw)
@@ -43,7 +51,7 @@ def main(pkg, version, out):
     html = (HERE / "tuna_installer.html").read_text(encoding="utf-8")
     lib = strip_module((HERE / "fm1pkg.js").read_text(encoding="utf-8")) + "\n" + \
         strip_module((HERE / "fm1ota.js").read_text(encoding="utf-8"))
-    name = f"tuna-{re.sub(r'[^A-Za-z0-9.-]', '-', version)}.fwsc"
+    name = f"tuna-{tuna_version()}-{re.sub(r'[^A-Za-z0-9.-]', '-', build)}.fwsc"
     meta = json.dumps({"version": version, "felucca": felucca_version(), "product": product,
                        "pkg": "../firmware/" + name})
     for mark in ("/*LIB*/", "/*META*/"):

@@ -11,7 +11,7 @@ melody, bass, accompaniment and percussion, through Felucca's synthesis engines.
 and Tuna plays in that composer's manner, endlessly and never twice the same; or pick a character
 preset and let it drift, from still and ambient to driving and rhythmic.
 
-> **Status: runs on the FM-1.** Install it from the web installer at <https://delirioux.github.io/tuna/>
+> **Version 1.0: runs on the FM-1.** Install it from the web installer at <https://delirioux.github.io/tuna/>
 > (Chrome or Edge, USB), or try it in the browser there first. Built for fun and with no warranty: Felucca's
 > installer, or the official V15, takes the FM-1 back.
 
@@ -76,7 +76,7 @@ preset and let it drift, from still and ambient to driving and rhythmic.
 | 6 | Screen and controls | done |
 | 7 | MIDI out per part, resonator | done |
 | 8 | On the FM-1: firmware, web installer, boot logo | done |
-| 9 | Measure CPU on the FM-1, then fine-tune every composer from their music | next |
+| 9 | After 1.0: measure CPU on the FM-1, then fine-tune every composer from their music | next |
 
 ## Building and testing
 

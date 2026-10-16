@@ -73,7 +73,8 @@ jobs:
       - name: Name the package
         run: |
           mkdir -p dist
-          cp build/felucca.fwsc "dist/tuna-${GITHUB_SHA::7}.fwsc"
+          TV=$(sed -n 's/^#define TUNA_VERSION "\([^"]*\)".*/\1/p' firmware/src/tuna_version.h)
+          cp build/felucca.fwsc "dist/tuna-$TV-${GITHUB_SHA::7}.fwsc"
           cp LICENSE LICENSING.md dist/
           cp -r LICENSES dist/
           mkdir -p dist/debug                 # for a crash screen: its PC in the symbols and the disassembly

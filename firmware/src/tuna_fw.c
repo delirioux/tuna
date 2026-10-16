@@ -236,13 +236,14 @@ static uint32_t tf_entropy(void)
 /* ---- the power-on screen: Tuna's logo (tools/tuna_logo.py: 176 px, 8 colours, rows run-length coded) and the
  * Felucca it runs on; main.c holds it 0.75 s ---- */
 #include "tuna_logo.inc"
+#include "tuna_version.h"
 #define TF_SPLASH_MS 750u
 static void tf_splash(void)
 {
     uint16_t row[2][TUNA_LOGO_SIZE];               /* (two: one fills while the other goes out by DMA) */
     uint32_t y, x0 = (240u - TUNA_LOGO_SIZE) / 2u, y0 = 12u;
-    char line[32] = "on Felucca ";
-    uint32_t k = 11u;
+    char line[40] = "Tuna " TUNA_VERSION " on Felucca ";
+    uint32_t k = sizeof "Tuna " TUNA_VERSION " on Felucca " - 1u;
     lcd_fill(0, 0, 240, 240, TUNA_LOGO_BG);
     for (y = 0; y < TUNA_LOGO_SIZE; y++) {
         const uint8_t *p = TUNA_LOGO_RLE + TUNA_LOGO_ROW[y];

@@ -85,6 +85,9 @@ enum {
     TI_PIPEORGAN, TI_REEDEP, TI_SLAPBASS, TI_SYNBRASS, TI_HARMONICA, TI_PANFLUTE, TI_SHAKUHACHI, TI_ERHU,
     TI_MUTETRUMPET, TI_FLUGELHORN, TI_TOYPIANO, TI_FRETLESS, TI_ENGLISHHORN,
     TI_UPRIGHT,                     /* the plucked double bass of jazz, blues and rockabilly (CONTRABASS: bowed) */
+    /* on NOISE: a resonant filter on noise, tuned to each note */
+    TI_WIND,                        /* wind through a narrow band: whistling, drifting chords */
+    TI_RAIN,                        /* crackle and drops through the filter: vinyl and rain, at the chord's pitches */
     TI_COUNT
 };
 enum { TG_ORCH_FIXED, TG_ORCH_CYCLE, TG_ORCH_RANDOM, TG_ORCH_ENERGY, TG_ORCH_CONTRAST };

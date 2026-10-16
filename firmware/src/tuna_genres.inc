@@ -1232,7 +1232,7 @@
         .bass_rhythm = 0x0501u,
         .bass_notes = {0, 0, 7}, .bass_len = 3,
         .bass_semis = true,
-        .orch = {{TI_SYNTHBASS, TI_WHISTLE, TI_SINEKEY}, {TI_UPRIGHT, TI_TABLA, TI_STRINGS}, {TI_WAVEBASS, TI_VOICE, TI_HARPSICHORD}}, .orch_n = 3, .orch_mode = TG_ORCH_RANDOM,
+        .orch = {{TI_SYNTHBASS, TI_WHISTLE, TI_SINEKEY}, {TI_UPRIGHT, TI_TABLA, TI_STRINGS}, {TI_WAVEBASS, TI_VOICE, TI_HARPSICHORD}, {TI_SYNTHBASS, TI_WHISTLE, TI_RAIN}}, .orch_n = 4, .orch_mode = TG_ORCH_RANDOM,
         .groove = 81,
     },
     [TG_STYLE_G_JUNGLE] = {
@@ -1810,7 +1810,7 @@
         .bass_rhythm = 0x0401u,
         .bass_notes = {0, 7}, .bass_len = 2,
         .bass_semis = true,
-        .orch = {{TI_UPRIGHT, TI_FLUGELHORN, TI_EPIANO}, {TI_FRETLESS, TI_VIBES, TI_REEDEP}, {TI_UPRIGHT, TI_KALIMBA, TI_EGUITAR}, {TI_EBASS, TI_SHAKUHACHI, TI_REEDEP}}, .orch_n = 4, .orch_mode = TG_ORCH_RANDOM,
+        .orch = {{TI_UPRIGHT, TI_FLUGELHORN, TI_EPIANO}, {TI_FRETLESS, TI_VIBES, TI_REEDEP}, {TI_UPRIGHT, TI_KALIMBA, TI_EGUITAR}, {TI_EBASS, TI_SHAKUHACHI, TI_RAIN}}, .orch_n = 4, .orch_mode = TG_ORCH_RANDOM,
         .groove = 19,
     },
     [TG_STYLE_G_VAPORWAVE] = {
@@ -1837,7 +1837,7 @@
         .bass_notes = {0, 7, 12}, .bass_len = 3,
         .bass_semis = true,
         .pad_rhythm = 0x50151415u, .pad_gate = 2,
-        .orch = {{TI_FRETLESS, TI_SAX, TI_EPIANO}, {TI_SLAPBASS, TI_MARIMBA, TI_SYNBRASS}, {TI_WAVEBASS, TI_SINEKEY, TI_FROZEN}}, .orch_n = 3, .orch_mode = TG_ORCH_RANDOM,
+        .orch = {{TI_FRETLESS, TI_SAX, TI_EPIANO}, {TI_SLAPBASS, TI_MARIMBA, TI_SYNBRASS}, {TI_WAVEBASS, TI_SINEKEY, TI_FROZEN}, {TI_FRETLESS, TI_SINEKEY, TI_RAIN}}, .orch_n = 4, .orch_mode = TG_ORCH_RANDOM,
         .groove = 24,
     },
     [TG_STYLE_G_AFROBEATS] = {
@@ -2128,7 +2128,7 @@
         .mel_mode = TG_MEL_PHRASE,
         .mel_min_ticks = 4,
         .spread = true,
-        .orch = {{TI_FRETLESS, TI_SHIMMER, TI_SINEKEY}, {TI_FRETLESS, TI_FROZEN, TI_EPIANO}, {TI_FRETLESS, TI_MUSICBOX, TI_STRMACH}}, .orch_n = 3, .orch_mode = TG_ORCH_CYCLE,
+        .orch = {{TI_FRETLESS, TI_SHIMMER, TI_SINEKEY}, {TI_FRETLESS, TI_FROZEN, TI_EPIANO}, {TI_FRETLESS, TI_MUSICBOX, TI_STRMACH}, {TI_FRETLESS, TI_SHIMMER, TI_WIND}}, .orch_n = 4, .orch_mode = TG_ORCH_CYCLE,
         .groove = 32,
     },
     [TG_STYLE_G_BEDROOM_POP] = {

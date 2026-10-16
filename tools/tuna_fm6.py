@@ -142,6 +142,27 @@ PATCHES = [
         op(r=(70, 45, 35, 64), l=(99, 78, 70, 0), ol=64, fc=2),
         op(r=(70, 45, 35, 64), l=(99, 76, 66, 0), ol=48)],
         fb=5, lfs=32, lfd=60, lpmd=4, lfw=4, lpms=3)),
+    # a concert flute (in place of Felucca's sampled one: its 31 KB freed for Tuna): almost a sine with its octave,
+    # warmer as it is blown harder, breath (a feedback modulator gone to noise) stronger at the start, and a vibrato
+    # that comes in late
+    ("FLUTE", voice("FLUTE", 5, [
+        op(r=(62, 40, 40, 62), l=(99, 96, 94, 0), ol=99, kvs=2, ams=1),
+        op(r=(70, 45, 40, 62), l=(99, 70, 62, 0), ol=74, kvs=3),
+        op(r=(62, 40, 40, 62), l=(99, 88, 84, 0), ol=84, fc=2),
+        op(r=(70, 45, 40, 62), l=(99, 60, 50, 0), ol=40),
+        op(r=(80, 52, 40, 62), l=(99, 72, 62, 0), ol=56, kvs=2),
+        op(r=(99, 60, 40, 62), l=(99, 90, 86, 0), ol=88, fc=7, ff=37)],
+        fb=7, lfs=33, lfd=60, lpmd=6, lamd=4, lfw=4, lpms=3)),
+    # a tenor sax (in place of the sampled one, 31 KB): a buzzing reed (the feedback modulator, brighter with
+    # the breath's force), a nasal stack with ratio 3, a scoop up into each note, a late vibrato
+    ("SAX", voice("SAX", 2, [
+        op(r=(72, 45, 40, 64), l=(99, 92, 88, 0), ol=99, kvs=2),
+        op(r=(78, 40, 30, 64), l=(99, 84, 76, 0), ol=86, kvs=5),
+        op(r=(72, 45, 40, 64), l=(99, 90, 86, 0), ol=78, det=9, kvs=2),
+        op(r=(76, 42, 32, 64), l=(99, 82, 74, 0), ol=72, fc=3, kvs=4),
+        op(r=(76, 42, 32, 64), l=(99, 80, 72, 0), ol=60),
+        op(r=(76, 42, 32, 64), l=(99, 76, 66, 0), ol=50, fc=2)],
+        fb=6, pr=(80, 50, 50, 50), pl=(45, 50, 50, 50), lfs=34, lfd=55, lpmd=7, lfw=4, lpms=3)),
 ]
 
 

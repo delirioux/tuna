@@ -7,7 +7,7 @@
 #define TUNA_SOUNDS_H
 
 enum { TSN_ANALOG = 0, TSN_PHASE = 2, TSN_LOFI = 3, TSN_SAMPLE = 4, TSN_VOICE = 5, TSN_TRIO = 6, TSN_WHEEL = 7,
-       TSN_GRAIN = 8, TSN_PHYS = 9, TSN_FM6 = 12 };
+       TSN_GRAIN = 8, TSN_PHYS = 9, TSN_NOISE = 11, TSN_FM6 = 12 };
 enum { TSN_KEEP = -1 };                   /* dist, glide, voice: as the preset leaves them */
 enum { TSN_POLY = 0, TSN_MONO = 1, TSN_LEGATO = 2 };   /* core.h's V_POLY V_MONO V_LEGATO */
 
@@ -36,12 +36,12 @@ static const tsn_family TSN_FAMILY[TI_COUNT] = {
     [TI_DEFAULT] = TSN(TSN_ANALOG, 1),     [TI_PIANO] = TSN(TSN_SAMPLE, 0),     [TI_HARPSICHORD] = TSN(TSN_FM6, 7),
     [TI_ORGAN] = TSN(TSN_WHEEL, 0),        [TI_STRINGS] = TSN(TSN_ANALOG, 11),  [TI_VIOLIN] = TSN(TSN_PHASE, 2),
     [TI_CELLO] = TSN_OWN(TSN_PHASE, 2, TSN_CELLO),        [TI_CONTRABASS] = TSN_OWN(TSN_PHASE, 2, TSN_CONTRABASS), [TI_PIZZ] = TSN_OWN(TSN_PHYS, 2, TSN_PIZZ),
-    [TI_FLUTE] = TSN(TSN_SAMPLE, 2),       [TI_OBOE] = TSN(TSN_ANALOG, 10),     [TI_CLARINET] = TSN_OWN(TSN_WHEEL, 3, TSN_CLARINET),
+    [TI_FLUTE] = TSN_FM6P(TSN_FM6_FLUTE),       [TI_OBOE] = TSN(TSN_ANALOG, 10),     [TI_CLARINET] = TSN_OWN(TSN_WHEEL, 3, TSN_CLARINET),
     [TI_BASSOON] = TSN_OWN(TSN_ANALOG, 10, TSN_BASSOON),       [TI_HORN] = TSN(TSN_PHASE, 0),       [TI_TRUMPET] = TSN(TSN_ANALOG, 9),
     [TI_BRASS] = TSN(TSN_FM6, 3),          [TI_TUBA] = TSN_OWN(TSN_PHASE, 0, TSN_TUBA),         [TI_HARP] = TSN(TSN_PHYS, 8),
     [TI_GUITAR] = TSN(TSN_PHYS, 2),        [TI_CHOIR] = TSN(TSN_VOICE, 0),      [TI_VOICE] = TSN(TSN_VOICE, 1),
     [TI_BELLS] = TSN(TSN_FM6, 1),          [TI_CELESTA] = TSN(TSN_PHASE, 4),    [TI_MARIMBA] = TSN(TSN_FM6, 5),
-    [TI_BANDONEON] = TSN_OWN(TSN_WHEEL, 2, TSN_BANDONEON),    [TI_SAX] = TSN(TSN_SAMPLE, 3),       [TI_SYNTH] = TSN(TSN_ANALOG, 0),
+    [TI_BANDONEON] = TSN_OWN(TSN_WHEEL, 2, TSN_BANDONEON),    [TI_SAX] = TSN_FM6P(TSN_FM6_SAX),       [TI_SYNTH] = TSN(TSN_ANALOG, 0),
     [TI_PAD] = TSN(TSN_GRAIN, 0),         [TI_WHISTLE] = TSN_OWN(TSN_LOFI, 0, TSN_WHISTLE),    [TI_DRONE] = TSN(TSN_PHYS, 7),
     [TI_EPIANO] = TSN(TSN_FM6, 0),
     /* the popular genres' */
@@ -93,6 +93,8 @@ static const tsn_family TSN_FAMILY[TI_COUNT] = {
     [TI_FRETLESS] = TSN_FM6PX(TSN_FM6_FRETLESS, TSN_KEEP, 22, TSN_LEGATO),
     [TI_ENGLISHHORN] = TSN_FM6P(TSN_FM6_ENGLISHHORN),
     [TI_UPRIGHT] = TSN_OWN(TSN_PHYS, 2, TSN_UPRIGHT),
+    /* NOISE's own WIND and RAIN (key-tracked: they play the notes) */
+    [TI_WIND] = TSN(TSN_NOISE, 0),             [TI_RAIN] = TSN(TSN_NOISE, 1),
 };
 #undef TSN
 #undef TSN_X
@@ -106,10 +108,10 @@ static const tsn_family TSN_FAMILY[TI_COUNT] = {
  * -12 dB, at most +9 dB) */
 static const int8_t TSN_TRIM[TI_COUNT] = {
     [TI_PIANO] = -2, [TI_HARPSICHORD] = 9, [TI_ORGAN] = 5, [TI_STRINGS] = -5, [TI_VIOLIN] = -4, [TI_CELLO] = -3,
-    [TI_CONTRABASS] = -6, [TI_PIZZ] = 18, [TI_FLUTE] = 0, [TI_OBOE] = -2, [TI_CLARINET] = 1, [TI_BASSOON] = -5,
+    [TI_CONTRABASS] = -6, [TI_PIZZ] = 18, [TI_FLUTE] = 7, [TI_OBOE] = -2, [TI_CLARINET] = 1, [TI_BASSOON] = -5,
     [TI_HORN] = -7, [TI_TRUMPET] = -2, [TI_BRASS] = 2, [TI_TUBA] = -4, [TI_HARP] = 16, [TI_GUITAR] = 18,
     [TI_CHOIR] = -4, [TI_VOICE] = -1, [TI_BELLS] = 11, [TI_CELESTA] = 6, [TI_MARIMBA] = 9, [TI_BANDONEON] = 3,
-    [TI_SAX] = 0, [TI_SYNTH] = -3, [TI_PAD] = 3, [TI_WHISTLE] = 4, [TI_DRONE] = 5, [TI_EPIANO] = -4,
+    [TI_SAX] = 3, [TI_SYNTH] = -3, [TI_PAD] = 3, [TI_WHISTLE] = 4, [TI_DRONE] = 5, [TI_EPIANO] = -4,
     [TI_EGUITAR] = 18, [TI_DISTGUITAR] = 9, [TI_EBASS] = 8, [TI_SYNTHBASS] = -2, [TI_808] = 8, [TI_ACID] = 1,
     [TI_SUPERSAW] = -8, [TI_FATBASS] = 8, [TI_SYNCLEAD] = 0, [TI_CHIP] = -1, [TI_CLAV] = 18, [TI_ROCKORGAN] = 0,
     [TI_GOSPEL] = -2, [TI_TALKBASS] = -7, [TI_GLITCH] = 9, [TI_SINEKEY] = -5, [TI_SHIMMER] = 5, [TI_KALIMBA] = 17,
@@ -121,7 +123,7 @@ static const int8_t TSN_TRIM[TI_COUNT] = {
     [TI_GLOCKEN] = 11, [TI_TUBULAR] = 18, [TI_MUSICBOX] = 7, [TI_TABLA] = 12, [TI_PIPEORGAN] = 6, [TI_REEDEP] = 2,
     [TI_SLAPBASS] = 8, [TI_SYNBRASS] = 0, [TI_HARMONICA] = 8, [TI_PANFLUTE] = 3, [TI_SHAKUHACHI] = 4, [TI_ERHU] = 11,
     [TI_MUTETRUMPET] = 15, [TI_FLUGELHORN] = 5, [TI_TOYPIANO] = 6, [TI_FRETLESS] = 6, [TI_ENGLISHHORN] = 5,
-    [TI_UPRIGHT] = 18,
+    [TI_UPRIGHT] = 18, [TI_WIND] = 9, [TI_RAIN] = 10,
 };
 
 /* the part's level (0..127) with its family's trim; 0 stays 0 (a part turned off) */

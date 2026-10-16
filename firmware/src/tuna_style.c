@@ -1851,7 +1851,7 @@ static const tg_style styles[TG_STYLE_COUNT] = {
         .vocab = TG_VOC_POP, .open = 0.4f, .mel_min_ticks = 4,
         .alt = {.mel_mode = TG_MEL_BIRDSONG + 1}, .alt_every = 3,
         .orch = {{TI_CONTRABASS, TI_VIOLIN, TI_CELLO}, {TI_CELLO, TI_WHISTLE, TI_PIZZ},
-                 {TI_CONTRABASS, TI_CHOIR, TI_STRINGS}}, .orch_n = 3,
+                 {TI_CONTRABASS, TI_CHOIR, TI_STRINGS}, {TI_CONTRABASS, TI_WHISTLE, TI_WIND}}, .orch_n = 4,   /* (birdsong over wind) */
         .orch_mode = TG_ORCH_CONTRAST,
     },
     [TG_STYLE_SHIMMER] = {
@@ -1870,7 +1870,7 @@ static const tg_style styles[TG_STYLE_COUNT] = {
         .w_minor = {6, 6, 3, 4, 4, 5, 4, 3, 3, 3, 3, 2, 2, 3, 5, 4, 2, 4, 2, 0, 0, 1, 2, 2},
         .vocab = TG_VOC_POP, .open = 0.2f, .mel_min_ticks = 4,
         .orch = {{TI_CELLO, TI_CHOIR, TI_HORN}, {TI_CELLO, TI_BELLTREE, TI_CELESTA},
-                 {TI_TUBA, TI_CLARINET, TI_HORN}}, .orch_n = 3,
+                 {TI_TUBA, TI_CLARINET, TI_HORN}, {TI_CELLO, TI_CELESTA, TI_WIND}}, .orch_n = 4,
         .orch_mode = TG_ORCH_RANDOM,
     },
     [TG_STYLE_ANTHEM] = {
@@ -2024,7 +2024,7 @@ static const char *const family_names[TI_COUNT] = {
     "ARP LEAD", "RING MOD", "CHIP CHR", "FROZEN", "BELLTREE", "GLASS", "REED ORG", "KOTO", "SITAR",
     "OUD", "BANJO", "DULCIMER", "VIBES", "XYLO", "GLOCK", "TUBULAR", "MUSICBOX", "TABLA",
     "PIPE ORG", "REED EP", "SLAPBASS", "SYNBRASS", "HARMONCA", "PANFLUTE", "SHAKU", "ERHU",
-    "MUTE TPT", "FLUGEL", "TOY PNO", "FRETLESS", "ENG HORN", "UPRIGHT",
+    "MUTE TPT", "FLUGEL", "TOY PNO", "FRETLESS", "ENG HORN", "UPRIGHT", "WIND", "RAIN",
 };
 
 const char *tg_family_name(int f) { return f >= 0 && f < TI_COUNT ? family_names[f] : "?"; }

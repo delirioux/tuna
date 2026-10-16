@@ -188,7 +188,7 @@ GENRES = [
          pad=dict(mode="BLOCK", base=52, tones=3),
          groove="G90_TRIPHOP",
          orch=[("SYNTHBASS", "WHISTLE", "SINEKEY"), ("UPRIGHT", "TABLA", "STRINGS"),
-               ("WAVEBASS", "VOICE", "HARPSICHORD")]),
+               ("WAVEBASS", "VOICE", "HARPSICHORD"), ("SYNTHBASS", "WHISTLE", "RAIN")]),
     dict(id="JUNGLE", name="JUNGLE", decade=1990, year=1993,
          comment="Goldie, M-Beat, Shy FX: chopped Amen breaks at 165, a booming sub at half speed, ragga skank "
                  "stabs and a dub-siren melody over a minor vamp",

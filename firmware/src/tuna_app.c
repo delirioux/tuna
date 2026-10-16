@@ -151,8 +151,26 @@ void ta_set_reverb_type(tuna_app *a, int type)
     a->rev_damp = r->damp;
 }
 
-/* the manner a composer plays in: the one chosen (LIBRARY, K4), else the seed's. Each seed has its manner, so a
- * new seed may bring a chorale where a fugue was, and the same seed brings the same again */
+/* sorted seeds: a composer's 256 seeds in blocks, one per manner in the manners' order, as even as they divide */
+int ta_seed_manner(int st, uint32_t seed)
+{
+    int n = st >= 0 ? tg_manner_count(st) : 1;
+    return n <= 1 ? 0 : (int)((seed % TA_SEEDS) * (uint32_t)n / TA_SEEDS);
+}
+
+uint32_t ta_manner_first(int st, int m)
+{
+    int n = st >= 0 ? tg_manner_count(st) : 1;
+    if (n <= 1 || m <= 0)
+        return 0;
+    if (m >= n)
+        return TA_SEEDS;
+    return ((uint32_t)m * TA_SEEDS + (uint32_t)n - 1u) / (uint32_t)n;   /* the first seed with seed * n / 256 >= m */
+}
+
+uint32_t ta_manner_size(int st, int m) { return ta_manner_first(st, m + 1) - ta_manner_first(st, m); }
+
+/* the manner a composer plays in: its seed's block (an older slot's own manner while its seed is kept) */
 static int manner_for(const tuna_app *a, int st, uint32_t seed)
 {
     int n = tg_manner_count(st);
@@ -160,10 +178,7 @@ static int manner_for(const tuna_app *a, int st, uint32_t seed)
         return 0;
     if (a->manner_fix >= 0 && a->manner_fix < n)
         return a->manner_fix;
-    uint32_t h = (seed + 1u) * 2654435761u ^ (uint32_t)st * 40503u;
-    h ^= h >> 15;
-    h *= 2246822519u;
-    return (int)((h >> 16) % (uint32_t)n);
+    return ta_seed_manner(st, seed);
 }
 
 /* a fresh generator for the item: the piece's own tempo, key, percussion and evolution, in its manner; the
@@ -187,6 +202,7 @@ static void load_item(tuna_app *a, int item)
     /* its reverb too (its manner's, else its own or its era's); the send is the player's */
     ta_set_reverb_type(a, st >= 0 && g->style && g->style->reverb ? g->style->reverb - 1 : ta_piece_reverb(st));
     a->item = item;
+    a->radio_frames = 0;                          /* (the radio: the piece's time from its start) */
     a->req_on = false;
     a->req.meter = a->req.mel = a->req.bass = a->req.pad = a->req.harm = a->req.scale = -1;
 }
@@ -198,6 +214,7 @@ void ta_init(tuna_app *a, float sample_rate, uint32_t seed)
     a->seed = seed % TA_SEEDS;
     a->rnd = seed * 2654435761u + 0x6d2b79f5u;
     a->manner_fix = -1;
+    a->radio_min = 5;
     a->pending = -1;
     a->seed_req = -1;
     a->req.meter = a->req.mel = a->req.bass = a->req.pad = a->req.harm = a->req.scale = -1;
@@ -229,7 +246,14 @@ void ta_set_sound(tuna_app *a, void (*fn)(void *ctx, const tg_event *e), void *c
     a->sound_ctx = ctx;
 }
 
-void ta_set_store(tuna_app *a, const tp_store *s) { a->store = *s; }
+static void prefs_load(tuna_app *a);
+static void radio_next(tuna_app *a);
+
+void ta_set_store(tuna_app *a, const tp_store *s)
+{
+    a->store = *s;
+    prefs_load(a);
+}
 
 /* every sounding note off, through the sound */
 static void all_off(tuna_app *a) { tg_all_off(&a->g, on_event, a); }
@@ -253,38 +277,53 @@ void ta_select(tuna_app *a, int item)
 {
     if (item < 0 || item >= ta_lib_count())
         return;
+    if (a->playing && item == a->item) {          /* (turned back: nothing changes) */
+        a->pending = -1;
+        a->seed_req = -1;
+        return;
+    }
+    ta_select_seed(a, item, new_seed(a));
+}
+
+/* a piece with a given seed (a favourite, a code) */
+void ta_select_seed(tuna_app *a, int item, uint32_t seed)
+{
+    if (item < 0 || item >= ta_lib_count())
+        return;
+    seed %= TA_SEEDS;
+    a->manner_fix = -1;                           /* (its manner by the seed) */
     if (a->playing) {
-        if (item == a->item) {                    /* (turned back: nothing changes) */
+        if (item == a->item) {
             a->pending = -1;
-            a->seed_req = -1;
+            ta_set_seed(a, seed);
             return;
         }
         a->pending = item;
-        a->seed_req = (int)new_seed(a);
-        a->manner_fix = -1;                       /* (a new composer: its manner by the seed) */
+        a->seed_req = (int)seed;
         return;
     }
     a->pending = -1;
     a->seed_req = -1;
-    a->seed = new_seed(a);
-    a->manner_fix = -1;
+    a->seed = seed;
     load_item(a, item);
 }
 
-/* the manner: -1 the seed's (AUTO), else one of the composer's; playing, at the next half period */
+/* the manner: the first seed of its block; playing, at the next half period */
 void ta_set_manner(tuna_app *a, int m)
 {
     int st = a->pending >= 0 ? ta_lib_style(a->pending) : a->g.style_id;
     int n = tg_manner_count(st);
-    a->manner_fix = st < 0 || n <= 1 ? -1 : m < -1 ? -1 : m >= n ? n - 1 : m;
-    if (a->pending >= 0 || st < 0)
-        return;                                   /* (a piece on its way: it takes it when it comes) */
-    if (manner_for(a, st, a->seed_req >= 0 ? (uint32_t)a->seed_req : a->seed) == a->g.manner)
+    if (st < 0 || n <= 1)
         return;
-    if (a->playing)
-        a->pending = a->item;
+    m = m < 0 ? 0 : m >= n ? n - 1 : m;
+    uint32_t seed = a->seed_req >= 0 ? (uint32_t)a->seed_req : a->seed;
+    if (a->manner_fix < 0 && ta_seed_manner(st, seed) == m)
+        return;
+    a->manner_fix = -1;
+    if (a->pending >= 0)
+        a->seed_req = (int)ta_manner_first(st, m);   /* (a piece on its way: it comes in that manner) */
     else
-        load_item(a, a->item);
+        ta_set_seed(a, ta_manner_first(st, m));
 }
 
 const char *ta_manner_name(const tuna_app *a) { return tg_manner_name(a->g.style_id, a->g.manner); }
@@ -331,6 +370,7 @@ void ta_play(tuna_app *a, bool on)
 void ta_seed_step(tuna_app *a, int delta)
 {
     uint32_t from = a->seed_req >= 0 ? (uint32_t)a->seed_req : a->seed;
+    a->manner_fix = -1;                           /* (stepping: the seeds' own manners again) */
     ta_set_seed(a, (from + (uint32_t)(delta % TA_SEEDS) + TA_SEEDS) % TA_SEEDS);
 }
 
@@ -540,12 +580,30 @@ void ta_process(tuna_app *a, int frames)
                     apply_changes(a, false);
             }
         }
-        tmi_clock(&a->midi, a->frame, n, a->g.bpm);
+        a->g.ext_clock = a->clock_in;             /* (a fresh generator forgets it) */
+        if (!a->clock_in)
+            a->g.tempo_trim = 1.0f;
+        tmi_clock(&a->midi, a->frame, n, a->g.bpm * (1.0f + (a->g.chaos_macro - 0.5f) * 0.16f));   /* (MOOD's tempo) */
         tg_process(&a->g, n, on_event, a);
         a->blocks++;
         a->frame += (uint32_t)n;
         frames -= n;
         retune(a);
+        /* the clock lost (half a second without a pulse): stop, never a note left hanging */
+        if (a->clock_in && a->ck_run && (a->ck_idle += (uint32_t)n) > (uint32_t)(a->sample_rate * 0.5f)) {
+            a->ck_run = false;
+            ta_play(a, false);
+            break;
+        }
+        /* the radio: after its minutes, in the second half of a period, the next piece (in at the cadence) */
+        if (a->radio && a->pending < 0 && a->seed_req < 0 && !a->req_on && !a->g.frozen) {   /* (a frozen loop stays) */
+            a->radio_frames += (uint32_t)n;
+            if (a->radio_frames >= (uint32_t)a->radio_min * 60u * (uint32_t)a->sample_rate) {
+                int p, d = tg_period_position(&a->g, &p);
+                if (d > tg_half_position(&a->g))
+                    radio_next(a);
+            }
+        }
     }
 }
 
@@ -636,4 +694,375 @@ int ta_slot_load(tuna_app *a, int slot)
 uint16_t ta_slots_used(tuna_app *a, char names[TP_SLOTS][TP_NAME + 1])
 {
     return a->store.load ? tp_slots_used(&a->store, names) : 0;
+}
+
+/* ---- seeds as words: the label, the share code --------------------------------------------------------- */
+static int t_len(const char *s)
+{
+    int n = 0;
+    while (s[n])
+        n++;
+    return n;
+}
+
+static void t_put(char *out, int max, int *k, const char *s)
+{
+    while (*s && *k < max - 1)
+        out[(*k)++] = *s++;
+    out[*k] = 0;
+}
+
+static void t_num(char *out, int max, int *k, uint32_t v)
+{
+    char t[12];
+    int n = 0;
+    do {
+        t[n++] = (char)('0' + v % 10u);
+        v /= 10u;
+    } while (v && n < 11);
+    while (n && *k < max - 1)
+        out[(*k)++] = t[--n];
+    out[*k] = 0;
+}
+
+void ta_seed_label(const tuna_app *a, char *out, int max)
+{
+    int item = a->pending >= 0 ? a->pending : a->item, st = item >= 0 ? ta_lib_style(item) : -1, k = 0;
+    uint32_t seed = a->seed_req >= 0 ? (uint32_t)a->seed_req : a->seed;
+    out[0] = 0;
+    if (st < 0 || tg_manner_count(st) <= 1 || (a->manner_fix >= 0 && a->pending < 0)) {
+        t_put(out, max, &k, "SEED ");
+        t_num(out, max, &k, seed);
+        return;
+    }
+    int m = ta_seed_manner(st, seed);
+    t_put(out, max, &k, tg_manner_name(st, m));
+    t_put(out, max, &k, " ");
+    t_num(out, max, &k, seed - ta_manner_first(st, m) + 1u);
+    t_put(out, max, &k, "/");
+    t_num(out, max, &k, ta_manner_size(st, m));
+}
+
+/* the words of a code: letters and digits upper case, everything else one dash */
+static void t_word(char *out, int max, int *k, const char *s)
+{
+    bool dash = false;
+    for (; *s && *k < max - 1; ++s) {
+        char c = *s >= 'a' && *s <= 'z' ? (char)(*s - 32) : *s;
+        bool ok = (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9');
+        if (!ok) {
+            dash = *k > 0;
+            continue;
+        }
+        if (dash && *k < max - 1)
+            out[(*k)++] = '-';
+        dash = false;
+        out[(*k)++] = c;
+    }
+    out[*k] = 0;
+}
+
+void ta_code_of(int item, uint32_t seed, char *out, int max)
+{
+    int k = 0, st = ta_lib_style(item);
+    out[0] = 0;
+    if (item < 0 || item >= ta_lib_count())
+        return;
+    seed %= TA_SEEDS;
+    t_word(out, max, &k, ta_lib_name(item));
+    t_put(out, max, &k, "-");
+    if (st >= 0 && tg_manner_count(st) > 1) {
+        int m = ta_seed_manner(st, seed);
+        t_word(out, max, &k, tg_manner_name(st, m));
+        t_put(out, max, &k, "-");
+        seed -= ta_manner_first(st, m);
+    }
+    t_num(out, max, &k, seed + 1u);
+}
+
+void ta_code(const tuna_app *a, char *out, int max)
+{
+    ta_code_of(a->pending >= 0 ? a->pending : a->item, a->seed_req >= 0 ? (uint32_t)a->seed_req : a->seed, out, max);
+}
+
+/* a code typed by hand: case, spaces and dashes do not matter ("bach fugue 17" is BACH-FUGUE-17) */
+static bool code_same(const char *x, const char *y)
+{
+    for (;;) {
+        while (*x && !((*x >= 'A' && *x <= 'Z') || (*x >= 'a' && *x <= 'z') || (*x >= '0' && *x <= '9')))
+            x++;
+        while (*y && !((*y >= 'A' && *y <= 'Z') || (*y >= 'a' && *y <= 'z') || (*y >= '0' && *y <= '9')))
+            y++;
+        if (!*x || !*y)
+            return !*x && !*y;
+        char cx = *x >= 'a' && *x <= 'z' ? (char)(*x - 32) : *x, cy = *y >= 'a' && *y <= 'z' ? (char)(*y - 32) : *y;
+        if (cx != cy)
+            return false;
+        x++, y++;
+    }
+}
+
+int ta_code_go(tuna_app *a, const char *code)
+{
+    char want[TA_CODE], c[TA_CODE];
+    int n = 0;
+    while (code[n] && n < TA_CODE - 1) {
+        want[n] = code[n];
+        n++;
+    }
+    want[n] = 0;
+    /* the number at the end */
+    int e = n;
+    while (e > 0 && !(want[e - 1] >= '0' && want[e - 1] <= '9'))
+        e--;
+    int b = e;
+    while (b > 0 && want[b - 1] >= '0' && want[b - 1] <= '9')
+        b--;
+    if (b == e || e - b > 3)
+        return -1;
+    uint32_t num = 0;
+    for (int i = b; i < e; ++i)
+        num = num * 10u + (uint32_t)(want[i] - '0');
+    if (num < 1u || num > TA_SEEDS)
+        return -1;
+    /* the piece and its manner: the code of each one's first seed, its number replaced */
+    for (int item = 0; item < ta_lib_count(); ++item) {
+        int st = ta_lib_style(item), nm = st >= 0 && tg_manner_count(st) > 1 ? tg_manner_count(st) : 1;
+        for (int m = 0; m < nm; ++m) {
+            uint32_t first = nm > 1 ? ta_manner_first(st, m) : 0u, size = nm > 1 ? ta_manner_size(st, m) : TA_SEEDS;
+            if (num > size)
+                continue;
+            ta_code_of(item, first + num - 1u, c, sizeof c);
+            if (code_same(c, want)) {
+                ta_select_seed(a, item, first + num - 1u);
+                return 0;
+            }
+        }
+    }
+    return -1;
+}
+
+/* ---- favourites ------------------------------------------------------------------------------------------ */
+static bool fav_name_is(const ta_fav *f, const char *name)
+{
+    int i = 0;
+    for (; i < TA_FAV_NAME - 1 && f->name[i] && f->name[i] == name[i]; ++i)
+        ;
+    return i == TA_FAV_NAME - 1 || f->name[i] == name[i];
+}
+
+int ta_fav_find(const tuna_app *a, int item, uint32_t seed)
+{
+    if (item < 0 || item >= ta_lib_count())
+        return -1;
+    const char *name = ta_lib_name(item);
+    for (int i = 0; i < a->fav_n; ++i)
+        if (a->fav[i].seed == (uint8_t)(seed % TA_SEEDS) && fav_name_is(&a->fav[i], name))
+            return i;
+    return -1;
+}
+
+int ta_fav_toggle(tuna_app *a)
+{
+    int item = a->pending >= 0 ? a->pending : a->item;
+    uint32_t seed = a->seed_req >= 0 ? (uint32_t)a->seed_req : a->seed;
+    if (item < 0)
+        return -1;
+    int i = ta_fav_find(a, item, seed);
+    a->prefs_dirty = true;
+    if (i >= 0) {
+        for (; i + 1 < a->fav_n; ++i)
+            a->fav[i] = a->fav[i + 1];
+        a->fav_n--;
+        return 0;
+    }
+    if (a->fav_n >= TA_FAVS) {
+        a->prefs_dirty = false;
+        return -1;
+    }
+    ta_fav *f = &a->fav[a->fav_n];
+    memset(f, 0, sizeof *f);
+    const char *name = ta_lib_name(item);
+    for (int k = 0; k < TA_FAV_NAME - 1 && name[k]; ++k)
+        f->name[k] = name[k];
+    f->seed = (uint8_t)(seed % TA_SEEDS);
+    return ++a->fav_n;
+}
+
+int ta_fav_item(const tuna_app *a, int i)
+{
+    if (i < 0 || i >= a->fav_n)
+        return -1;
+    for (int item = 0; item < ta_lib_count(); ++item)
+        if (fav_name_is(&a->fav[i], ta_lib_name(item)))
+            return item;
+    return -1;
+}
+
+void ta_fav_play(tuna_app *a, int i)
+{
+    int item = ta_fav_item(a, i);
+    if (item >= 0)
+        ta_select_seed(a, item, a->fav[i].seed);
+}
+
+/* ---- the radio ------------------------------------------------------------------------------------------- */
+void ta_radio_set(tuna_app *a, int mode, int minutes)
+{
+    mode = mode < 0 ? 0 : mode >= TA_RADIO_COUNT ? TA_RADIO_COUNT - 1 : mode;
+    minutes = minutes < 1 ? 1 : minutes > 30 ? 30 : minutes;
+    if (mode != a->radio || minutes != a->radio_min)
+        a->prefs_dirty = true;
+    if (mode != a->radio)
+        a->radio_frames = 0;
+    a->radio = (uint8_t)mode;
+    a->radio_min = (uint8_t)minutes;
+}
+
+/* the next piece: another one of the era (or of the whole library), drawn */
+static void radio_next(tuna_app *a)
+{
+    int count = ta_lib_count(), first = 0, n = count;
+    if (a->radio == TA_RADIO_ERA && a->item >= 0) {
+        int gr = ta_lib_group(a->item);
+        first = ta_lib_first(gr);
+        n = (gr + 1 < TA_GROUPS ? ta_lib_first(gr + 1) : count) - first;
+    }
+    int item = first + (int)(new_seed(a) * (uint32_t)n / TA_SEEDS);
+    if (item == a->item)
+        item = first + (item - first + 1) % n;
+    ta_select(a, item);
+}
+
+/* ---- the preferences: their own storage object --------------------------------------------------------------
+ * "TPF1", radio, minutes, the favourites' count, then each favourite: its name's length, the name, the seed */
+static int prefs_encode(const tuna_app *a, uint8_t *b, int max)
+{
+    int k = 0;
+    if (max < 7)
+        return TP_ERR_SPACE;
+    b[k++] = 'T', b[k++] = 'P', b[k++] = 'F', b[k++] = '1';
+    b[k++] = a->radio;
+    b[k++] = a->radio_min;
+    b[k++] = (uint8_t)a->fav_n;
+    for (int i = 0; i < a->fav_n; ++i) {
+        int n = t_len(a->fav[i].name);
+        if (k + 2 + n > max)
+            return TP_ERR_SPACE;
+        b[k++] = (uint8_t)n;
+        memcpy(b + k, a->fav[i].name, (size_t)n);
+        k += n;
+        b[k++] = a->fav[i].seed;
+    }
+    return k;
+}
+
+static void prefs_decode(tuna_app *a, const uint8_t *b, int n)
+{
+    if (n < 7 || b[0] != 'T' || b[1] != 'P' || b[2] != 'F' || b[3] != '1')
+        return;
+    int k = 7, count = b[6];
+    a->radio = b[4] < TA_RADIO_COUNT ? b[4] : 0;
+    a->radio_min = b[5] >= 1 && b[5] <= 30 ? b[5] : 5;
+    a->fav_n = 0;
+    for (int i = 0; i < count && a->fav_n < TA_FAVS && k < n; ++i) {
+        int len = b[k++];
+        if (len >= TA_FAV_NAME || k + len + 1 > n)
+            break;
+        ta_fav *f = &a->fav[a->fav_n++];
+        memset(f, 0, sizeof *f);
+        memcpy(f->name, b + k, (size_t)len);
+        k += len;
+        f->seed = b[k++];
+    }
+}
+
+static void prefs_load(tuna_app *a)
+{
+    a->radio = TA_RADIO_OFF;
+    a->radio_min = 5;
+    a->fav_n = 0;
+    a->prefs_dirty = false;
+    if (!a->store.load)
+        return;
+    int n = a->store.load(a->store.ctx, TP_PREFS_GROUP, rec_buf, sizeof rec_buf);
+    if (n > 0)
+        prefs_decode(a, rec_buf, n);
+}
+
+int ta_prefs_flush(tuna_app *a)
+{
+    if (!a->prefs_dirty || a->playing)
+        return 1;
+    if (!a->store.save)
+        return TP_ERR_STORE;
+    int n = prefs_encode(a, rec_buf, sizeof rec_buf);
+    if (n < 0)
+        return n;
+    if (a->store.save(a->store.ctx, TP_PREFS_GROUP, rec_buf, n) != 0)
+        return TP_ERR_STORE;
+    a->prefs_dirty = false;
+    return TP_OK;
+}
+
+/* ---- MIDI clock in -------------------------------------------------------------------------------------------
+ * The tempo is the clock's (24 pulses a beat, measured over a beat); the phase is kept by a small trim on it: the
+ * generator's ticks are where the pulses since Start say they should be. Start and Continue start the piece from
+ * its top, Stop stops it; no pulse for half a second stops it too. */
+void ta_clock_in_set(tuna_app *a, bool on)
+{
+    a->clock_in = on;
+    a->ck_run = false;
+    a->ck_pulses = a->ck_beat_n = 0;
+    a->ck_bpm = 0.0f;
+    a->g.ext_clock = on;
+    a->g.tempo_trim = 1.0f;
+    if (on)
+        ta_midi_set(a, a->midi.on, false, a->midi.bend);   /* (never both: no clock sent back) */
+}
+
+void ta_clock_msg(tuna_app *a, uint8_t status, uint32_t frame)
+{
+    if (!a->clock_in)
+        return;
+    if (status == 0xFAu || status == 0xFBu) {
+        if (a->playing)
+            ta_play(a, false);
+        ta_play(a, true);
+        a->ck_run = true;
+        a->ck_pulses = 0;
+        a->ck_idle = 0;
+        return;
+    }
+    if (status == 0xFCu) {
+        a->ck_run = false;
+        ta_play(a, false);
+        return;
+    }
+    if (status != 0xF8u)
+        return;
+    /* the tempo: a beat's 24 pulses */
+    if (a->ck_beat_n == 0)
+        a->ck_beat0 = frame;
+    if (++a->ck_beat_n > 24u) {
+        uint32_t dt = frame - a->ck_beat0;
+        float sr = a->sample_rate;
+        if (dt > (uint32_t)(sr * 0.2f) && dt < (uint32_t)(sr * 3.0f)) {   /* 20 .. 300 BPM */
+            float bpm = 60.0f * sr / (float)dt;
+            a->ck_bpm = a->ck_bpm > 0.0f ? a->ck_bpm + 0.5f * (bpm - a->ck_bpm) : bpm;
+            a->g.bpm = a->ck_bpm;
+        }
+        a->ck_beat0 = frame;
+        a->ck_beat_n = 1;
+    }
+    a->ck_last = frame;
+    a->ck_idle = 0;
+    if (!a->ck_run || !a->playing)
+        return;
+    /* the phase: ticks since the start against the pulses since it (the first tick came with Start) */
+    float want = (float)a->ck_pulses * (float)a->g.division / 24.0f;
+    float have = (float)(a->g.ticks > 0 ? a->g.ticks - 1 : 0) + a->g.t.master_phase;
+    float e = want - have, trim = 1.0f + 0.05f * e;
+    a->g.tempo_trim = trim < 0.9f ? 0.9f : trim > 1.1f ? 1.1f : trim;
+    a->ck_pulses++;
 }

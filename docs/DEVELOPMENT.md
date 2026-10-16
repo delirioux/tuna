@@ -176,6 +176,12 @@ CPU is the one left open: it is measured on the FM-1 next.
 
 ## Next
 
+The goals after the player (README's roadmap, set 16 Oct 2026): Tuna is for fun and for people who buy the FM-1 as
+a synth, so the experience counts. First 1.0 on the FM-1 itself; then **less dissonance** (it is everywhere now:
+right for a few composers, wrong for most: strong beats on chord tones, no clashes between parts, perhaps equal temperament
+as the default) and **longer form** (a period now ends in a full cadence every 8 bars: half cadences between, themes
+that return, sections, an arc over minutes); then hands on the instruments, and a synth session on a held button.
+
 What the composers' manners could not say (the agents who wrote them met these again and again). Gaps in the
 generator's design, not the hardware's; in order of value:
 

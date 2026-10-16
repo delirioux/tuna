@@ -24,7 +24,7 @@ All choices were settled on 6 October 2026.
 | Sampler | Felucca's SAMPLE (multisampled instruments, 3 user slots), SLICE (break or own sample, one slice per key) and GRAIN (granular from built-in or user samples); upload from PC and on-device recording with trim; the generator can play samples as a part |
 | Parts | 3 synth parts (bass, melody, pad) plus percussion, within 8 voices. Percussion is a switch per composer: off, period (the composer's own orchestra: timpani on tonic and dominant, Mahler's march snare, Dvořák's triangle and tambourine, and so on) or kit (a modern kit driven by Marbles). Switching it never changes a note |
 | Resonator | Rings-style, as a send effect on the mix, as far as the CPU allows |
-| Chaos | Separate knobs for rhythm, pitch and density, plus a macro knob |
+| Chaos | Separate knobs for rhythm, pitch and density, plus MOOD (calm to busy, every part; was a macro knob until 16 Oct 2026) |
 | Memory | Deja vu (phrases recur), switchable on and off |
 | Scales | All 12 keys × church modes, plus extras (see Scales); historical tunings and a 12-note user table |
 | Harmony | Moves along well-known progressions, or follows one of 89 composer signatures; switchable per preset |
@@ -32,10 +32,12 @@ All choices were settled on 6 October 2026.
 | Freeze | Convert a generated phrase into an editable pattern |
 | P-locks and trig conditions | In both generator and sequencer |
 | Form | Endless, with optional evolution timer |
-| MIDI | MIDI out per part |
+| MIDI | MIDI out per part; clock out or in |
 | USB audio | Stereo mix only |
 | Screen | Visualisation (notes as falling particles), parameters while turning |
 | Presets | 16 slots, full state including seed |
+| Seeds | 256 per composer, sorted by the type of work (a block per manner); each piece a share code (BACH-FUGUE-17) |
+| Favourites and radio | Up to 48 favourites (REC held); a radio that moves on to another piece every 1 to 30 minutes |
 | Publishing | Personal use first; if published, GPL-3.0 with source applies |
 | Name | Tuna |
 
@@ -251,6 +253,7 @@ Phases 1 to 6 can be done without hardware using `hostsim`; only phase 8 waits f
 - [x] **Phase 6 — GUI.** Done 7 Oct 2026, Tuna only (Felucca's screens replaced): Tuna's own pages in Felucca's look (its fonts, icons, 10 palettes, FLAT and LINE). HOME: the notes falling as particles (colour per part, size per velocity), the chord and key, and four chaos knobs RHYTHM, PITCH, DENSITY, MACRO (0 = the composer byte for byte). PRESETS browses the library piece by piece, ALGORITHM era by era; while playing a new piece comes in at the end of the period. Keys: a tap sets the root from the next chord, several held set that chord. OCT−/OCT+ step the seed, REC locks the phrase (deja vu). Pages: library, key/scale/tuning/memory, time, parts, evolution, freeze, mix, reverb, save/load on the 16 white keys, menu. Tested on the host with Felucca's `gfx.c`: 132 UI checks plus a layout check over every page, palette and composer; PNGs and GIFs of each page. Wiring the hardware (knobs, keys, LEDs, the audio loop) follows in phase 8.
 - [x] **Phase 7 — MIDI and resonator.** Done 7 Oct 2026. MIDI out (ENV page): bass, melody, pad, timpani and drums on channels 1, 2, 3, 4 and 10; instrument families as General MIDI programs; sound locks as controllers; historical tunings as pitch bend on the one-note parts; clock with start and stop; every note closed on stop; the FM-1's own sound can be switched off for MIDI only. Resonator (LFO page): six sympathetic strings on the mix in the manner of Rings, fixed point at half rate, tuned to the chord, the key or the root and gliding as the harmony moves, saved with each slot; about 0.12× the reference mix when on (Debussy's worst half second 1.02×), nothing when off. 102 MIDI and 18 resonator checks; the USB send itself is wired in phase 8.
 - [ ] **Phase 8 — On the FM-1.** Install toolchain, flash, measure CPU on the chip. Then fine-tune each composer by analysing their music or MIDI files of their work (chord transitions, intervals, rhythm). Prepared 7 Oct 2026, before delivery: the firmware glue (knobs, keys, LEDs, flash, USB MIDI out, the resonator after the mix) behind FELUCCA_TUNA=1; Tuna's own single-precision maths, since the firmware has no C library; no doubles anywhere (checked by compiling for a single-precision-only CPU: nothing left but memcpy and memset); and Tuna in Felucca's browser emulator, the same code on a simulated FM-1, with a Node test (boot, play, browse, root, pages, stop, save).
+- [x] **Phase 9 — The player.** Done 16 Oct 2026 (on the host and in the browser; not yet on the FM-1): a composer's 256 seeds sorted by the type of work, a block per manner in the manners' order (LIBRARY's K4 jumps to the next block, OCT walks through them, the screen says "FUGUE 17/86"); favourites (REC held 0.8 s; LIBRARY's ERA turned below TUNA lists them; kept with the radio in a storage object of their own, written while stopped); share codes (BACH-FUGUE-17, REGGAE-148: the piece, the manner, the number in it; under the library list, and as a link in the browser, `try/?piece=`); the radio (OFF, ERA, ALL; every 1 to 30 minutes, the next piece at a cadence); MOOD in place of the macro knob (every part's density and rhythm, loudness ±18, tempo ±8 %, never pitch); MIDI clock in (ENV's CLOCK: OFF, OUT, IN: tempo over a beat of pulses, the phase kept by a trim of at most 10 %; Start and Continue from the top, Stop, no pulse for half a second stops).
 
 ## Development environment
 

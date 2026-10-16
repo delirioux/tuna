@@ -15,16 +15,19 @@ static void zero(void *p, unsigned n)
 static int pmod12(int n) { return ((n % 12) + 12) % 12; }
 static float clamp01(float v) { return v < 0.0f ? 0.0f : v > 1.0f ? 1.0f : v; }
 
-/* one chaos amount with the macro added: -1 .. 1, 0 = the composer */
-static float chaos_of(const tg_gen *g, float c)
-{
-    return clamp01(c + g->chaos_macro - 0.5f) * 2.0f - 1.0f;
-}
-
-/* the same for one part: 0 when the part does not follow the knobs */
+/* one rhythm or density amount for a part: -1 .. 1, 0 = the composer. The knob counts where the part follows the
+ * knobs; MOOD (chaos_macro: calm 0 .. busy 1, 0.5 nothing) moves every part, busier or calmer */
 static float chaos_part(const tg_gen *g, int part, float c)
 {
-    return (g->chaos_parts >> part) & 1u ? chaos_of(g, c) : 0.0f;
+    float v = (g->chaos_parts >> part) & 1u ? c * 2.0f - 1.0f : 0.0f;
+    v += (g->chaos_macro - 0.5f) * 1.6f;
+    return v < -1.0f ? -1.0f : v > 1.0f ? 1.0f : v;
+}
+
+/* pitch: the knob only (MOOD never makes the music wilder in pitch) */
+static float chaos_pp(const tg_gen *g, int part)
+{
+    return (g->chaos_parts >> part) & 1u ? clamp01(g->chaos_pitch) * 2.0f - 1.0f : 0.0f;
 }
 
 static bool in_mask(uint16_t mask, int note, int root) { return (mask >> pmod12(note - root)) & 1; }
@@ -150,6 +153,7 @@ static void defaults(tg_gen *g)
     g->harmonize = true;
     g->melody_density = 0.5f;
     g->chaos_rhythm = g->chaos_pitch = g->chaos_density = g->chaos_macro = 0.5f;
+    g->tempo_trim = 1.0f;
     g->chaos_parts = TG_CHAOS_ALL;
     for (int s = 0; s < 2; ++s)
         for (int n = 0; n < 128; ++n) {
@@ -1545,7 +1549,7 @@ static void melody_tick(tg_gen *g, beat_pos b, float x2, int velocity, int offse
             /* interval from X2: mostly steps, sometimes a leap; a style may lean downward or upward */
             int dir = x + g->direction * 0.6f < 0.0f ? -1 : 1;
             const float *pr = g->mel_profile;
-            float cp = chaos_part(g, TG_PART_MELODY, g->chaos_pitch), prc[4];
+            float cp = chaos_pp(g, TG_PART_MELODY), prc[4];
             int max_leap = g->max_leap;
             float octave = g->octave;
             if (cp != 0.0f) {
@@ -3399,7 +3403,7 @@ static int cx_bass_wild(tg_gen *g, int note)
 
 static int cx_bass(tg_gen *g, int note)
 {
-    float cr = chaos_part(g, TG_PART_BASS, g->chaos_rhythm), cp = chaos_part(g, TG_PART_BASS, g->chaos_pitch);
+    float cr = chaos_part(g, TG_PART_BASS, g->chaos_rhythm), cp = chaos_pp(g, TG_PART_BASS);
     float cd = chaos_part(g, TG_PART_BASS, g->chaos_density);
     if ((cr == 0.0f && cp == 0.0f && cd == 0.0f) || g->cx_fresh)
         return note;                                 /* (on the chord change: the root as it is) */
@@ -3438,7 +3442,7 @@ static int cx_pad(tg_gen *g, int note)
 {
     if (!g->cx_adding && cx_pad_skip(g))
         return -1;
-    float cp = chaos_part(g, TG_PART_PAD, g->chaos_pitch);
+    float cp = chaos_pp(g, TG_PART_PAD);
     if (cp == 0.0f)
         return note;
     /* PITCH: the voicing opens (voices up an octave) or closes (down to the bottom octave); the same note
@@ -3469,6 +3473,12 @@ static int cx_off(tg_gen *g, int part, int note)
 static void cx_filter(void *ctx, const tg_event *e)
 {
     tg_gen *g = ctx;
+    tg_event mv;
+    if (e->type == TG_EV_NOTE && e->on && g->chaos_macro != 0.5f) {
+        mv = *e;                                     /* MOOD: louder busy, softer calm */
+        mv.velocity = (uint8_t)clampi(e->velocity + (int)((g->chaos_macro - 0.5f) * 36.0f), 1, 127);
+        e = &mv;
+    }
     int slot = e->part == TG_PART_BASS ? 0 : e->part == TG_PART_PAD ? 1 : -1;
     if (slot < 0 || e->type != TG_EV_NOTE) {
         g->cx_fn(g->cx_ctx, e);
@@ -3524,7 +3534,7 @@ static void cx_add(tg_gen *g, beat_pos b, int velocity, int offset, tg_event_fn 
                    (g->cx_half && cr > 0.0f && cx_rand(g) < 0.5f * cr);
         if (add) {
             /* straight out, past the filter's map: the part's own notes keep theirs */
-            float cp = chaos_part(g, TG_PART_BASS, g->chaos_pitch);
+            float cp = chaos_pp(g, TG_PART_BASS);
             int n = cx_rand(g) < 0.6f ? bass_root_note(g, g->chord.root) : cx_bass_tone(g);
             if (cp > 0.0f && cx_rand(g) < 0.7f * cp)
                 n = cx_bass_wild(g, n);
@@ -3590,6 +3600,10 @@ static void process_block(tg_gen *g, int size, tg_event_fn fn, void *ctx)
         else if (d < g->division)
             bpm *= 1.0f - 0.2f * g->rubato;
     }
+    if (g->ext_clock)
+        bpm = g->bpm * g->tempo_trim;               /* MIDI clock in: its tempo and phase, nothing of ours */
+    else
+        bpm *= 1.0f + (g->chaos_macro - 0.5f) * 0.16f;   /* MOOD: a little faster busy, slower calm */
     g->t.rate_hz = bpm / 60.0f * (float)g->division;
     tm_t_process(&g->t, NULL, master, s0, s1, gate, (size_t)size);
     tm_xy_process(&g->xy, g->clock_source, &g->x, &g->y, NULL, master, s0, s1, yr, out, NULL, (size_t)size);

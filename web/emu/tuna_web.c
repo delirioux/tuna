@@ -401,10 +401,11 @@ EXPORT void web_enc(uint32_t role, int32_t n)
         web_enc_steps[panel.enc[role] % 7u] += n * panel.dir[role];
 }
 EXPORT void web_master(uint32_t v) { web_master_adc = v > 1023u ? 1023u : v; }
-/* a channel message from Web MIDI, as a USB-MIDI packet arrives (usb.c midi_enqueue): 0 = the ring was full */
+/* a channel message (or the clock's real-time ones: Tuna follows them) from Web MIDI, as a USB-MIDI packet arrives
+ * (usb.c midi_enqueue): 0 = the ring was full */
 EXPORT uint32_t web_midi(uint32_t status, uint32_t d1, uint32_t d2)
 {
-    if (status < 0x80u || status >= 0xF0u)
+    if (status < 0x80u || (status >= 0xF0u && status != 0xF8u && status != 0xFAu && status != 0xFBu && status != 0xFCu))
         return 1;
     return (uint32_t)midi_enqueue((status >> 4) | status << 8 | (d1 & 127u) << 16 | (d2 & 127u) << 24, 1);
 }
@@ -476,5 +477,18 @@ EXPORT void web_tuna_seed(uint32_t s)
     tf_seed_boot = tf_app.seed;
 }
 EXPORT uint32_t web_tuna_seed_now(void) { return tf_app.seed; }
+/* the share code: the page writes one (?piece=BACH-FUGUE-17) and plays it; and reads the one playing */
+static char web_code_in[TA_CODE], web_code_out[TA_CODE];
+EXPORT char *web_tuna_code_buf(void) { return web_code_in; }
+EXPORT int32_t web_tuna_code_go(void)
+{
+    web_code_in[TA_CODE - 1] = 0;
+    return ta_code_go(&tf_app, web_code_in);
+}
+EXPORT const char *web_tuna_code_now(void)
+{
+    ta_code(&tf_app, web_code_out, sizeof web_code_out);
+    return web_code_out;
+}
 EXPORT uint32_t web_tuna_ticks(void) { return (uint32_t)tf_app.g.ticks; }
 EXPORT uint32_t web_sample_rate(void) { return FS; }

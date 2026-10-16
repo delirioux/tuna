@@ -11,9 +11,9 @@ melody, bass, accompaniment and percussion, through Felucca's synthesis engines.
 and Tuna plays in that composer's manner, endlessly and never twice the same; or pick a character
 preset and let it drift, from still and ambient to driving and rhythmic.
 
-> **Status: in development, first builds for the FM-1.** Install it from the web installer at
-> <https://delirioux.github.io/tuna/> (Chrome or Edge, USB), or try it in the browser there first. Built for
-> fun and with no warranty: Felucca's installer, or the official V15, takes the FM-1 back.
+> **Status: runs on the FM-1.** Install it from the web installer at <https://delirioux.github.io/tuna/>
+> (Chrome or Edge, USB), or try it in the browser there first. Built for fun and with no warranty: Felucca's
+> installer, or the official V15, takes the FM-1 back.
 
 ## What is in it
 
@@ -75,7 +75,8 @@ preset and let it drift, from still and ambient to driving and rhythmic.
 | 5 | Presets, slots, composers by era | done |
 | 6 | Screen and controls | done |
 | 7 | MIDI out per part, resonator | done |
-| 8 | On the FM-1: flash, measure CPU, then fine-tune every composer from their music | prepared: firmware glue, maths, browser build; waiting for the hardware |
+| 8 | On the FM-1: firmware, web installer, boot logo | done |
+| 9 | Measure CPU on the FM-1, then fine-tune every composer from their music | next |
 
 ## Building and testing
 
@@ -96,14 +97,15 @@ sh web/emu/tuna_build.sh                                # build/tuna_emu: serve 
 node web/emu/tuna_emu_test.mjs build/tuna_emu/tuna.wasm  # boot, play, browse, root, pages, stop, save
 ```
 
-For the FM-1 itself: `FELUCCA_TUNA=1` with Felucca's build, described in [BUILDING.md](BUILDING.md). Untested
-on hardware so far.
+For the FM-1 itself: `FELUCCA_TUNA=1 ./build.sh`, with Felucca's toolchain and SDK as [BUILDING.md](BUILDING.md)
+describes. Every push to `main` builds the package and the site on GitHub Actions
+([.github/workflows/firmware.yml](.github/workflows/firmware.yml)).
 
 ## Documentation
 
 - [docs/SPEC.md](docs/SPEC.md): the specification and all 89 composers and styles, era by era
-- [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md): the working notes: agreements, workflow, design decisions, risks,
-  and the steps for the first build on the FM-1
+- [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md): the working notes: agreements, workflow, design decisions, risks
+  and what comes next
 
 ## Credits and licence
 

@@ -169,11 +169,10 @@ clang; the freestanding check and the browser test were not at hand that day, la
 | Risk | What happens | Check |
 | --- | --- | --- |
 | CPU on the chip | dropouts at the loudest moments; all 175 styles measured (instruction counts, 30 s each): mean at most 1.03×, the worst half second 1.30× the reference mix (JAZZ 50S), most below 1.1× | measure on the FM-1; organ or pad in place of the choir |
-| The JieLi compiler wants doubles or a maths function the host build never showed | link errors, or slow software floats | the first build's errors name the function; add it to `tuna_libm.c` |
-| Flash space | the image may not fit the ~568 KB program area | the first build says; the Marbles tables (74 KB) can shrink |
-| Chip and clock unconfirmed | estimates off | read the board on delivery |
+| Soft floats | without `-mcpu=r3 -mfprev1` floats become library calls that crash the FM-1 at boot | settled: tools/build.py sets them for Tuna, and CI fails on any soft-float routine in the image |
+| Flash and RAM | the image did not fit at first | settled: packed styles, uint16 Marbles tables, no editor, recordings in the pool |
 
-None of these is measured yet; they wait for the hardware.
+CPU is the one left open: it is measured on the FM-1 next.
 
 ## Next
 

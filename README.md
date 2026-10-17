@@ -48,7 +48,7 @@ preset and let it drift, from still and ambient to driving and rhythmic.
 - **16 slots** that save the whole state and play back exactly the music that was saved.
 - **Seeds sorted by the type of work**: each composer's 256 pieces in a block per manner, so OCT+ walks through
   the fugues, then the chorales, then the gigues, the screen saying where you are ("FUGUE 17/86").
-- **Favourites**: hold REC on a piece you like; they wait below TUNA in the library (up to 48), kept across power-offs.
+- **Favourites**: hold REC on a piece you like; they wait below TUNA in the library (up to 32), kept across power-offs.
 - **Share codes**: every piece has a code, `BACH-FUGUE-17`, the same piece on any FM-1 and in the browser. A link
   plays it: `https://delirioux.github.io/tuna/try/?piece=BACH-FUGUE-17`.
 - **Radio**: after a few minutes (1 to 30) another piece, from the same era or the whole library, coming in at a

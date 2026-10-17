@@ -26,7 +26,7 @@
 #define TA_SEEDS 256                      /* seeds 0..255: a full turn of steps */
 #define TA_GROUPS (1 + TP_ERA_COUNT)      /* TUNA's characters, then the eras */
 #define TA_FEED 32                        /* note-ons waiting for the screen */
-#define TA_FAVS 48                        /* favourites */
+#define TA_FAVS 32                        /* favourites (in the pool, 19 B each: its headroom) */
 #define TA_FAV_NAME 18                    /* a library name (17) and its end */
 #define TA_CODE 40                        /* a share code and its end */
 

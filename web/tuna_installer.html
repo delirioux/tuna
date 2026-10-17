@@ -55,6 +55,14 @@
     <a href="https://github.com/kurogedelic/FM-1-transporter" target="_blank" rel="noopener">Transporter</a>.</p>
 
   <details class="card">
+    <summary>Install a test build</summary>
+    <p class="small">A Tuna package from a test build (GitHub: Actions &gt; the run &gt; Artifacts &gt; tuna-firmware, its
+      .fwsc). It is checked here, in the browser, and not sent anywhere. Install above puts the released Tuna back.</p>
+    <p><input id="test-file" type="file" accept=".fwsc"></p>
+    <p><button id="test-go" disabled>Install test build</button></p>
+  </details>
+
+  <details class="card">
     <summary>Return to the official firmware (V15)</summary>
     <p class="small">Get the official FM-1 V15 from <a href="https://www.m-vave.com/download" target="_blank"
       rel="noopener">M-VAVE</a> and select its unmodified FM-1.fwsc. It is checked here, in the browser, and not sent
@@ -93,12 +101,14 @@ const sayK = (k, arg = "") => { $("status").textContent = (TEXT[k] || k) + arg; 
 const say = (txt) => { $("status").textContent = txt; };
 const log = (t) => { $("log").textContent += t + "\n"; };
 
-let image = null, stock = null, writing = false, stockEpoch = 0;
+let image = null, stock = null, test = null, writing = false, stockEpoch = 0, testEpoch = 0;
 const lock = (on) => {
   writing = on;
   $("go").disabled = on || !image;
   $("stock-go").disabled = on || !stock;
   $("stock-file").disabled = on;
+  $("test-go").disabled = on || !test;
+  $("test-file").disabled = on;
 };
 window.addEventListener("beforeunload", (e) => { if (writing) { e.preventDefault(); e.returnValue = TEXT.leave; } });
 
@@ -152,6 +162,39 @@ $("go").addEventListener("click", async () => {
   if (writing || !image) return;
   lock(true);
   try { await write(image, meta.product, "done"); } catch (e) { failed(e); }
+  lock(false);
+});
+
+// a test build: a package of Felucca's own loader (FELUCCA-LOADER-1) for the FM-1 (FM-1_9xx), as the site's is
+const hasMark = (pkg, text) => {
+  const m = new TextEncoder().encode(text);
+  outer: for (let i = 0; i + m.length <= pkg.length; i++) {
+    for (let k = 0; k < m.length; k++) if (pkg[i + k] !== m[k]) continue outer;
+    return true;
+  }
+  return false;
+};
+$("test-file").addEventListener("change", async () => {
+  const epoch = ++testEpoch, file = $("test-file").files[0];
+  test = null; lock(false);
+  if (!file) return;
+  try {
+    const pkg = new Uint8Array(await file.arrayBuffer());
+    if (epoch !== testEpoch) return;
+    const product = productOf(pkg);
+    if (!/^FM-1_9[0-9][0-9]$/.test(product) || !hasMark(pkg, "FELUCCA-LOADER-1")) {
+      say("Not a Tuna (or Felucca) package for the FM-1.");
+      return;
+    }
+    test = { image: logicalImage(pkg), product, name: file.name };
+    say(`Test build ${file.name} verified.`);
+    lock(false);
+  } catch (e) { if (epoch === testEpoch) say("Not a Tuna package: " + e.message); }
+});
+$("test-go").addEventListener("click", async () => {
+  if (writing || !test || !confirm(`Install the test build ${test.name}?`)) return;
+  lock(true);
+  try { await write(test.image, test.product, "done"); } catch (e) { failed(e); }
   lock(false);
 });
 

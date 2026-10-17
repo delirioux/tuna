@@ -37,7 +37,7 @@ All choices were settled on 6 October 2026.
 | Screen | Visualisation (notes as falling particles), parameters while turning |
 | Presets | 16 slots, full state including seed |
 | Seeds | 256 per composer, sorted by the type of work (a block per manner); each piece a share code (BACH-FUGUE-17) |
-| Favourites and radio | Up to 48 favourites (REC held); a radio that moves on to another piece every 1 to 30 minutes |
+| Favourites and radio | Up to 32 favourites (REC held); a radio that moves on to another piece every 1 to 30 minutes |
 | Publishing | Personal use first; if published, GPL-3.0 with source applies |
 | Name | Tuna |
 

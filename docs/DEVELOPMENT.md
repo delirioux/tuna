@@ -14,7 +14,7 @@ Status: 7 October 2026. Phases 1 to 7 done, phase 8 prepared; the FM-1 is on its
 | Upstream | Tuna is a fork of [Felucca](https://github.com/hugelton/Felucca) (GPL-3.0). Never push to Felucca. Upstream releases are merged in by hand (`Merge Felucca 1.6.1 into Tuna`; its five engines are a submodule, `firmware/engines`), Felucca's own README kept as [FELUCCA.md](FELUCCA.md). |
 | Language | English throughout: code, comments, commits, docs. |
 | Licence | GPL-3.0-only, as Felucca; Marbles parts MIT ([LICENSES/MIT-Marbles.txt](../LICENSES/MIT-Marbles.txt)). |
-| Commits | Author `delirioux <340923392+delirioux@users.noreply.github.com>`. Work done with Claude ends with the `Co-Authored-By` and `Claude-Session` lines. |
+| Commits | Author `delirioux <340923392+delirioux@users.noreply.github.com>`. Work done with Claude ends with the `Co-Authored-By` line (no links into Claude). |
 | Publishing | Public, GPL-3.0, for everyone, as soon as it works on the FM-1 (release checklist below). |
 
 ## How changes reach GitHub

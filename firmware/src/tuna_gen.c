@@ -29,6 +29,18 @@ static float chaos_part(const tg_gen *g, int part, float c)
 
 static bool in_mask(uint16_t mask, int note, int root) { return (mask >> pmod12(note - root)) & 1; }
 
+/* the humanizer's per-note last events, forgotten: set two seconds back on the (wrapping) clock, so none counts
+ * as a moment ahead (hum_collect); all of them on a reset, and every 2^26 samples (1.7 hours) the ones already
+ * past, so none grows old enough to wrap */
+static void hdue_forget(tg_gen *g, bool all)
+{
+    uint32_t past = g->clock - (uint32_t)(2.0f * g->sample_rate);
+    for (int p = 0; p < TG_EVENT_PARTS; ++p)
+        for (int n = 0; n < 128; ++n)
+            if (all || (int32_t)(g->hdue[p][n] - past) < 0 || (int32_t)(g->hdue[p][n] - g->clock) > (int32_t)g->sample_rate)
+                g->hdue[p][n] = past;
+}
+
 /* the k-th note of mask above (k > 0) or below (k < 0) note; note itself need not be in mask */
 static int mask_step(uint16_t mask, int root, int note, int k)
 {
@@ -277,10 +289,8 @@ void tg_reseed(tg_gen *g, uint32_t seed)
     tm_rng_init(&g->hum_rng, seed ^ 0x48756d61u);
     g->hq_n = 0;
     g->hq_order = 0;
-    for (int p = 0; p < TG_EVENT_PARTS; ++p)
-        for (int n = 0; n < 128; ++n)
-            g->hdue[p][n] = 0;
     g->clock = 0;
+    hdue_forget(g, true);
     g->tick_delay = 0;
     /* sequencer: recording from the start; the overlay's steps and FILL are settings and stay */
     g->rec_cur = 0;
@@ -990,9 +1000,7 @@ void tg_all_off(tg_gen *g, tg_event_fn fn, void *ctx)
             fn(ctx, &e);
         }
     g->hq_n = 0;
-    for (int p = 0; p < TG_EVENT_PARTS; ++p)
-        for (int n = 0; n < 128; ++n)
-            g->hdue[p][n] = 0;
+    hdue_forget(g, true);
     g->humanize = hum;
     g->rat_n = 0;
     cx_release(g, fn, ctx);
@@ -2582,10 +2590,13 @@ static void hum_collect(void *ctx, const tg_event *e)
     } else {
         d = g->hdelay[x.part][x.note];
     }
-    long due = g->clock + x.offset + d;
+    uint32_t due = g->clock + (uint32_t)x.offset + (uint32_t)d;
     if (x.type == TG_EV_NOTE && x.part < TG_EVENT_PARTS) {
-        if (due < g->hdue[x.part][x.note])
-            due = g->hdue[x.part][x.note];          /* keep start and end of one note in order */
+        /* keep start and end of one note in order (on the wrapping clock: a difference, and only a recent
+         * one counts: the note's last event a moment ahead, not one from long ago) */
+        int32_t ahead = (int32_t)(g->hdue[x.part][x.note] - due);
+        if (ahead > 0 && ahead < (int32_t)g->sample_rate)
+            due = g->hdue[x.part][x.note];
         g->hdue[x.part][x.note] = due;
     }
     g->hq[g->hq_n].due = due;
@@ -2594,19 +2605,23 @@ static void hum_collect(void *ctx, const tg_event *e)
     g->hq_n++;
 }
 
-/* deliver the queued events due before `end`, earliest first, with offsets inside this block */
-static void hum_deliver(tg_gen *g, long end)
+/* deliver the queued events due before `end`, earliest first, with offsets inside this block (the clock
+ * wraps: every comparison is a difference) */
+static void hum_deliver(tg_gen *g, uint32_t end)
 {
     while (1) {
         int best = -1;
-        for (int i = 0; i < g->hq_n; ++i)
-            if (g->hq[i].due < end && (best < 0 || g->hq[i].due < g->hq[best].due ||
-                                       (g->hq[i].due == g->hq[best].due && g->hq[i].order < g->hq[best].order)))
+        for (int i = 0; i < g->hq_n; ++i) {
+            if ((int32_t)(g->hq[i].due - end) >= 0)
+                continue;
+            int32_t vs = best < 0 ? -1 : (int32_t)(g->hq[i].due - g->hq[best].due);
+            if (best < 0 || vs < 0 || (vs == 0 && (int32_t)(g->hq[i].order - g->hq[best].order) < 0))
                 best = i;
+        }
         if (best < 0)
             return;
         tg_event e = g->hq[best].e;
-        long off = g->hq[best].due - g->clock;
+        int32_t off = (int32_t)(g->hq[best].due - g->clock);
         e.offset = (uint16_t)(off < 0 ? 0 : off);
         g->hq[best] = g->hq[--g->hq_n];
         g->user_fn(g->user_ctx, &e);
@@ -2680,8 +2695,10 @@ void tg_process(tg_gen *g, int size, tg_event_fn fn, void *ctx)
     g->user_ctx = ctx;
     process_block(g, size, rec_sink, g);            /* -> recording -> overlay -> humanizer -> fn */
     if (g->hq_n)
-        hum_deliver(g, g->clock + size);
-    g->clock += size;
+        hum_deliver(g, g->clock + (uint32_t)size);
+    g->clock += (uint32_t)size;
+    if ((g->clock & 0x3FFFFFFu) < (uint32_t)size)
+        hdue_forget(g, false);                      /* (every 1.7 hours: none of them grows old enough to wrap) */
 }
 
 /* ---- sequencer ---------------------------------------------------------------------------------------

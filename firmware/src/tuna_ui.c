@@ -866,7 +866,7 @@ static void tu_panel_reso(tuna_ui *u)
         for (int32_t x = 48; x < 230; x += 2) {
             /* a standing wave: still at both ends, its amplitude in the middle */
             int32_t env = (x - 48) * (230 - x) * 1024 / ((230 - 48) * (230 - 48));   /* 0..256 */
-            int32_t ph = (int32_t)((x * (note > 0 ? note : 40) / 8 + (int32_t)u->frame * 3) % 32);
+            int32_t ph = (int32_t)(((uint32_t)(x * (note > 0 ? note : 40) / 8) + u->frame * 3u) % 32u);   /* (frame wraps) */
             int32_t sw = ph < 16 ? ph - 8 : 24 - ph;              /* a triangle -8..8 */
             int32_t yy = y + sw * amp * env / (8 * 256);
             cv_line(x - 2, prev, x, yy, c);

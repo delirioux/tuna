@@ -266,13 +266,13 @@ typedef struct {
     /* humanization: a player's small lateness and touch, on its own randomness */
     float humanize;                /* 0 = machine-exact (the default), 1 = a natural amount */
 #define TG_HQ 160
-    struct { long due; uint32_t order; tg_event e; } hq[TG_HQ];
+    struct { uint32_t due; uint32_t order; tg_event e; } hq[TG_HQ];   /* (due: on the clock, wrapping) */
     int hq_n;
     uint32_t hq_order;            /* arrival order: events due together leave in the order they came */
-    long clock;                    /* samples rendered */
+    uint32_t clock;                /* samples rendered (wraps after 4.5 days at 11 kHz: compared as differences) */
     int tick_delay;                /* swing and lilt: samples the events of this tick come late */
     uint16_t hdelay[TG_EVENT_PARTS][128];
-    long hdue[TG_EVENT_PARTS][128];  /* when the note's last start or end leaves the queue: a note never
+    uint32_t hdue[TG_EVENT_PARTS][128];  /* when the note's last start or end leaves the queue: a note never
                                         ends before it starts, nor starts again before it ended */
     tm_rng hum_rng;
     tg_event_fn user_fn;

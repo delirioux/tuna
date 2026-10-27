@@ -1298,6 +1298,43 @@ static void test_hands(void)
     CHECK(g.hold_root == -1, "released");
 }
 
+/* ---- the sample clock wraps (32 bits: 4.5 days at 11 kHz): the late events (swing, lilt, strums) come the same --- */
+static uint64_t wrap_h;
+static uint32_t wrap_start;
+static void wrap_cb(void *ctx, const tg_event *e)
+{
+    (void)ctx;
+    uint32_t t = g.clock + e->offset - wrap_start;       /* its time from the start, whatever the clock's value */
+    uint8_t b[8] = {(uint8_t)t, (uint8_t)(t >> 8), (uint8_t)(t >> 16), e->part, e->note, e->velocity, e->on, e->type};
+    for (int i = 0; i < 8; ++i)
+        wrap_h = (wrap_h ^ b[i]) * 1099511628211ull;
+}
+static uint64_t wrap_run(int style, uint32_t start, float secs)
+{
+    tg_init(&g, 5, SR);
+    tg_apply_style(&g, style);
+    tg_reseed(&g, 5);
+    g.humanize = 0.6f;
+    g.clock = start;                                     /* (as if it had run that long: the per-note last */
+    for (int p = 0; p < TG_EVENT_PARTS; ++p)             /* events two seconds back, as tg_reseed sets them) */
+        for (int n = 0; n < 128; ++n)
+            g.hdue[p][n] = start - (uint32_t)(2.0f * SR);
+    wrap_start = start;
+    wrap_h = 1469598103934665603ull;
+    for (long i = 0; i < (long)(secs * SR) / BLOCK; ++i)
+        tg_process(&g, BLOCK, wrap_cb, NULL);
+    return wrap_h;
+}
+static void test_clock_wrap(void)
+{
+    static const int styles[] = {TG_STYLE_G_LOFI_HIP_HOP, TG_STYLE_JOHANN_STRAUSS, TG_STYLE_BACH};
+    for (unsigned si = 0; si < sizeof styles / sizeof styles[0]; ++si) {
+        uint64_t plain = wrap_run(styles[si], 0, 40.0f);
+        uint64_t wrapped = wrap_run(styles[si], 0xFFFFFFFFu - (uint32_t)(20.0f * SR), 40.0f);   /* wraps halfway */
+        CHECK(plain == wrapped, "%s: the clock wrapping changes the music", tg_style_get(styles[si])->name);
+    }
+}
+
 int main(void)
 {
     test_meters();
@@ -1310,6 +1347,7 @@ int main(void)
     test_orchestration();
     test_hands();
     test_hands_parts();
+    test_clock_wrap();
     printf("tuna_mech: %d checks, %d failed\n", checks, fails);
     return fails ? 1 : 0;
 }

@@ -1059,10 +1059,11 @@ void ta_clock_msg(tuna_app *a, uint8_t status, uint32_t frame)
     a->ck_idle = 0;
     if (!a->ck_run || !a->playing)
         return;
-    /* the phase: ticks since the start against the pulses since it (the first tick came with Start) */
-    float want = (float)a->ck_pulses * (float)a->g.division / 24.0f;
-    float have = (float)(a->g.ticks > 0 ? a->g.ticks - 1 : 0) + a->g.t.master_phase;
-    float e = want - have, trim = 1.0f + 0.05f * e;
+    /* the phase: ticks since the start against the pulses since it (the first tick came with Start); the whole
+     * ticks in 24ths, as a difference of unsigned counts, so hours of clock lose no precision and a wrap no step */
+    uint32_t ticks = (uint32_t)(a->g.ticks > 0 ? a->g.ticks - 1 : 0);
+    int32_t d = (int32_t)(a->ck_pulses * (uint32_t)a->g.division - ticks * 24u);
+    float e = (float)d / 24.0f - a->g.t.master_phase, trim = 1.0f + 0.05f * e;
     a->g.tempo_trim = trim < 0.9f ? 0.9f : trim > 1.1f ? 1.1f : trim;
     a->ck_pulses++;
 }

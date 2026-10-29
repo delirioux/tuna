@@ -99,7 +99,8 @@ node web/emu/tuna_emu_test.mjs build/tuna_emu/tuna.wasm  # boot, play, browse, r
 
 For the FM-1 itself: `FELUCCA_TUNA=1 ./build.sh`, with Felucca's toolchain and SDK as [BUILDING.md](BUILDING.md)
 describes. Every push to `main` builds the package and the site on GitHub Actions
-([.github/workflows/firmware.yml](.github/workflows/firmware.yml)).
+([.github/workflows/firmware.yml](.github/workflows/firmware.yml)); a new version there is tagged and released
+(notes in [docs/RELEASE.md](docs/RELEASE.md)).
 
 ## Documentation
 

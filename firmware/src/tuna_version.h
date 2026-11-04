@@ -3,5 +3,5 @@
  * .github/workflows/firmware.yml read it here). Felucca's own stays FELUCCA_VERSION in felucca.c. */
 #ifndef TUNA_VERSION_H
 #define TUNA_VERSION_H
-#define TUNA_VERSION "1.0"
+#define TUNA_VERSION "1.1"
 #endif

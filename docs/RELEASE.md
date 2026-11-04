@@ -1,6 +1,14 @@
-# Tuna 1.0
+# Tuna 1.1
 
-The first release: generative music on the FM-1, composed as it plays.
+Generative music on the FM-1, composed as it plays.
+
+New in 1.1:
+
+- Newer FM-1 units, with a UC25HQ80 flash, now save: 1.0 did not recognise that chip and ran without saving
+  (Felucca's fix for #320).
+- Plays for days on end: the sample clock wraps without a hiccup.
+
+What Tuna holds:
 
 - 89 composers and styles in 10 eras, from Hildegard von Bingen to today, in 285 manners; 86 popular genres in
   8 decades, the 1950s to now; 8 character presets, from STILL to DRIVE.
@@ -13,7 +21,6 @@ The first release: generative music on the FM-1, composed as it plays.
   locks and an evolution timer.
 - 16 slots that save the whole state and play back exactly the music that was saved.
 - MIDI out with every part on its own channel, and clock; a resonator of sympathetic strings tuned to the harmony.
-- Plays for days on end: the sample clock wraps without a hiccup.
 - In the browser: the same firmware on a simulated FM-1.
 
 Runs on the FM-1. To go back: Felucca's installer, or the official V15.

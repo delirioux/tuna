@@ -11,7 +11,7 @@ New in 1.2, the player:
 - Radio: another piece after 1 to 30 minutes, from the same era or the whole library, coming in at a cadence.
 - MOOD in place of MACRO: one knob from calm to busy, every part at once.
 - MIDI clock in: Tuna follows another device's tempo, start and stop.
-- Flute and sax as FM patches of Tuna's own, freeing the flash their samples took; WIND and RAIN on Felucca's
+- Flute and sax as FM patches of Tuna's own, freeing the flash their samples took; WIND and RAIN on [Felucca](https://github.com/hugelton/Felucca)'s
   NOISE engine.
 - An instrument tester in the browser.
 

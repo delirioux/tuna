@@ -9,7 +9,7 @@ Oct 6, 2026 · delirioux
 
 Tuna is a generative firmware for the M-VAVE FM-1: press play and it improvises endlessly within a key, while you steer with knobs and keys.
 
-No existing FM-1 firmware does this. The other forks (Felucca, SLOOP, Groove OS, X0X, FM-1+VA) are grooveboxes or synths you program yourself. Tuna builds on Felucca's engines and hardware layer, with its own generator, sequencer and GUI on top.
+No existing FM-1 firmware does this. The other forks (Felucca, [SLOOP](https://github.com/isod89/sloop-fm1), Groove OS, [X0X](https://github.com/charlesvestal/fm1-x0x), FM-1+VA) are grooveboxes or synths you program yourself. Tuna builds on Felucca's engines and hardware layer, with its own generator, sequencer and GUI on top.
 
 ## Specification
 

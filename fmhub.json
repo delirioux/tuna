@@ -1,0 +1,10 @@
+{
+  "what": "Generative music that composes as it plays: Marbles-style randomness shaped by music theory into melody, bass, accompaniment and percussion. Pick a genre from 86 across eight decades or a composer's manner and it plays endlessly, never twice the same; or let a character preset drift.",
+  "author": "delirioux",
+  "kinds": [
+    "groove"
+  ],
+  "play": "https://delirioux.github.io/tuna/try/",
+  "image": "docs/card.png",
+  "color": "#2EA8F0"
+}

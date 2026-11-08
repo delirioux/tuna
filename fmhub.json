@@ -1,10 +1,10 @@
 {
-  "what": "Generative music that composes as it plays: Marbles-style randomness shaped by music theory into melody, bass, accompaniment and percussion. Pick a genre from 86 across eight decades or a composer's manner and it plays endlessly, never twice the same; or let a character preset drift.",
+  "what": "Generative music for the FM-1: it composes as it plays, melody, bass, accompaniment and percussion shaped by music theory out of controlled randomness. Pick a composer or one of 86 genres across eight decades and it plays in that manner, endlessly and never twice the same.",
   "author": "delirioux",
   "kinds": [
     "groove"
   ],
   "play": "https://delirioux.github.io/tuna/try/",
   "image": "docs/card.png",
-  "color": "#2EA8F0"
+  "color": "#2BA6E8"
 }

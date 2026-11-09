@@ -1,5 +1,7 @@
 **Patched for FM-1 units with the new chipset.**
 
+**[Quick cheat sheet](docs/CHEATSHEET.md): every control and what it does.**
+
 # Tuna
 
 <p align="center"><img src="docs/tuna-logo.png" alt="Tuna" width="256"></p>

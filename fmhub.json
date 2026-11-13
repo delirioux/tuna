@@ -7,5 +7,6 @@
   "play": "https://delirioux.github.io/tuna/try/",
   "cheat": "https://github.com/delirioux/tuna/blob/main/docs/CHEATSHEET.md",
   "image": "docs/card.png",
-  "color": "#2BA6E8"
+  "color": "#2BA6E8",
+  "sounds": "CC0: Versilian Studios' VSCO-2 CE and VCSL (Kawai piano, flute, tenor sax); drums synthesized by Felucca's tools/gen_waves.py (Hügelton Sample Pack, GPL-3.0-only)"
 }

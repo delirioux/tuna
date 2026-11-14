@@ -141,3 +141,5 @@ Tuna's random section is a port of **Marbles** by Emilie Gillet
 
 Tuna is free software under the GNU General Public License, version 3 only ([LICENSE](LICENSE)).
 Bundled and ported parts keep their own licences: see [LICENSING.md](LICENSING.md).
+
+You can also try Tuna in the browser, no flashing needed, in the free community [FM-1 Emulator](https://fm1-emulator.atst.tools/).
